@@ -1,7 +1,7 @@
 # import time
 import numpy as np
 import matplotlib.pyplot as plt
-from grispy3 import GriSPy
+from grispy import GriSPy
 
 plt.ion()
 
