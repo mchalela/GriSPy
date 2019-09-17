@@ -46,6 +46,7 @@ def do_setup():
         version='2019.9',
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
+
         author='Martin Chalela',
         author_email='tinchochalela@gmail.com',
         url='https://github.com/mchalela/GriSPy',
