@@ -1,6 +1,7 @@
 # import os
 import numpy as np
-import time, datetime
+import time
+import datetime
 # from multiprocessing import Process, Queue
 
 ###############################################################################
@@ -53,8 +54,8 @@ class GriSPy(object):
         save_grid method). If a grid is loaded, the "data" field stored within
         it will take precedence over the "data" keyword passed on construction.
     metric: str, optional
-        Metric definition to compute distances. Not implemented yet. Distances
-        are computed with euclidean metric.
+        Metric definition to compute distances. Options: 'euclid' or 'sphere'.
+        Notes: In the case of 'sphere' metric, input units must be degrees.
 
     Attributes
     ----------
@@ -99,7 +100,7 @@ class GriSPy(object):
             self.set_periodicity(periodic)
             self._build_grid()
         else:
-            f = np.load(load_grid).item()
+            f = np.load(load_grid, allow_pickle=True).item()
             self.N_cells = f["N_cells"]
             self.dim = f["dim"]
             self.metric = f["metric"]
@@ -107,15 +108,12 @@ class GriSPy(object):
             self.grid = f["grid"]
             self.k_bins = f["k_bins"]
             self.time = f["time"]
-            try:
-                self.data = f["data"]
-            except Exception as e:
-                self.data = data
+            self.data = f["data"]
             print(
                 "Succsefully loaded GriSPy grid created on {}".format(
-                    f["time"]["datetime"]
-                )
+                    self.time["datetime"])
             )
+
         self._empty = np.array([], dtype=int)  # Useful for empty arrays
 
     def _build_grid(self, epsilon=1.0e-6):
@@ -180,6 +178,8 @@ class GriSPy(object):
     def distance(self, centre_0, centres):
         """ Computes the distance between points
         metric: 'euclid', 'sphere'
+
+        Notes: In the case of 'sphere' metric, the input units must be degrees.
         """
         if len(centres) == 0:
             return self._empty
@@ -593,15 +593,9 @@ class GriSPy(object):
         return neighbors_distances, neighbors_indices
 
     # User methods
-    def save_grid(self, file="grispy.npy", save_data=False):
+    def save_grid(self, file="grispy.npy"):
         """
         Save all grid attributes in a binary file for future use.
-
-        Note: Given that the memory needed to store the set of k-dimensional
-        data points is expected to be large, saving the data in a GriSPy file
-        is optional. If this data exists in another form, it is encouraged to
-        use that. However, if the data was created dinamically (e.g. a catalog
-        of random points) then you should definitely save it.
 
         Parameters
         ----------
@@ -610,9 +604,6 @@ class GriSPy(object):
             binary file with extension '.npy'. If the extension is not
             explicitely given it will be added automatically.
             Default: grispy.npy
-        save_data: bool, optional
-            Indicates if the k-dimensional points should be saved.
-            Default: False
         """
         dic = {
             "grid": self.grid,
@@ -622,9 +613,8 @@ class GriSPy(object):
             "periodic": self.periodic,
             "k_bins": self.k_bins,
             "time": self.time,
+            "data": self.data
         }
-        if save_data:
-            dic["data"] = self.data
 
         np.save(file, dic)
         print("GriSPy grid attributes saved to: {}".format(file))
