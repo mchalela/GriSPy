@@ -92,10 +92,11 @@ class GriSPy(object):
     ):
 
         if load_grid is None:
-            if type(data) is not np.ndarray:
-                raise TypeError('Argument "data" must be a numpy array.')
+            if not isinstance(data, np.ndarray):
+                raise TypeError("Argument 'data' must be a numpy array.")
             self.data = data.copy() if copy_data else data
-            self.dim = self.data.shape[1]
+            if self._check_data_dimensionality(self.data.shape):
+                self.dim = self.data.shape[1]
             self.N_cells = N_cells
             self.metric = metric
             self.set_periodicity(periodic)
@@ -390,6 +391,28 @@ class GriSPy(object):
 
         return terran_centres, terran_indices
 
+    def _check_data_dimensionality(self, shape):
+        """ Check if data has the expected dimension
+        """       
+        if len(shape)==2:
+            return True
+        else:
+            raise ValueError(
+                "Data array has the wrong shape. Expected shape of (n, k), "
+                "got instead {}".format(shape)
+                )
+
+    def _check_centre_dimensionality(self, shape):
+        """ Check if centres has the same dimension as data
+        """
+        if len(shape)==2 and shape[1]==self.dim:
+            return None
+        else:
+            raise ValueError(
+                "Centre array has the wrong shape. Expected shape of (m, {}), "
+                "got instead {}".format(self.dim, shape)
+                )            
+
     # User methods
     def bubble_neighbors(
         self,
@@ -431,13 +454,16 @@ class GriSPy(object):
             neighbors of that centre.
         """
 
+        # Check centres has the correct dimension
+        self._check_centre_dimensionality(centres.shape)
+
         # Match distance_upper_bound shape with centres shape
         if np.isscalar(distance_upper_bound):
             distance_upper_bound *= np.ones(len(centres))
         elif len(centres) != len(distance_upper_bound):
             raise ValueError(
-                "If an array is given in 'distance_upper_bound', \
-                its size must be the same as the number of centres."
+                "If an array is given in 'distance_upper_bound', "
+                "its size must be the same as the number of centres."
             )
 
         neighbor_cells = self._get_neighbor_cells(
@@ -527,25 +553,28 @@ class GriSPy(object):
             neighbors of that centre.
         """
 
+        # Check centres has the correct dimension
+        self._check_centre_dimensionality(centres.shape)
+
         # Match distance bounds shapes with centres shape
         if np.isscalar(distance_lower_bound):
             distance_lower_bound *= np.ones(len(centres))
         elif len(centres) != len(distance_lower_bound):
             raise ValueError(
-                "If an array is given in 'distance_lower_bound', \
-                its size must be the same as the number of centres."
+                "If an array is given in 'distance_lower_bound', "
+                "its size must be the same as the number of centres."
             )
         if np.isscalar(distance_upper_bound):
             distance_upper_bound *= np.ones(len(centres))
         elif len(centres) != len(distance_upper_bound):
             raise ValueError(
-                "If an array is given in 'distance_upper_bound', \
-                its size must be the same as the number of centres."
+                "If an array is given in 'distance_upper_bound', "
+                "its size must be the same as the number of centres."
             )
         if np.any(distance_lower_bound > distance_upper_bound):
             raise ValueError(
-                "One or more values in 'distance_lower_bound' is greater \
-                than its 'distance_upper_bound' pair."
+                "One or more values in 'distance_lower_bound' is greater "
+                "than its 'distance_upper_bound' pair."
             )
 
         neighbor_cells = self._get_neighbor_cells(
@@ -636,6 +665,9 @@ class GriSPy(object):
             Returns a list of m arrays. Each array has the indices to the
             neighbors of that centre.
         """
+        # Check centres has the correct dimension
+        self._check_centre_dimensionality(centres.shape)
+
         # Initial definitions
         N_centres = len(centres)
         centres_lookup_ind = np.arange(0, N_centres)
