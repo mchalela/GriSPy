@@ -393,8 +393,8 @@ class GriSPy(object):
 
     def _check_data_dimensionality(self, shape):
         """ Check if data has the expected dimension
-        """       
-        if len(shape)==2:
+        """
+        if len(shape) == 2:
             return True
         else:
             raise ValueError(
@@ -405,13 +405,13 @@ class GriSPy(object):
     def _check_centre_dimensionality(self, shape):
         """ Check if centres has the same dimension as data
         """
-        if len(shape)==2 and shape[1]==self.dim:
+        if len(shape) == 2 and shape[1] == self.dim:
             return None
         else:
             raise ValueError(
                 "Centre array has the wrong shape. Expected shape of (m, {}), "
                 "got instead {}".format(self.dim, shape)
-                )            
+                )
 
     # User methods
     def bubble_neighbors(
@@ -740,7 +740,6 @@ class GriSPy(object):
 
         return neighbors_distances, neighbors_indices
 
-    
     def save_grid(self, file="grispy.npy"):
         """
         Save all grid attributes in a binary file for future use.
