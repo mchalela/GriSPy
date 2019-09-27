@@ -17,7 +17,7 @@ def test_distance_A_02():
     gsp = GriSPy(data=data, N_cells=2, copy_data=False, periodic=periodic, metric='sphere', load_grid=None)
     dist1 = gsp.distance(np.array([1,1]), np.array([[2,2]]))
     dist2 = gsp.distance(np.array([2,2]), np.array([[1,1]]))
-    np.testing.assert_almost_equal(dist1, dist2, decimal=16)
+    np.testing.assert_almost_equal(dist1, dist2, decimal=10)
 
 def test_distance_B_01():
     # Distancia a-->c <= a-->b + b-->c (metric='euclid')

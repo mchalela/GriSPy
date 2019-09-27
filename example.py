@@ -1,4 +1,3 @@
-# import time
 import numpy as np
 import matplotlib.pyplot as plt
 from grispy import GriSPy
@@ -12,20 +11,20 @@ plt.ion()
 # We search for neighbors within a given radius and n-nearest neighbors.
 
 # Create random points and centres
-Npoints = 10 ** 4
-Ncentres = 5
+Npoints = 10 ** 5
+Ncentres = 1
 dim = 2
-Lbox = 100.0
+Lbox = 10.0
 
 np.random.seed(0)
 data = np.random.uniform(-Lbox / 2, Lbox / 2, size=(Npoints, dim))
 centres = np.random.uniform(-Lbox / 2, Lbox / 2, size=(Ncentres, dim))
 
 # Grispy params
-upper_radii = 10.0
-lower_radii = 7.0
+upper_radii = 6.0
+lower_radii = 5.9
 n_nearest = 100
-periodic = {1: (-Lbox / 2, Lbox / 2)}
+periodic = {0: (-Lbox / 2, Lbox / 2), 1: (-Lbox / 2, Lbox / 2)}
 
 # Build the grid with the data
 gsp = GriSPy(data, periodic=periodic)
@@ -47,7 +46,7 @@ shell_dist, shell_ind = gsp.shell_neighbors(
 # Query for nth nearest neighbors
 near_dist, near_ind = gsp.nearest_neighbors(centres, n=n_nearest)
 
-
+'''
 # Plot bubble results
 plt.figure()
 plt.title("Bubble query")
@@ -63,6 +62,7 @@ plt.scatter(data[:, 0], data[:, 1], c="k", marker=".", s=2)
 for i in range(Ncentres):
     ind_i = shell_ind[i]
     plt.scatter(data[ind_i, 0], data[ind_i, 1], c="C2", marker="o", s=5)
+plt.plot(centres[0,0],centres[0,1],'ro',ms=10)
 
 # Plot nearest results
 plt.figure()
@@ -71,3 +71,4 @@ plt.scatter(data[:, 0], data[:, 1], c="k", marker=".", s=2)
 for i in range(Ncentres):
     ind_i = near_ind[i]
     plt.scatter(data[ind_i, 0], data[ind_i, 1], c="C0", marker="o", s=5)
+'''

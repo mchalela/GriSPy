@@ -1,6 +1,7 @@
 # import os
 import numpy as np
-import time, datetime
+import time
+import datetime
 # from multiprocessing import Process, Queue
 
 ###############################################################################
@@ -27,6 +28,7 @@ class GriSPy(object):
     To be implemented:
     box_neighbors: find neighbors within a k-dimensional squared box of
         a given size and orientation.
+    n_jobs: number of cores for parallel computation.
 
     Parameters
     ----------
@@ -53,8 +55,8 @@ class GriSPy(object):
         save_grid method). If a grid is loaded, the "data" field stored within
         it will take precedence over the "data" keyword passed on construction.
     metric: str, optional
-        Metric definition to compute distances. Not implemented yet. Distances
-        are computed with euclidean metric.
+        Metric definition to compute distances. Options: 'euclid' or 'sphere'.
+        Notes: In the case of 'sphere' metric, input units must be degrees.
 
     Attributes
     ----------
@@ -90,16 +92,17 @@ class GriSPy(object):
     ):
 
         if load_grid is None:
-            if type(data) is not np.ndarray:
-                raise TypeError('Argument "data" must be a numpy array.')
+            if not isinstance(data, np.ndarray):
+                raise TypeError("Argument 'data' must be a numpy array.")
             self.data = data.copy() if copy_data else data
-            self.dim = self.data.shape[1]
+            if self._check_data_dimensionality(self.data.shape):
+                self.dim = self.data.shape[1]
             self.N_cells = N_cells
             self.metric = metric
             self.set_periodicity(periodic)
             self._build_grid()
         else:
-            f = np.load(load_grid).item()
+            f = np.load(load_grid, allow_pickle=True).item()
             self.N_cells = f["N_cells"]
             self.dim = f["dim"]
             self.metric = f["metric"]
@@ -107,15 +110,12 @@ class GriSPy(object):
             self.grid = f["grid"]
             self.k_bins = f["k_bins"]
             self.time = f["time"]
-            try:
-                self.data = f["data"]
-            except Exception as e:
-                self.data = data
+            self.data = f["data"]
             print(
                 "Succsefully loaded GriSPy grid created on {}".format(
-                    f["time"]["datetime"]
-                )
+                    self.time["datetime"])
             )
+
         self._empty = np.array([], dtype=int)  # Useful for empty arrays
 
     def _build_grid(self, epsilon=1.0e-6):
@@ -135,11 +135,10 @@ class GriSPy(object):
             k_digit[:, k] = np.digitize(k_data, bins=self.k_bins[:, k]) - 1
 
         # Check that there is at least one point per cell
-        if self.N_cells ** self.dim < len(self.data):
-            # compact_ind = np.sum(k_digit*(self.N_cells**np.arange(self.dim)),
-            # axis=1)
+        # if self.N_cells ** self.dim < len(self.data):
+        if True:
             compact_ind = np.ravel_multi_index(
-                [k_digit[:, i] for i in range(self.dim)],
+                k_digit.T,
                 (self.N_cells,) * self.dim,
                 order="F",
             )
@@ -151,26 +150,17 @@ class GriSPy(object):
             split_ind = np.searchsorted(
                 compact_ind, np.arange(self.N_cells ** self.dim)
             )
-            if compact_ind[-1] < (
-                self.N_cells ** self.dim - 1
-            ):  # Delete empty cells
-                split_ind = np.delete(
-                    split_ind, list(range(compact_ind[-1], len(split_ind)))
-                )
+            deleted_cells = np.diff(np.append(-1,split_ind)).astype(bool)
+            split_ind = split_ind[deleted_cells]
+            if split_ind[-1] >= data_ind[-1]:
+                split_ind = split_ind[:-1]
+
             list_ind = np.split(data_ind[compact_ind_sort], split_ind[1:])
             k_digit = k_digit[split_ind]
 
             self.grid = {}
             for i, j in enumerate(k_digit):
                 self.grid[tuple(j)] = list(list_ind[i])
-        else:
-            self.grid = {}
-            for i in range(len(self.data)):
-                cell_point = tuple(k_digit[i, :])
-                if cell_point not in self.grid:
-                    self.grid[cell_point] = [i]
-                else:
-                    self.grid[cell_point].append(i)
 
         # Record date and build time
         self.time = {"buildtime": time.time() - t0}
@@ -180,6 +170,8 @@ class GriSPy(object):
     def distance(self, centre_0, centres):
         """ Computes the distance between points
         metric: 'euclid', 'sphere'
+
+        Notes: In the case of 'sphere' metric, the input units must be degrees.
         """
         if len(centres) == 0:
             return self._empty
@@ -389,17 +381,81 @@ class GriSPy(object):
 
         return terran_centres, terran_indices
 
-    def _bubble(
+    def _check_data_dimensionality(self, shape):
+        """ Check if data has the expected dimension
+        """
+        if len(shape) == 2:
+            return True
+        else:
+            raise ValueError(
+                "Data array has the wrong shape. Expected shape of (n, k), "
+                "got instead {}".format(shape)
+                )
+
+    def _check_centre_dimensionality(self, shape):
+        """ Check if centres has the same dimension as data
+        """
+        if len(shape) == 2 and shape[1] == self.dim:
+            return None
+        else:
+            raise ValueError(
+                "Centre array has the wrong shape. Expected shape of (m, {}), "
+                "got instead {}".format(self.dim, shape)
+                )
+
+    # User methods
+    def bubble_neighbors(
         self,
         centres,
         distance_upper_bound=-1.0,
         sorted=False,
         kind="quicksort",
     ):
-        """ Find all points within given distances of each centre.
-        Different distances for each point can be provided.
-        This should not be used. Instead, use shell_neighbors.
         """
+        Find all points within given distances of each centre. Different
+        distances for each point can be provided.
+
+        Parameters
+        ----------
+        centres: ndarray, shape (m,k)
+            The point or points to search for neighbors of.
+        distance_upper_bound: scalar or ndarray of length m
+            The radius of points to return. If a scalar is provided, the same
+            distance will apply for every centre. An ndarray with individual
+            distances can also be rovided.
+        sorted: bool, optional
+            If True the returned neighbors will be ordered by increasing
+            distance to the centre. Default: False.
+        kind: str, optional
+            When sorted = True, the sorting algorithm can be specified in this
+            keyword. Available algorithms are: ['quicksort', 'mergesort',
+            'heapsort', 'stable']. Default: 'quicksort'
+        njobs: int, optional
+            Number of jobs for parallel computation. Not implemented yet.
+
+        Returns
+        -------
+        distances: list, length m
+            Returns a list of m arrays. Each array has the distances to the
+            neighbors of that centre.
+
+        indices: list, length m
+            Returns a list of m arrays. Each array has the indices to the
+            neighbors of that centre.
+        """
+
+        # Check centres has the correct dimension
+        self._check_centre_dimensionality(centres.shape)
+
+        # Match distance_upper_bound shape with centres shape
+        if np.isscalar(distance_upper_bound):
+            distance_upper_bound *= np.ones(len(centres))
+        elif len(centres) != len(distance_upper_bound):
+            raise ValueError(
+                "If an array is given in 'distance_upper_bound', "
+                "its size must be the same as the number of centres."
+            )
+
         neighbor_cells = self._get_neighbor_cells(
             centres, distance_upper_bound
         )
@@ -442,7 +498,7 @@ class GriSPy(object):
                 neighbors_indices[i] = neighbors_indices[i][sorted_ind]
         return neighbors_distances, neighbors_indices
 
-    def _shell(
+    def shell_neighbors(
         self,
         centres,
         distance_lower_bound=-1.0,
@@ -453,8 +509,63 @@ class GriSPy(object):
         """
         Find all points within given lower and upper distances of each centre.
         Different distances for each point can be provided.
-        This should not be used. Instead, use shell_neighbors.
+
+        Parameters
+        ----------
+        centres: ndarray, shape (m,k)
+            The point or points to search for neighbors of.
+        distance_lower_bound: scalar or ndarray of length m
+            The minimum distance of points to return. If a scalar is provided,
+            the same distance will apply for every centre. An ndarray with
+            individual distances can also be rovided.
+        distance_upper_bound: scalar or ndarray of length m
+            The maximum distance of points to return. If a scalar is provided,
+            the same distance will apply for every centre. An ndarray with
+            individual distances can also be rovided.
+        sorted: bool, optional
+            If True the returned neighbors will be ordered by increasing
+            distance to the centre. Default: False.
+        kind: str, optional
+            When sorted = True, the sorting algorithm can be specified in this
+            keyword. Available algorithms are: ['quicksort', 'mergesort',
+            'heapsort', 'stable']. Default: 'quicksort'
+        njobs: int, optional
+            Number of jobs for parallel computation. Not implemented yet.
+
+        Returns
+        -------
+        distances: list, length m
+            Returns a list of m arrays. Each array has the distances to the
+            neighbors of that centre.
+
+        indices: list, length m
+            Returns a list of m arrays. Each array has the indices to the
+            neighbors of that centre.
         """
+
+        # Check centres has the correct dimension
+        self._check_centre_dimensionality(centres.shape)
+
+        # Match distance bounds shapes with centres shape
+        if np.isscalar(distance_lower_bound):
+            distance_lower_bound *= np.ones(len(centres))
+        elif len(centres) != len(distance_lower_bound):
+            raise ValueError(
+                "If an array is given in 'distance_lower_bound', "
+                "its size must be the same as the number of centres."
+            )
+        if np.isscalar(distance_upper_bound):
+            distance_upper_bound *= np.ones(len(centres))
+        elif len(centres) != len(distance_upper_bound):
+            raise ValueError(
+                "If an array is given in 'distance_upper_bound', "
+                "its size must be the same as the number of centres."
+            )
+        if np.any(distance_lower_bound > distance_upper_bound):
+            raise ValueError(
+                "One or more values in 'distance_lower_bound' is greater "
+                "than its 'distance_upper_bound' pair."
+            )
 
         neighbor_cells = self._get_neighbor_cells(
             centres,
@@ -516,10 +627,37 @@ class GriSPy(object):
 
         return neighbors_distances, neighbors_indices
 
-    def _nearest(self, centres, n=1, kind="quicksort"):
-        """Find the n nearest-neighbors for each centre.
-        This should not be used. Instead, use nearest_neighbors.
+    def nearest_neighbors(self, centres, n=1, kind="quicksort"):
         """
+        Find the n nearest-neighbors for each centre.
+
+        Parameters
+        ----------
+        centres: ndarray, shape (m,k)
+            The point or points to search for neighbors of.
+        n: int, optional
+            The number of neighbors to fetch for each centre. Default: 1.
+        kind: str, optional
+            The returned neighbors will be ordered by increasing distance
+            to the centre. The sorting algorithm can be specified in this
+            keyword. Available algorithms are: ['quicksort', 'mergesort',
+            'heapsort', 'stable']. Default: 'quicksort'
+        njobs: int, optional
+            Number of jobs for parallel computation. Not implemented yet.
+
+        Returns
+        -------
+        distances: list, length m
+            Returns a list of m arrays. Each array has the distances to the
+            neighbors of that centre.
+
+        indices: list, length m
+            Returns a list of m arrays. Each array has the indices to the
+            neighbors of that centre.
+        """
+        # Check centres has the correct dimension
+        self._check_centre_dimensionality(centres.shape)
+
         # Initial definitions
         N_centres = len(centres)
         centres_lookup_ind = np.arange(0, N_centres)
@@ -592,16 +730,9 @@ class GriSPy(object):
 
         return neighbors_distances, neighbors_indices
 
-    # User methods
-    def save_grid(self, file="grispy.npy", save_data=False):
+    def save_grid(self, file="grispy.npy"):
         """
         Save all grid attributes in a binary file for future use.
-
-        Note: Given that the memory needed to store the set of k-dimensional
-        data points is expected to be large, saving the data in a GriSPy file
-        is optional. If this data exists in another form, it is encouraged to
-        use that. However, if the data was created dinamically (e.g. a catalog
-        of random points) then you should definitely save it.
 
         Parameters
         ----------
@@ -610,9 +741,6 @@ class GriSPy(object):
             binary file with extension '.npy'. If the extension is not
             explicitely given it will be added automatically.
             Default: grispy.npy
-        save_data: bool, optional
-            Indicates if the k-dimensional points should be saved.
-            Default: False
         """
         dic = {
             "grid": self.grid,
@@ -622,9 +750,8 @@ class GriSPy(object):
             "periodic": self.periodic,
             "k_bins": self.k_bins,
             "time": self.time,
+            "data": self.data
         }
-        if save_data:
-            dic["data"] = self.data
 
         np.save(file, dic)
         print("GriSPy grid attributes saved to: {}".format(file))
@@ -657,340 +784,5 @@ class GriSPy(object):
                 self.periodic = {
                     k: periodic.get(k, None) for k in range(self.dim)
                 }
-
-    def bubble_neighbors(
-        self,
-        centres,
-        distance_upper_bound=-1.0,
-        sorted=False,
-        kind="quicksort",
-        njobs=1,
-    ):
-        """
-        Find all points within given distances of each centre. Different
-        distances for each point can be provided.
-
-        Parameters
-        ----------
-        centres: ndarray, shape (m,k)
-            The point or points to search for neighbors of.
-        distance_upper_bound: scalar or ndarray of length m
-            The radius of points to return. If a scalar is provided, the same
-            distance will apply for every centre. An ndarray with individual
-            distances can also be rovided.
-        sorted: bool, optional
-            If True the returned neighbors will be ordered by increasing
-            distance to the centre. Default: False.
-        kind: str, optional
-            When sorted = True, the sorting algorithm can be specified in this
-            keyword. Available algorithms are: ['quicksort', 'mergesort',
-            'heapsort', 'stable']. Default: 'quicksort'
-        njobs: int, optional
-            Number of jobs for parallel computation. Default, njobs=1.
-        metric: str, optional
-            Metric definition to compute distances. Not implemented yet.
-            Distances are computed with euclidean metric.
-
-        Returns
-        -------
-        distances: list, length m
-            Returns a list of m arrays. Each array has the distances to the
-            neighbors of that centre.
-
-        indices: list, length m
-            Returns a list of m arrays. Each array has the indices to the
-            neighbors of that centre.
-        """
-
-        # Match distance_upper_bound shape with centres shape
-        if np.isscalar(distance_upper_bound):
-            distance_upper_bound *= np.ones(len(centres))
-        elif len(centres) != len(distance_upper_bound):
-            raise ValueError(
-                "If an array is given in 'distance_upper_bound', \
-                its size must be the same as the number of centres."
-            )
-        if njobs == 1:
-            return self._bubble(
-                centres,
-                distance_upper_bound=distance_upper_bound,
-                sorted=sorted,
-                kind=kind,
-            )
-
-        task_queue = Queue()
-        centres_id = list(range(len(centres)))
-        ic = len(centres) / njobs + 1
-        for nj in range(njobs):
-            args = (
-                centres[nj * ic: (nj + 1) * ic, :],
-                distance_upper_bound[nj * ic: (nj + 1) * ic],
-                sorted,
-                kind,
-            )
-            task_queue.put((args, centres_id[nj * ic: (nj + 1) * ic]))
-        for nj in range(njobs):
-            task_queue.put("STOP")
-
-        ################################################
-        def _worker(
-            input, output
-        ):
-            """ Sets the queue for parallel computation
-            input is a queue with args tuples:
-                args are the arguments to pass to search
-            output is a queue storing (distances, indices, id) tuples:
-                id is the centre id.
-            """
-            for args, centres_id in iter(input.get, "STOP"):
-                neighbors_distances, neighbors_indices = self._bubble(*args)
-                output.put(
-                    (neighbors_distances, neighbors_indices, centres_id)
-                )
-
-        done_queue = Queue()
-        for nj in range(njobs):
-            _l = (task_queue, done_queue)
-            Process(target=_worker, args=(task_queue, done_queue)).start()
-
-        neighbors_distances = []
-        neighbors_indices = []
-        centres_id = []
-        for nj in range(njobs):
-            dd, ii, cid = done_queue.get()
-            neighbors_distances += dd
-            neighbors_indices += ii
-            centres_id += cid
-
-        # This sorting is made to match the order of input and output
-        # centres id
-        idsort = np.argsort(centres_id)
-        neighbors_distances = np.array(neighbors_distances, dtype=object)[
-            idsort
-        ]
-        neighbors_indices = np.array(neighbors_indices, dtype=object)[idsort]
-        return list(neighbors_distances), list(neighbors_indices)
-
-    def shell_neighbors(
-        self,
-        centres,
-        distance_lower_bound=-1.0,
-        distance_upper_bound=-1.0,
-        sorted=False,
-        kind="quicksort",
-        njobs=1,
-    ):
-        """
-        Find all points within given lower and upper distances of each centre.
-        Different distances for each point can be provided.
-
-        Parameters
-        ----------
-        centres: ndarray, shape (m,k)
-            The point or points to search for neighbors of.
-        distance_lower_bound: scalar or ndarray of length m
-            The minimum distance of points to return. If a scalar is provided,
-            the same distance will apply for every centre. An ndarray with
-            individual distances can also be rovided.
-        distance_upper_bound: scalar or ndarray of length m
-            The maximum distance of points to return. If a scalar is provided,
-            the same distance will apply for every centre. An ndarray with
-            individual distances can also be rovided.
-        sorted: bool, optional
-            If True the returned neighbors will be ordered by increasing
-            distance to the centre. Default: False.
-        kind: str, optional
-            When sorted = True, the sorting algorithm can be specified in this
-            keyword. Available algorithms are: ['quicksort', 'mergesort',
-            'heapsort', 'stable']. Default: 'quicksort'
-        njobs: int, optional
-            Number of jobs for parallel computation. Default, njobs=1.
-        metric: str, optional
-            Metric definition to compute distances. Not implemented yet.
-            Distances are computed with euclidean metric.
-
-        Returns
-        -------
-        distances: list, length m
-            Returns a list of m arrays. Each array has the distances to the
-            neighbors of that centre.
-
-        indices: list, length m
-            Returns a list of m arrays. Each array has the indices to the
-            neighbors of that centre.
-        """
-        # Match distance bounds shapes with centres shape
-        if np.isscalar(distance_lower_bound):
-            distance_lower_bound *= np.ones(len(centres))
-        elif len(centres) != len(distance_lower_bound):
-            raise ValueError(
-                "If an array is given in 'distance_lower_bound', \
-                its size must be the same as the number of centres."
-            )
-        if np.isscalar(distance_upper_bound):
-            distance_upper_bound *= np.ones(len(centres))
-        elif len(centres) != len(distance_upper_bound):
-            raise ValueError(
-                "If an array is given in 'distance_upper_bound', \
-                its size must be the same as the number of centres."
-            )
-        if np.any(distance_lower_bound > distance_upper_bound):
-            raise ValueError(
-                "One or more values in 'distance_lower_bound' is greater \
-                than its 'distance_upper_bound' pair."
-            )
-
-        if njobs == 1:
-            return self._shell(
-                centres,
-                distance_lower_bound=distance_lower_bound,
-                distance_upper_bound=distance_upper_bound,
-                sorted=sorted,
-                kind=kind,
-            )
-
-        task_queue = Queue()
-        centres_id = list(range(len(centres)))
-        ic = len(centres) / njobs + 1
-        for nj in range(njobs):
-            args = (
-                centres[nj * ic: (nj + 1) * ic, :],
-                distance_lower_bound[nj * ic: (nj + 1) * ic],
-                distance_upper_bound[nj * ic: (nj + 1) * ic],
-                sorted,
-                kind,
-            )
-            task_queue.put((args, centres_id[nj * ic: (nj + 1) * ic]))
-        for nj in range(njobs):
-            task_queue.put("STOP")
-
-        ################################################
-        def _worker(
-            input, output
-        ):
-            """ Sets the queue for parallel computation
-            input is a queue with args tuples:
-                args are the arguments to pass to search
-            output is a queue storing (distances, indices, id) tuples:
-                id is the centre id.
-            """
-            for args, centres_id in iter(input.get, "STOP"):
-                neighbors_distances, neighbors_indices = self._shell(*args)
-                output.put(
-                    (neighbors_distances, neighbors_indices, centres_id)
-                )
-
-        done_queue = Queue()
-        for nj in range(njobs):
-            Process(target=_worker, args=(task_queue, done_queue)).start()
-
-        neighbors_distances = []
-        neighbors_indices = []
-        centres_id = []
-        for nj in range(njobs):
-            dd, ii, cid = done_queue.get()
-            neighbors_distances += dd
-            neighbors_indices += ii
-            centres_id += cid
-
-        # This sorting is made to match the order of input and output
-        # centres id
-        idsort = np.argsort(centres_id)
-        neighbors_distances = np.array(neighbors_distances, dtype=object)[
-            idsort
-        ]
-        neighbors_indices = np.array(neighbors_indices, dtype=object)[idsort]
-        return list(neighbors_distances), list(neighbors_indices)
-
-    def nearest_neighbors(self, centres, n=1, kind="quicksort", njobs=1):
-        """
-        Find the n nearest-neighbors for each centre.
-
-        Parameters
-        ----------
-        centres: ndarray, shape (m,k)
-            The point or points to search for neighbors of.
-        n: int, optional
-            The number of neighbors to fetch for each centre. Default: 1.
-        kind: str, optional
-            The returned neighbors will be ordered by increasing distance
-            to the centre. The sorting algorithm can be specified in this
-            keyword. Available algorithms are: ['quicksort', 'mergesort',
-            'heapsort', 'stable']. Default: 'quicksort'
-        njobs: int, optional
-            Number of jobs for parallel computation. Default, njobs=1.
-
-        Returns
-        -------
-        distances: list, length m
-            Returns a list of m arrays. Each array has the distances to the
-            neighbors of that centre.
-
-        indices: list, length m
-            Returns a list of m arrays. Each array has the indices to the
-            neighbors of that centre.
-        """
-
-        if njobs == 1:
-            return self._nearest(centres, n=n, kind=kind)
-
-        task_queue = Queue()
-        centres_id = list(range(len(centres)))
-        ic = len(centres) / njobs + 1
-        for nj in range(njobs):
-            args = (centres[nj * ic: (nj + 1) * ic, :], n, kind)
-            task_queue.put((args, centres_id[nj * ic: (nj + 1) * ic]))
-        for nj in range(njobs):
-            task_queue.put("STOP")
-
-        ################################################
-        def _worker(
-            input, output
-        ):
-            """ Sets the queue for parallel computation
-            input is a queue with args tuples:
-                args are the arguments to pass to search
-            output is a queue storing (distances, indices, id) tuples:
-                id is the centre id.
-            """
-            for args, centres_id in iter(input.get, "STOP"):
-                neighbors_distances, neighbors_indices = self._nearest(*args)
-                output.put(
-                    (neighbors_distances, neighbors_indices, centres_id)
-                )
-
-        done_queue = Queue()
-        for nj in range(njobs):
-            Process(target=_worker, args=(task_queue, done_queue)).start()
-
-        neighbors_distances = []
-        neighbors_indices = []
-        centres_id = []
-        for nj in range(njobs):
-            dd, ii, cid = done_queue.get()
-            neighbors_distances += dd
-            neighbors_indices += ii
-            centres_id += cid
-
-        # This sorting is made to match the order of input and output
-        # centres id
-        idsort = np.argsort(centres_id)
-        neighbors_distances = np.array(neighbors_distances, dtype=object)[
-            idsort
-        ]
-        neighbors_indices = np.array(neighbors_indices, dtype=object)[idsort]
-        return list(neighbors_distances), list(neighbors_indices)
-
-        return
-
-    '''
-    # Plot grid
-    def plot_grid(self, proyection="01"):
-        x_proy, y_proy = int(proyection[0]), int(proyection[1])
-        for i in range(len(self.k_bins[:, x_proy])):
-            plt.axvline(self.k_bins[i, x_proy])
-            plt.axhline(self.k_bins[i, y_proy])
-        return plt.show()
-    '''
 
 ###############################################################################
