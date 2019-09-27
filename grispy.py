@@ -135,11 +135,10 @@ class GriSPy(object):
             k_digit[:, k] = np.digitize(k_data, bins=self.k_bins[:, k]) - 1
 
         # Check that there is at least one point per cell
-        if self.N_cells ** self.dim < len(self.data):
-            # compact_ind = np.sum(k_digit*(self.N_cells**np.arange(self.dim)),
-            # axis=1)
+        # if self.N_cells ** self.dim < len(self.data):
+        if True:
             compact_ind = np.ravel_multi_index(
-                [k_digit[:, i] for i in range(self.dim)],
+                k_digit.T,
                 (self.N_cells,) * self.dim,
                 order="F",
             )
@@ -151,26 +150,17 @@ class GriSPy(object):
             split_ind = np.searchsorted(
                 compact_ind, np.arange(self.N_cells ** self.dim)
             )
-            if compact_ind[-1] < (
-                self.N_cells ** self.dim - 1
-            ):  # Delete empty cells
-                split_ind = np.delete(
-                    split_ind, list(range(compact_ind[-1], len(split_ind)))
-                )
+            deleted_cells = np.diff(np.append(-1,split_ind)).astype(bool)
+            split_ind = split_ind[deleted_cells]
+            if split_ind[-1] >= data_ind[-1]:
+                split_ind = split_ind[:-1]
+
             list_ind = np.split(data_ind[compact_ind_sort], split_ind[1:])
             k_digit = k_digit[split_ind]
 
             self.grid = {}
             for i, j in enumerate(k_digit):
                 self.grid[tuple(j)] = list(list_ind[i])
-        else:
-            self.grid = {}
-            for i in range(len(self.data)):
-                cell_point = tuple(k_digit[i, :])
-                if cell_point not in self.grid:
-                    self.grid[cell_point] = [i]
-                else:
-                    self.grid[cell_point].append(i)
 
         # Record date and build time
         self.time = {"buildtime": time.time() - t0}
