@@ -117,8 +117,8 @@ class Test_grispy():
       self.n_nearest = 32
       self.eps = 1e-6
 
-      #self.gsp = GriSPy(self.data, periodic=periodic)
       self.gsp = GriSPy(self.data)
+      #self.gsp = GriSPy(self.data, periodic=periodic)
 
     def test_nearest_neighbors_sort(self, setUp_1d):
 
@@ -132,13 +132,14 @@ class Test_grispy():
 
         for i, l in enumerate(ind):
             for j in l:
-                d = np.fabs(self.centres[i] - self.data[j])
+                d = self.centres[i] - self.data[j]
                 if(self.gsp.periodic_flag):
                     if(d >  0.5*self.lbox): 
                         d = d - self.lbox
                     if(d < -0.5*self.lbox): 
                         d = d + self.lbox
 
+                d = np.fabs(d)
                 assert_(d <= self.upper_radii*(1.+self.eps))
 
     def test_all_in_shell(self, setUp_1d):
@@ -147,12 +148,14 @@ class Test_grispy():
 
         for i, l in enumerate(ind):
             for j in l:
-                d = np.fabs(self.centres[i] - self.data[j])
+                d = self.centres[i] - self.data[j]
                 if(self.gsp.periodic_flag):
                     if(d >  0.5*self.lbox): 
                         d = d - self.lbox
                     if(d < -0.5*self.lbox): 
                         d = d + self.lbox
+
+                d = np.fabs(d)
                 assert_(d <= self.upper_radii*(1.+self.eps))
                 assert_(d >= self.lower_radii*(1.-self.eps))
 
@@ -161,13 +164,14 @@ class Test_grispy():
         b, ind = self.gsp.bubble_neighbors(self.centres, distance_upper_bound=self.upper_radii)
 
         for i, centre in enumerate(self.centres):
-            d = np.fabs(centre - self.data)
+            d = centre - self.data
             if(self.gsp.periodic_flag):
                 mask = (d >  0.5*self.lbox) 
                 d[mask] = d[mask] - self.lbox
                 mask = (d < -0.5*self.lbox)
                 d[mask] = d[mask] + self.lbox
 
+            d = np.fabs(d)
             mask = (d <= self.upper_radii)
             d = d[mask]
             assert_equal(len(b[i]),len(d))
@@ -178,13 +182,14 @@ class Test_grispy():
         b, ind = self.gsp.shell_neighbors(self.centres, distance_lower_bound=self.lower_radii, distance_upper_bound=self.upper_radii)
 
         for i, centre in enumerate(self.centres):
-            d = np.fabs(centre - self.data)
+            d = centre - self.data
             if(self.gsp.periodic_flag):
                 mask = (d >  0.5*self.lbox) 
                 d[mask] = d[mask] - self.lbox
                 mask = (d < -0.5*self.lbox)
                 d[mask] = d[mask] + self.lbox
 
+            d = np.fabs(d)
             mask = (d <= self.upper_radii) * (d >= self.lower_radii)
             d = d[mask]
             assert_equal(len(b[i]),len(d))
@@ -195,16 +200,15 @@ class Test_grispy():
         b, ind = self.gsp.nearest_neighbors(self.centres, n=self.n_nearest)
 
         for i, centre in enumerate(self.centres):
-            d = np.fabs(centre - self.data)
+            d = centre - self.data
             if(self.gsp.periodic_flag):
                 mask = (d >  0.5*self.lbox) 
                 d[mask] = d[mask] - self.lbox
                 mask = (d < -0.5*self.lbox)
                 d[mask] = d[mask] + self.lbox
 
+            d = np.fabs(d)
             d = sorted(np.concatenate(d))
             d = d[:self.n_nearest]
             assert_equal(len(b[i]),len(d))
             np.testing.assert_almost_equal(b[i], d, decimal=16)
-
-
