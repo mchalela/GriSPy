@@ -1,6 +1,9 @@
+import importlib
 import numpy as np
 import matplotlib.pyplot as plt
-from grispy import GriSPy
+import grispy ; importlib.reload(grispy)
+GriSPy = grispy.GriSPy
+#from grispy import GriSPy
 
 plt.ion()
 
@@ -21,8 +24,8 @@ data = np.random.uniform(-Lbox / 2, Lbox / 2, size=(Npoints, dim))
 centres = np.random.uniform(-Lbox / 2, Lbox / 2, size=(Ncentres, dim))
 
 # Grispy params
-upper_radii = 6.0
-lower_radii = 5.9
+upper_radii = 9.0
+lower_radii = 8.9
 n_nearest = 100
 periodic = {0: (-Lbox / 2, Lbox / 2), 1: (-Lbox / 2, Lbox / 2)}
 
@@ -34,9 +37,9 @@ gsp = GriSPy(data, periodic=periodic)
 # gsp.set_periodicity(periodic)
 
 # Query for neighbors within upper_radii
-bubble_dist, bubble_ind = gsp.bubble_neighbors(
-    centres, distance_upper_bound=upper_radii
-)
+#bubble_dist, bubble_ind = gsp.bubble_neighbors(
+#    centres, distance_upper_bound=upper_radii
+#)
 
 # Query for neighbors in a shell within lower_radii and upper_radii
 shell_dist, shell_ind = gsp.shell_neighbors(
@@ -44,7 +47,7 @@ shell_dist, shell_ind = gsp.shell_neighbors(
 )
 
 # Query for nth nearest neighbors
-near_dist, near_ind = gsp.nearest_neighbors(centres, n=n_nearest)
+#near_dist, near_ind = gsp.nearest_neighbors(centres, n=n_nearest)
 
 '''
 # Plot bubble results
@@ -54,9 +57,11 @@ plt.scatter(data[:, 0], data[:, 1], c="k", marker=".", s=3)
 for i in range(Ncentres):
     ind_i = bubble_ind[i]
     plt.scatter(data[ind_i, 0], data[ind_i, 1], c="C3", marker="o", s=5)
+'''
 
 # Plot shell results
-plt.figure()
+plt.figure(1)
+plt.cla()
 plt.title("Shell query")
 plt.scatter(data[:, 0], data[:, 1], c="k", marker=".", s=2)
 for i in range(Ncentres):
@@ -64,6 +69,7 @@ for i in range(Ncentres):
     plt.scatter(data[ind_i, 0], data[ind_i, 1], c="C2", marker="o", s=5)
 plt.plot(centres[0,0],centres[0,1],'ro',ms=10)
 
+'''
 # Plot nearest results
 plt.figure()
 plt.title("n-Nearest query")
