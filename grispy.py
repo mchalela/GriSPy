@@ -1,8 +1,6 @@
-# import os
 import numpy as np
 import time
 import datetime
-# from multiprocessing import Process, Queue
 
 ###############################################################################
 
@@ -150,7 +148,7 @@ class GriSPy(object):
             split_ind = np.searchsorted(
                 compact_ind, np.arange(self.N_cells ** self.dim)
             )
-            deleted_cells = np.diff(np.append(-1,split_ind)).astype(bool)
+            deleted_cells = np.diff(np.append(-1, split_ind)).astype(bool)
             split_ind = split_ind[deleted_cells]
             if split_ind[-1] >= data_ind[-1]:
                 split_ind = split_ind[:-1]
@@ -311,7 +309,7 @@ class GriSPy(object):
         return neighbor_cells
 
     def _mirror_universe(self, centres, distance_upper_bound):
-        """ Generate Terran centres in the Mirror Universe
+        """Generate Terran centres in the Mirror Universe
         """
 
         def _near_boundary(centres, distance_upper_bound):
@@ -319,46 +317,65 @@ class GriSPy(object):
             for k in range(self.dim):
                 if self.periodic[k] is None:
                     continue
-
-                mask[:, k] = (
-                    abs(centres[:, k] - self.periodic[k][0])
-                    < distance_upper_bound
-                )
-                mask[:, k] += (
-                    abs(centres[:, k] - self.periodic[k][1])
-                    < distance_upper_bound
-                )
+                mask[:, k] = abs(
+                    centres[:, k] - self.periodic[k][0]
+                        ) < distance_upper_bound
+                mask[:, k] += abs(
+                    centres[:, k] - self.periodic[k][1]
+                    ) < distance_upper_bound
             return mask.sum(axis=1, dtype=bool)
 
-        # Constructs the indices outside _mirror() to not repeat calculation
-        # for every centre
-        _ind = np.zeros((2 ** self.dim, self.dim), dtype=bool)
+        # Constructs the indices outside _mirror() to not repeat
+        # calculation for every centre
+        ind = np.zeros((2 ** self.dim, self.dim), dtype=bool)
         for k in range(self.dim):
-            _i = np.repeat([False, True], 2 ** k)
-            _ind[:, k] = np.concatenate((_i,) * (2 ** (self.dim - k - 1)))
+            i = np.repeat([False, True], 2 ** k)
+            ind[:, k] = np.concatenate((i,) * (2 ** (self.dim - k - 1)))
 
         def _mirror(centre, distance_upper_bound):
             mirror_centre = np.repeat(
                 centre[np.newaxis, :], 2 ** self.dim, axis=0
-            )
-            mask = np.ones(2 ** self.dim, dtype=bool)
+                )
+            mask = np.zeros(2 ** self.dim, dtype=bool)
             for k in range(self.dim):
-                _i = _ind[:, k]
+                i = ind[:, k]
                 if self.periodic[k] is None:
-                    mask[_i] = False
                     continue
-                if abs(centre[k] - self.periodic[k][0]) < distance_upper_bound:
-                    mirror_centre[_i, k] += (
-                        self.periodic[k][1] - self.periodic[k][0]
-                    )
-                elif (
+
+                near_bottom_edge = (
+                    abs(centre[k] - self.periodic[k][0]) < distance_upper_bound
+                )
+                near_top_edge = (
                     abs(centre[k] - self.periodic[k][1]) < distance_upper_bound
-                ):
-                    mirror_centre[_i, k] -= (
+                )
+
+                if near_bottom_edge and near_top_edge:
+                    # If it is near both edges
+                    i_tmp = np.arange(i.size)  # numeric indeces
+                    # Separate both indeces
+                    i_bottom = i.copy()
+                    i_top = i.copy()
+                    i_bottom[i_tmp[i][0]] = False
+                    i_top[i_tmp[i][1]] = False
+                    # Compute position
+                    mirror_centre[i_bottom, k] += (
                         self.periodic[k][1] - self.periodic[k][0]
                     )
-                else:
-                    mask[_i] = False
+                    mirror_centre[i_top, k] -= (
+                        self.periodic[k][1] - self.periodic[k][0]
+                    )
+                    mask += i
+                elif near_bottom_edge or near_top_edge:
+                    # If it is near one of the edges
+                    if near_bottom_edge:
+                        mirror_centre[i, k] += (
+                            self.periodic[k][1] - self.periodic[k][0]
+                        )
+                    elif near_top_edge:
+                        mirror_centre[i, k] -= (
+                            self.periodic[k][1] - self.periodic[k][0]
+                        )
+                    mask += i
             return mirror_centre[mask]
 
         terran_centres = np.array([[]] * self.dim).T
