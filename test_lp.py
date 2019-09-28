@@ -100,3 +100,48 @@ class Test_data_consistency():
       for i in range(len(b)):
         assert_equal(np.shape(b[i]),(self.n_nearest,))
         assert_equal(np.shape(ind[i]),(self.n_nearest,))
+
+class Test_grispy():
+
+    @pytest.fixture
+    def setUp_1d(self):
+      
+      np.random.seed(1234)
+      npoints = 10 ** 5
+      lbox = 100.0
+      periodic = {0: (-lbox*0.5, lbox*0.5)}
+      self.centres = lbox*(0.5 - np.random.rand(1,10).T)
+      self.data = np.random.uniform(-0.5*lbox, 0.5*lbox, size=(npoints, 1))
+      self.upper_radii = 0.25*lbox
+      self.lower_radii = 0.20*lbox
+      self.n_nearest = 32
+      self.eps = 1e-6
+
+      self.gsp = GriSPy(self.data)
+
+    def test_nearest_neighbors_sort(self, setUp_1d):
+
+      b, ind = self.gsp.nearest_neighbors(self.centres, n=self.n_nearest)
+      for i in range(len(b)):
+        assert_equal(sorted(b[i]), b[i])
+
+    def test_all_in_bubble(self, setUp_1d):
+
+        b, ind = self.gsp.bubble_neighbors(self.centres, distance_upper_bound=self.upper_radii)
+
+        for i, l in enumerate(ind):
+            for j in l:
+                d = np.fabs(self.centres[i] - self.data[j])
+                assert_(d <= self.upper_radii*(1.+self.eps))
+
+    def test_all_in_shell(self, setUp_1d):
+
+        b, ind = self.gsp.shell_neighbors(self.centres, distance_lower_bound=self.lower_radii, distance_upper_bound=self.upper_radii)
+
+        for i, l in enumerate(ind):
+            for j in l:
+                d = np.fabs(self.centres[i] - self.data[j])
+                assert_(d <= self.upper_radii*(1.+self.eps))
+                assert_(d >= self.lower_radii*(1.-self.eps))
+
+
