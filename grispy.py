@@ -1,11 +1,7 @@
 import numpy as np
 import time
 import datetime
-<<<<<<< HEAD
-
 # from multiprocessing import Process, Queue
-=======
->>>>>>> b60b70db952cb32b68844bbcc86067317ca3ecc6
 
 ###############################################################################
 
@@ -330,34 +326,31 @@ class GriSPy(object):
                     ) < distance_upper_bound
             return mask.sum(axis=1, dtype=bool)
 
-<<<<<<< HEAD
+        '''
         # Constructs the indices outside _mirror() to not repeat calculation
         # for every centre
         _ind = np.zeros((3 ** self.dim, self.dim), dtype=bool)
         for k in range(self.dim):
             _i = np.repeat([True, False, True], 3 ** k)
             _ind[:, k] = np.concatenate((_i,) * (3 ** (self.dim - k - 1)))
-=======
+
         # Constructs the indices outside _mirror() to not repeat
         # calculation for every centre
         ind = np.zeros((2 ** self.dim, self.dim), dtype=bool)
         for k in range(self.dim):
             i = np.repeat([False, True], 2 ** k)
             ind[:, k] = np.concatenate((i,) * (2 ** (self.dim - k - 1)))
->>>>>>> b60b70db952cb32b68844bbcc86067317ca3ecc6
+        '''
 
         def _mirror(centre, distance_upper_bound):
             '''
             mirror_centre = np.repeat(
-<<<<<<< HEAD
                 centre[np.newaxis, :], 3 ** self.dim, axis=0
             )
             mask = np.ones(3 ** self.dim, dtype=bool)
-=======
                 centre[np.newaxis, :], 2 ** self.dim, axis=0
                 )
             mask = np.zeros(2 ** self.dim, dtype=bool)
->>>>>>> b60b70db952cb32b68844bbcc86067317ca3ecc6
             for k in range(self.dim):
                 i = ind[:, k]
                 if self.periodic[k] is None:
@@ -382,7 +375,22 @@ class GriSPy(object):
                     mirror_centre[i_bottom, k] += (
                         self.periodic[k][1] - self.periodic[k][0]
                     )
-<<<<<<< HEAD
+                    mirror_centre[i_top, k] -= (
+                        self.periodic[k][1] - self.periodic[k][0]
+                    )
+                    mask += i
+                elif near_bottom_edge or near_top_edge:
+                    # If it is near one of the edges
+                    if near_bottom_edge:
+                        mirror_centre[i, k] += (
+                            self.periodic[k][1] - self.periodic[k][0]
+                        )
+                    elif near_top_edge:
+                        mirror_centre[i, k] -= (
+                            self.periodic[k][1] - self.periodic[k][0]
+                        )
+                    mask += i
+
 
                 elif ( ###
                     abs(centre[k] + self.periodic[k][0]) < distance_upper_bound
@@ -408,27 +416,11 @@ class GriSPy(object):
                 else:
                     mask[_i] = False
             '''
+
             mirror_centre = centre - self._periodic_edges
             mask = 0.5 * np.abs(mirror_centre) < distance_upper_bound
             mask = np.prod(mask, 1, dtype=bool)
 
-=======
-                    mirror_centre[i_top, k] -= (
-                        self.periodic[k][1] - self.periodic[k][0]
-                    )
-                    mask += i
-                elif near_bottom_edge or near_top_edge:
-                    # If it is near one of the edges
-                    if near_bottom_edge:
-                        mirror_centre[i, k] += (
-                            self.periodic[k][1] - self.periodic[k][0]
-                        )
-                    elif near_top_edge:
-                        mirror_centre[i, k] -= (
-                            self.periodic[k][1] - self.periodic[k][0]
-                        )
-                    mask += i
->>>>>>> b60b70db952cb32b68844bbcc86067317ca3ecc6
             return mirror_centre[mask]
 
         terran_centres = np.array([[]] * self.dim).T
