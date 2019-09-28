@@ -326,102 +326,13 @@ class GriSPy(object):
                     ) < distance_upper_bound
             return mask.sum(axis=1, dtype=bool)
 
-        '''
-        # Constructs the indices outside _mirror() to not repeat calculation
-        # for every centre
-        _ind = np.zeros((3 ** self.dim, self.dim), dtype=bool)
-        for k in range(self.dim):
-            _i = np.repeat([True, False, True], 3 ** k)
-            _ind[:, k] = np.concatenate((_i,) * (3 ** (self.dim - k - 1)))
-
-        # Constructs the indices outside _mirror() to not repeat
-        # calculation for every centre
-        ind = np.zeros((2 ** self.dim, self.dim), dtype=bool)
-        for k in range(self.dim):
-            i = np.repeat([False, True], 2 ** k)
-            ind[:, k] = np.concatenate((i,) * (2 ** (self.dim - k - 1)))
-        '''
 
         def _mirror(centre, distance_upper_bound):
-            '''
-            mirror_centre = np.repeat(
-                centre[np.newaxis, :], 3 ** self.dim, axis=0
-            )
-            mask = np.ones(3 ** self.dim, dtype=bool)
-                centre[np.newaxis, :], 2 ** self.dim, axis=0
-                )
-            mask = np.zeros(2 ** self.dim, dtype=bool)
-            for k in range(self.dim):
-                i = ind[:, k]
-                if self.periodic[k] is None:
-                    continue
-
-                near_bottom_edge = (
-                    abs(centre[k] - self.periodic[k][0]) < distance_upper_bound
-                )
-                near_top_edge = (
-                    abs(centre[k] - self.periodic[k][1]) < distance_upper_bound
-                )
-
-                if near_bottom_edge and near_top_edge:
-                    # If it is near both edges
-                    i_tmp = np.arange(i.size)  # numeric indeces
-                    # Separate both indeces
-                    i_bottom = i.copy()
-                    i_top = i.copy()
-                    i_bottom[i_tmp[i][0]] = False
-                    i_top[i_tmp[i][1]] = False
-                    # Compute position
-                    mirror_centre[i_bottom, k] += (
-                        self.periodic[k][1] - self.periodic[k][0]
-                    )
-                    mirror_centre[i_top, k] -= (
-                        self.periodic[k][1] - self.periodic[k][0]
-                    )
-                    mask += i
-                elif near_bottom_edge or near_top_edge:
-                    # If it is near one of the edges
-                    if near_bottom_edge:
-                        mirror_centre[i, k] += (
-                            self.periodic[k][1] - self.periodic[k][0]
-                        )
-                    elif near_top_edge:
-                        mirror_centre[i, k] -= (
-                            self.periodic[k][1] - self.periodic[k][0]
-                        )
-                    mask += i
-
-
-                elif ( ###
-                    abs(centre[k] + self.periodic[k][0]) < distance_upper_bound
-                ):
-                    mirror_centre[_i, k] -= (
-                        self.periodic[k][1] - self.periodic[k][0]
-                    )
-
-                elif (
-                    abs(centre[k] - self.periodic[k][1]) < distance_upper_bound
-                ):
-                    mirror_centre[_i, k] -= (
-                        self.periodic[k][1] - self.periodic[k][0]
-                    )
-
-                elif ( ###
-                    abs(centre[k] + self.periodic[k][1]) < distance_upper_bound
-                ):
-                    mirror_centre[_i, k] += (
-                        self.periodic[k][1] - self.periodic[k][0]
-                    )
-
-                else:
-                    mask[_i] = False
-            '''
-
             mirror_centre = centre - self._periodic_edges
             mask = 0.5 * np.abs(mirror_centre) < distance_upper_bound
-            mask = np.prod(mask, 1, dtype=bool)
-
+            mask = np.sum(mask, 1, dtype=bool)
             return mirror_centre[mask]
+
 
         terran_centres = np.array([[]] * self.dim).T
         terran_indices = np.array([], dtype=int)
@@ -440,7 +351,6 @@ class GriSPy(object):
                 terran_indices = np.concatenate(
                     (terran_indices, np.repeat(i, len(mirror_centre)))
                 )
-
         return terran_centres, terran_indices
 
     def _check_data_dimensionality(self, shape):
@@ -851,12 +761,13 @@ class GriSPy(object):
                 self._periodic_edges = [
                     np.insert(self.periodic[k],1,0.) for k in range(self.dim)
                 ]
-                self._periodic_edges = itertools.product(
-                    *self._periodic_edges
-                )
-                self._periodic_edges = np.array(
-                    [i for i in self._periodic_edges]
+                self._periodic_edges = np.reshape(
+                    list(itertools.product(*self._periodic_edges)),
+                    (3 ** self.dim, self.dim)
                 )
                 self._periodic_edges -= self._periodic_edges[::-1]
+                self._periodic_edges = np.unique(self._periodic_edges, axis=1)
+                mask = self._periodic_edges.sum(axis=1, dtype=bool)
+                self._periodic_edges = self._periodic_edges[mask]
 
 ###############################################################################
