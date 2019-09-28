@@ -21,7 +21,8 @@ Lbox = 10.0
 
 np.random.seed(0)
 data = np.random.uniform(-Lbox / 2, Lbox / 2, size=(Npoints, dim))
-centres = np.random.uniform(-Lbox / 2, Lbox / 2, size=(Ncentres, dim))
+#centres = np.random.uniform(-Lbox / 2, Lbox / 2, size=(Ncentres, dim))
+centres = np.array([[0.,0.]])
 
 # Grispy params
 upper_radii = 9.0
