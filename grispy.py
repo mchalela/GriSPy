@@ -309,41 +309,41 @@ class GriSPy(object):
                 neighbor_cells[i] = self._empty
         return neighbor_cells
 
+
+    def _near_boundary(self, centres, distance_upper_bound):
+        mask = np.zeros((len(centres), self.dim), dtype=bool)
+        for k in range(self.dim):
+            if self.periodic[k] is None:
+                continue
+            mask[:, k] = abs(
+                centres[:, k] - self.periodic[k][0]
+                    ) < distance_upper_bound
+            mask[:, k] += abs(
+                centres[:, k] - self.periodic[k][1]
+                ) < distance_upper_bound
+        return mask.sum(axis=1, dtype=bool)
+
+
+    def _mirror(self, centre, distance_upper_bound):
+        mirror_centre = centre - self._periodic_edges
+        mask = 0.5 * np.abs(mirror_centre) < distance_upper_bound
+        mask = np.sum(mask, 1, dtype=bool)
+        return mirror_centre[mask]
+
+
     def _mirror_universe(self, centres, distance_upper_bound):
         """Generate Terran centres in the Mirror Universe
         """
-
-        def _near_boundary(centres, distance_upper_bound):
-            mask = np.zeros((len(centres), self.dim), dtype=bool)
-            for k in range(self.dim):
-                if self.periodic[k] is None:
-                    continue
-                mask[:, k] = abs(
-                    centres[:, k] - self.periodic[k][0]
-                        ) < distance_upper_bound
-                mask[:, k] += abs(
-                    centres[:, k] - self.periodic[k][1]
-                    ) < distance_upper_bound
-            return mask.sum(axis=1, dtype=bool)
-
-
-        def _mirror(centre, distance_upper_bound):
-            mirror_centre = centre - self._periodic_edges
-            mask = 0.5 * np.abs(mirror_centre) < distance_upper_bound
-            mask = np.sum(mask, 1, dtype=bool)
-            return mirror_centre[mask]
-
-
         terran_centres = np.array([[]] * self.dim).T
         terran_indices = np.array([], dtype=int)
-        near_boundary = _near_boundary(centres, distance_upper_bound)
+        near_boundary = self._near_boundary(centres, distance_upper_bound)
         if not np.any(near_boundary):
             return terran_centres, terran_indices
 
         for i, centre in enumerate(centres):
             if not near_boundary[i]:
                 continue
-            mirror_centre = _mirror(centre, distance_upper_bound[i])
+            mirror_centre = self._mirror(centre, distance_upper_bound[i])
             if len(mirror_centre) > 0:
                 terran_centres = np.concatenate(
                     (terran_centres, mirror_centre), axis=0
@@ -766,7 +766,7 @@ class GriSPy(object):
                     (3 ** self.dim, self.dim)
                 )
                 self._periodic_edges -= self._periodic_edges[::-1]
-                self._periodic_edges = np.unique(self._periodic_edges, axis=1)
+                self._periodic_edges = np.unique(self._periodic_edges, axis=0)
                 mask = self._periodic_edges.sum(axis=1, dtype=bool)
                 self._periodic_edges = self._periodic_edges[mask]
 
