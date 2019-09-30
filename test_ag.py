@@ -1,5 +1,6 @@
 import numpy as np
 from grispy import GriSPy
+import pytest
 
 def test_distance_A_01():
     # Distancia a-->b = b-->a (metric='euclid')
@@ -80,3 +81,32 @@ def test_distance_D_02():
     centre_0 = np.random.uniform(-10, 10, size=(2,))
     dist = gsp.distance(centre_0, data)
     assert not np.isnan(dist).any()
+
+def test__init__A_01():
+    # Data type
+    data = 4
+    periodic = {0: None, 1: None}
+    with pytest.raises(TypeError, match=r".*must be a numpy array*"):
+        gsp = GriSPy(data=data, N_cells=2, copy_data=False, periodic=periodic, metric='sphere', load_grid=None)
+
+def test__init__A_02():
+    # Data format
+    data = np.array([])
+    periodic = {0: None, 1: None}
+    with pytest.raises(ValueError, match=r".*Data array has the wrong shape*"):
+        gsp = GriSPy(data=data, N_cells=2, copy_data=False, periodic=periodic, metric='sphere', load_grid=None)
+
+def test__init__A_03():
+    # Data format
+    data = np.array([1, 1, 1])
+    periodic = {0: None, 1: None}
+    with pytest.raises(ValueError, match=r".*Data array has the wrong shape*"):
+        gsp = GriSPy(data=data, N_cells=2, copy_data=False, periodic=periodic, metric='sphere', load_grid=None)
+
+def test__init__A_04():
+    # Data value
+    data = np.array([[]])
+    periodic = {0: None, 1: None}
+    with pytest.raises(ValueError, match=r".*Data must have at least 1 point*"):
+        gsp = GriSPy(data=data, N_cells=2, copy_data=False, periodic=periodic, metric='sphere', load_grid=None)
+
