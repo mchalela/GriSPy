@@ -766,13 +766,13 @@ class GriSPy(object):
                 [x is not None for x in list(periodic.values())]
             )
             if self.periodic_flag:
-                self.periodic = {
-                    k: periodic.get(k, (0,0)) for k in range(self.dim)
-                }
-
                 import itertools
+
+                self.periodic = {k: periodic.get(k) for k in range(self.dim)}
                 self._periodic_edges = [
-                    np.insert(self.periodic[k],1,0.) for k in range(self.dim)
+                    (0,0,0) if not periodic.get(k)
+                    else np.insert(periodic.get(k),1,0.)
+                    for k in range(self.dim)
                 ]
                 self._periodic_edges = np.reshape(
                     list(itertools.product(*self._periodic_edges)),
