@@ -255,15 +255,13 @@ class GriSPy(object):
                 np.digitize(
                     centres[:, k] - distance_upper_bound,
                     bins=self.k_bins[:, k],
-                )
-                - 1
+                ) - 1
             )
             k_cell_max[:, k] = (
                 np.digitize(
                     centres[:, k] + distance_upper_bound,
                     bins=self.k_bins[:, k],
-                )
-                - 1
+                ) - 1
             )
 
             k_cell_min[k_cell_min[:, k] < 0, k] = 0
@@ -289,22 +287,22 @@ class GriSPy(object):
             # Calculo la distancia de cada centro i a sus celdas vecinas,
             # luego descarto las celdas que no toca el circulo definido por
             # la distancia
-            cells_physical = np.array(
-                [
-                    self.k_bins[neighbor_cells[i][:, k], k]
-                    + 0.5 * cell_size[k]
-                    for k in range(self.dim)
-                ]
-            ).T
+            cells_physical = [
+                self.k_bins[neighbor_cells[i][:, k], k] + 0.5 * cell_size[k]
+                for k in range(self.dim)
+            ]
+            cells_physical = np.array(cells_physical).T
             mask_cells = (
-                self.distance(centres[i], cells_physical)
-                < distance_upper_bound[i] + cell_radii
+                self.distance(
+                    centres[i], cells_physical
+                ) < distance_upper_bound[i] + cell_radii
             )
 
             if shell_flag:
                 mask_cells *= (
-                    self.distance(centres[i], cells_physical)
-                    > distance_lower_bound[i] - cell_radii
+                    self.distance(
+                        centres[i], cells_physical
+                    ) > distance_lower_bound[i] - cell_radii
                 )
 
             if np.any(mask_cells):
@@ -313,7 +311,6 @@ class GriSPy(object):
                 neighbor_cells[i] = self._empty
         return neighbor_cells
 
-
     def _near_boundary(self, centres, distance_upper_bound):
         mask = np.zeros((len(centres), self.dim), dtype=bool)
         for k in range(self.dim):
@@ -321,19 +318,17 @@ class GriSPy(object):
                 continue
             mask[:, k] = abs(
                 centres[:, k] - self.periodic[k][0]
-                    ) < distance_upper_bound
+            ) < distance_upper_bound
             mask[:, k] += abs(
                 centres[:, k] - self.periodic[k][1]
-                ) < distance_upper_bound
+            ) < distance_upper_bound
         return mask.sum(axis=1, dtype=bool)
-
 
     def _mirror(self, centre, distance_upper_bound):
         mirror_centre = centre - self._periodic_edges
         mask = 0.5 * np.abs(mirror_centre) < distance_upper_bound
         mask = np.sum(mask, 1, dtype=bool)
         return mirror_centre[mask]
-
 
     def _mirror_universe(self, centres, distance_upper_bound):
         """Generate Terran centres in the Mirror Universe
@@ -366,7 +361,7 @@ class GriSPy(object):
             raise ValueError(
                 "Data array has the wrong shape. Expected shape of (n, k), "
                 "got instead {}".format(shape)
-                )
+            )
 
     def _check_data_amount(self, data):
         """ Check if data has the expected dimension
@@ -385,7 +380,7 @@ class GriSPy(object):
             raise ValueError(
                 "Centre array has the wrong shape. Expected shape of (m, {}), "
                 "got instead {}".format(self.dim, shape)
-                )
+            )
 
     # User methods
     def bubble_neighbors(
@@ -590,9 +585,9 @@ class GriSPy(object):
             mask_distances_upper = (
                 neighbors_distances[i] <= distance_upper_bound[i]
             )
+            mask_distances_lower = neighbors_distances[i][mask_distances_upper]
             mask_distances_lower = (
-                neighbors_distances[i][mask_distances_upper]
-                > distance_lower_bound[i]
+                mask_distances_lower > distance_lower_bound[i]
             )
             aux = neighbors_distances[i]
             aux = aux[mask_distances_upper]
@@ -745,7 +740,7 @@ class GriSPy(object):
             raise FileExistsError(
                 f"The file {file} already exists. "
                 "You may want to use the keyword overwrite=True."
-                )
+            )
 
         np.save(file, dic)
         print(f"GriSPy grid attributes saved to: {file}")
@@ -779,8 +774,8 @@ class GriSPy(object):
 
                 self.periodic = {k: periodic.get(k) for k in range(self.dim)}
                 self._periodic_edges = [
-                    (0,0,0) if not periodic.get(k)
-                    else np.insert(periodic.get(k),1,0.)
+                    (0, 0, 0) if not periodic.get(k)
+                    else np.insert(periodic.get(k), 1, 0.)
                     for k in range(self.dim)
                 ]
                 self._periodic_edges = np.reshape(

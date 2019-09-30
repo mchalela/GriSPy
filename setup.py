@@ -73,7 +73,7 @@ def do_setup():
         #    'example': ['example'],
         #    'test': ['pytest','coverage','pytest-cov'],
         # }
-        )
+    )
 
 
 if __name__ == "__main__":

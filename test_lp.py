@@ -2,11 +2,7 @@ from __future__ import division, print_function, absolute_import
 
 from numpy.testing import (
     assert_equal,
-    assert_array_equal,
-    assert_almost_equal,
-    assert_array_almost_equal,
-    assert_,
-    run_module_suite,
+    assert_
 )
 
 import os
@@ -79,8 +75,7 @@ class Test_data_consistency:
     def test_nearest_neighbors_single_query(self, setUp):
 
         b, ind = self.gsp.nearest_neighbors(
-            np.array([[0, 0, 0]]),
-            n=self.n_nearest
+            np.array([[0, 0, 0]]), n=self.n_nearest
         )
 
         assert_(isinstance(b, list))
@@ -145,8 +140,8 @@ class Test_grispy:
         self.eps = 1e-6
 
         self.gsp = GriSPy(self.data)
-        #periodic = {0: (-self.lbox * 0.5, self.lbox * 0.5)}
-        #self.gsp = GriSPy(self.data, periodic=periodic)
+        # periodic = {0: (-self.lbox * 0.5, self.lbox * 0.5)}
+        # self.gsp = GriSPy(self.data, periodic=periodic)
 
     def test_nearest_neighbors_sort(self, setUp_1d):
 
@@ -162,7 +157,7 @@ class Test_grispy:
 
         for i, l in enumerate(ind):
             for j in l:
-                d = self.data[j] - self.centres[i] 
+                d = self.data[j] - self.centres[i]
                 if self.gsp.periodic_flag:
                     if d > 0.5 * self.lbox:
                         d = d - self.lbox
@@ -182,7 +177,7 @@ class Test_grispy:
 
         for i, l in enumerate(ind):
             for j in l:
-                d = self.data[j] - self.centres[i] 
+                d = self.data[j] - self.centres[i]
                 if self.gsp.periodic_flag:
                     if d > 0.5 * self.lbox:
                         d = d - self.lbox
@@ -222,7 +217,7 @@ class Test_grispy:
         )
 
         for i, centre in enumerate(self.centres):
-            d = self.data - centre 
+            d = self.data - centre
             if self.gsp.periodic_flag:
                 mask = d > 0.5 * self.lbox
                 d[mask] = d[mask] - self.lbox
