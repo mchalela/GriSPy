@@ -191,7 +191,9 @@ class Test_grispy:
     def test_bubble_precision(self, setUp_1d):
 
         b, ind = self.gsp.bubble_neighbors(
-            self.centres, distance_upper_bound=self.upper_radii
+            self.centres,
+            distance_upper_bound=self.upper_radii,
+            sorted=True
         )
 
         for i, centre in enumerate(self.centres):
@@ -206,7 +208,7 @@ class Test_grispy:
             mask = d < self.upper_radii
             d = d[mask]
             assert_equal(len(b[i]), len(d))
-            np.testing.assert_almost_equal(sorted(b[i]), sorted(d), decimal=14)
+            np.testing.assert_almost_equal(b[i], sorted(d), decimal=14)
 
     def test_shell_precision(self, setUp_1d):
 
@@ -214,6 +216,7 @@ class Test_grispy:
             self.centres,
             distance_lower_bound=self.lower_radii,
             distance_upper_bound=self.upper_radii,
+            sorted=True
         )
 
         for i, centre in enumerate(self.centres):
@@ -228,7 +231,7 @@ class Test_grispy:
             mask = (d <= self.upper_radii) * (d >= self.lower_radii)
             d = d[mask]
             assert_equal(len(b[i]), len(d))
-            np.testing.assert_almost_equal(sorted(b[i]), sorted(d), decimal=14)
+            np.testing.assert_almost_equal(b[i], sorted(d), decimal=14)
 
     def test_nearest_newighbors_precision(self, setUp_1d):
 
