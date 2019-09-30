@@ -140,8 +140,8 @@ class Test_grispy:
         self.eps = 1e-6
 
         self.gsp = GriSPy(self.data)
-        # periodic = {0: (-self.lbox * 0.5, self.lbox * 0.5)}
-        # self.gsp = GriSPy(self.data, periodic=periodic)
+        periodic = {0: (-self.lbox * 0.5, self.lbox * 0.5)}
+        self.gsp = GriSPy(self.data, periodic=periodic)
 
     def test_nearest_neighbors_sort(self, setUp_1d):
 
@@ -203,10 +203,10 @@ class Test_grispy:
                 d[mask] = d[mask] + self.lbox
             d = np.fabs(d)
 
-            mask = d <= self.upper_radii
+            mask = d < self.upper_radii
             d = d[mask]
             assert_equal(len(b[i]), len(d))
-            np.testing.assert_almost_equal(sorted(b[i]), sorted(d), decimal=16)
+            np.testing.assert_almost_equal(sorted(b[i]), sorted(d), decimal=14)
 
     def test_shell_precision(self, setUp_1d):
 
@@ -228,7 +228,7 @@ class Test_grispy:
             mask = (d <= self.upper_radii) * (d >= self.lower_radii)
             d = d[mask]
             assert_equal(len(b[i]), len(d))
-            np.testing.assert_almost_equal(sorted(b[i]), sorted(d), decimal=16)
+            np.testing.assert_almost_equal(sorted(b[i]), sorted(d), decimal=14)
 
     def test_nearest_newighbors_precision(self, setUp_1d):
 
