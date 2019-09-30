@@ -117,6 +117,9 @@ class GriSPy(object):
 
         self._empty = np.array([], dtype=int)  # Useful for empty arrays
 
+    def __getitem__(self, key):
+        return getattr(self, key)
+
     def _build_grid(self, epsilon=1.0e-6):
         """ Builds the grid
         """
@@ -702,7 +705,7 @@ class GriSPy(object):
 
         return neighbors_distances, neighbors_indices
 
-    def save_grid(self, file="grispy.npy"):
+    def save_grid(self, file="grispy.npy", overwrite=False):
         """
         Save all grid attributes in a binary file for future use.
 
@@ -713,6 +716,9 @@ class GriSPy(object):
             binary file with extension '.npy'. If the extension is not
             explicitely given it will be added automatically.
             Default: grispy.npy
+        overwrite: bool, optional
+            If True the file will be overwritten in case it already exists.
+            Default: False
         """
         dic = {
             "grid": self.grid,
@@ -725,8 +731,15 @@ class GriSPy(object):
             "data": self.data
         }
 
+        import os
+        if not overwrite and os.path.isfile(file):
+            raise FileExistsError(
+                f"The file {file} already exists. "
+                "You may want to use the keyword overwrite=True."
+                )
+
         np.save(file, dic)
-        print("GriSPy grid attributes saved to: {}".format(file))
+        print(f"GriSPy grid attributes saved to: {file}")
 
     def set_periodicity(self, periodic={}):
         """
