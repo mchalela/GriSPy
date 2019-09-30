@@ -162,14 +162,14 @@ class Test_grispy:
 
         for i, l in enumerate(ind):
             for j in l:
-                d = self.centres[i] - self.data[j]
+                d = self.data[j] - self.centres[i] 
                 if self.gsp.periodic_flag:
                     if d > 0.5 * self.lbox:
                         d = d - self.lbox
                     if d < -0.5 * self.lbox:
                         d = d + self.lbox
-
                 d = np.fabs(d)
+
                 assert_(d <= self.upper_radii * (1.0 + self.eps))
 
     def test_all_in_shell(self, setUp_1d):
@@ -182,14 +182,14 @@ class Test_grispy:
 
         for i, l in enumerate(ind):
             for j in l:
-                d = self.centres[i] - self.data[j]
+                d = self.data[j] - self.centres[i] 
                 if self.gsp.periodic_flag:
                     if d > 0.5 * self.lbox:
                         d = d - self.lbox
                     if d < -0.5 * self.lbox:
                         d = d + self.lbox
-
                 d = np.fabs(d)
+
                 assert_(d <= self.upper_radii * (1.0 + self.eps))
                 assert_(d >= self.lower_radii * (1.0 - self.eps))
 
@@ -200,14 +200,14 @@ class Test_grispy:
         )
 
         for i, centre in enumerate(self.centres):
-            d = centre - self.data
+            d = self.data - centre
             if self.gsp.periodic_flag:
                 mask = d > 0.5 * self.lbox
                 d[mask] = d[mask] - self.lbox
                 mask = d < -0.5 * self.lbox
                 d[mask] = d[mask] + self.lbox
-
             d = np.fabs(d)
+
             mask = d <= self.upper_radii
             d = d[mask]
             assert_equal(len(b[i]), len(d))
@@ -222,7 +222,7 @@ class Test_grispy:
         )
 
         for i, centre in enumerate(self.centres):
-            d = centre - self.data
+            d = self.data - centre 
             if self.gsp.periodic_flag:
                 mask = d > 0.5 * self.lbox
                 d[mask] = d[mask] - self.lbox
@@ -240,7 +240,7 @@ class Test_grispy:
         b, ind = self.gsp.nearest_neighbors(self.centres, n=self.n_nearest)
 
         for i, centre in enumerate(self.centres):
-            d = centre - self.data
+            d = self.data - centre
             if self.gsp.periodic_flag:
                 mask = d > 0.5 * self.lbox
                 d[mask] = d[mask] - self.lbox
