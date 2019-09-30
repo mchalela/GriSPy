@@ -83,27 +83,26 @@ class Test_periodicity_grispy:
     def test_periodicity_in_shell(self, setUp_1d):
 
         centres = np.array([[0.0, 0.0, 0.0]])
-        upper_radii = 0.81 * self.lbox
-        lower_radii = 0.79 * self.lbox
+        upper_radii = 0.8 * self.lbox
+        lower_radii = 0.8 * self.lbox
 
         for j in range(3):
-            self.gsp.set_periodicity({j: (-self.lbox * 0.5, self.lbox * 0.5)})
+            self.gsp.set_periodicity({j: (-0.5 * self.lbox, 0.5 * self.lbox)})
 
             dis, ind = self.gsp.shell_neighbors(
                 centres,
-                distance_lower_bound=lower_radii,
-                distance_upper_bound=upper_radii,
+                distance_lower_bound=lower_radii - self.eps,
+                distance_upper_bound=upper_radii + self.eps,
             )
             dis, ind = dis[0], ind[0]
 
             aux = np.argsort(ind)
             ind = ind[aux]
             dis = dis[aux]
-
             for i in range(2):
                 assert_equal(ind[i], i + (j * 2))
-                assert_(dis[i] <= upper_radii)
-                assert_(dis[i] >= lower_radii)
+                assert_(dis[i] >= lower_radii - self.eps)
+                assert_(dis[i] <= upper_radii + self.eps)
 
         self.gsp.set_periodicity(
             {
@@ -114,8 +113,8 @@ class Test_periodicity_grispy:
         )
         dis, ind = self.gsp.shell_neighbors(
             centres,
-            distance_lower_bound=lower_radii,
-            distance_upper_bound=upper_radii
+            distance_lower_bound=lower_radii - self.eps,
+            distance_upper_bound=upper_radii + self.eps
         )
         dis, ind = dis[0], ind[0]
 
@@ -125,8 +124,8 @@ class Test_periodicity_grispy:
 
         for i in range(6):
             assert_equal(ind[i], i)
-            assert_(dis[i] <= upper_radii * (1.0 + self.eps))
             assert_(dis[i] >= lower_radii * (1.0 - self.eps))
+            assert_(dis[i] <= upper_radii * (1.0 + self.eps))
 
     def test_periodicity_in_bubble(self, setUp_1d):
 
