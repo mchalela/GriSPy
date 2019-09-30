@@ -96,6 +96,7 @@ class GriSPy(object):
             self.data = data.copy() if copy_data else data
             if self._check_data_dimensionality(self.data.shape):
                 self.dim = self.data.shape[1]
+            self._check_data_amount(self.data)
             self.N_cells = N_cells
             self.metric = metric
             self.set_periodicity(periodic)
@@ -366,6 +367,14 @@ class GriSPy(object):
                 "Data array has the wrong shape. Expected shape of (n, k), "
                 "got instead {}".format(shape)
                 )
+
+    def _check_data_amount(self, data):
+        """ Check if data has the expected dimension
+        """
+        if len(data.flatten()) > 0:
+            return True
+        else:
+            raise ValueError("Data must have at least 1 point")
 
     def _check_centre_dimensionality(self, shape):
         """ Check if centres has the same dimension as data
