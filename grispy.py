@@ -326,7 +326,7 @@ class GriSPy(object):
 
     def _mirror(self, centre, distance_upper_bound):
         mirror_centre = centre - self._periodic_edges
-        mask = 0.5 * np.abs(mirror_centre) < distance_upper_bound
+        mask = np.abs(mirror_centre) < self._periodic_range
         mask = np.sum(mask, 1, dtype=bool)
         return mirror_centre[mask]
 
@@ -762,9 +762,9 @@ class GriSPy(object):
             Default: all axis set to None.
             Example, periodic = { 0: (0, 360), 1: None}.
         """
+        self.periodic = {}
         if len(periodic) == 0:
             self.periodic_flag = False
-            self.periodic = {}
         else:
             self.periodic_flag = any(
                 [x is not None for x in list(periodic.values())]
@@ -772,12 +772,15 @@ class GriSPy(object):
             if self.periodic_flag:
                 import itertools
 
-                self.periodic = {k: periodic.get(k) for k in range(self.dim)}
-                self._periodic_edges = [
-                    (0, 0, 0) if not periodic.get(k)
-                    else np.insert(periodic.get(k), 1, 0.)
-                    for k in range(self.dim)
-                ]
+                self._periodic_edges = np.zeros((self.dim,3))
+                self._periodic_range = np.zeros((1,self.dim))
+                for k in range(self.dim):
+                    aux = periodic.get(k)
+                    self.periodic[k] = aux
+                    if aux:
+                        self._periodic_edges[k,:] = np.insert(aux, 1, 0.)
+                        self._periodic_range[:,k] = aux[1] - aux[0]
+
                 self._periodic_edges = np.reshape(
                     list(itertools.product(*self._periodic_edges)),
                     (3 ** self.dim, self.dim)
