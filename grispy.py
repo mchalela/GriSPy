@@ -1,11 +1,11 @@
 import numpy as np
 import time
 import datetime
-# from multiprocessing import Process, Queue
+import attr
+import utils
 
-###############################################################################
 
-
+@attr.s
 class GriSPy(object):
     """ Grid Search in Python.
     GriSPy is a regular grid search algorithm for quick nearest-neighbor
@@ -79,43 +79,23 @@ class GriSPy(object):
         keys: 'buildtime', returns float with the time taken to build the grid,
         in seconds; 'datetime': formated string with the date of build.
     """
+    # User input params
+    data = attr.ib(
+        default=None, kw_only=False, repr=False, validator=utils.validate_data,
+    )
+    N_cells = attr.ib(default=20, validator=utils.validate_N_cells)
+    periodic = attr.ib(default={})  # The validator runs in set_periodicity()
+    metric = attr.ib(default="euclid", validator=utils.validate_metric)
+    copy_data = attr.ib(
+        default=False, validator=attr.validators.instance_of(bool),
+    )
 
-    def __init__(
-        self,
-        data=None,
-        N_cells=20,
-        copy_data=False,
-        periodic={},
-        metric="euclid",
-        load_grid=None,
-    ):
-
-        if load_grid is None:
-            if not isinstance(data, np.ndarray):
-                raise TypeError("Argument 'data' must be a numpy array.")
-            self.data = data.copy() if copy_data else data
-            if self._check_data_dimensionality(self.data.shape):
-                self.dim = self.data.shape[1]
-            self._check_data_amount(self.data)
-            self.N_cells = N_cells
-            self.metric = metric
-            self.set_periodicity(periodic)
-            self._build_grid()
-        else:
-            f = np.load(load_grid, allow_pickle=True).item()
-            self.N_cells = f["N_cells"]
-            self.dim = f["dim"]
-            self.metric = f["metric"]
-            self.set_periodicity(f["periodic"])
-            self.grid = f["grid"]
-            self.k_bins = f["k_bins"]
-            self.time = f["time"]
-            self.data = f["data"]
-            print(
-                "Succsefully loaded GriSPy grid created on {}".format(
-                    self.time["datetime"])
-            )
-
+    def __attrs_post_init__(self):
+        if self.copy_data:
+            self.data = self.data.copy()
+        self.dim = self.data.shape[1]
+        self.set_periodicity(self.periodic)
+        self._build_grid()
         self._empty = np.array([], dtype=int)  # Useful for empty arrays
 
     def __getitem__(self, key):
@@ -352,36 +332,6 @@ class GriSPy(object):
                 )
         return terran_centres, terran_indices
 
-    def _check_data_dimensionality(self, shape):
-        """ Check if data has the expected dimension
-        """
-        if len(shape) == 2:
-            return True
-        else:
-            raise ValueError(
-                "Data array has the wrong shape. Expected shape of (n, k), "
-                "got instead {}".format(shape)
-            )
-
-    def _check_data_amount(self, data):
-        """ Check if data has the expected dimension
-        """
-        if len(data.flatten()) > 0:
-            return True
-        else:
-            raise ValueError("Data must have at least 1 point")
-
-    def _check_centre_dimensionality(self, shape):
-        """ Check if centres has the same dimension as data
-        """
-        if len(shape) == 2 and shape[1] == self.dim:
-            return None
-        else:
-            raise ValueError(
-                "Centre array has the wrong shape. Expected shape of (m, {}), "
-                "got instead {}".format(self.dim, shape)
-            )
-
     # User methods
     def bubble_neighbors(
         self,
@@ -423,18 +373,18 @@ class GriSPy(object):
             neighbors of that centre.
         """
 
-        # Check centres has the correct dimension
-        self._check_centre_dimensionality(centres.shape)
-
+        # Validate iputs
+        utils.validate_centres(centres, self.data)
+        utils.validate_distance_bound(distance_upper_bound, self.periodic)
+        utils.validate_bool(sorted)
+        utils.validate_sortkind(kind)
         # Match distance_upper_bound shape with centres shape
         if np.isscalar(distance_upper_bound):
             distance_upper_bound *= np.ones(len(centres))
-        elif len(centres) != len(distance_upper_bound):
-            raise ValueError(
-                "If an array is given in 'distance_upper_bound', "
-                "its size must be the same as the number of centres."
-            )
+        else:
+            utils.validate_equalsize(centres, distance_upper_bound)
 
+        # Get neighbors
         neighbor_cells = self._get_neighbor_cells(
             centres, distance_upper_bound
         )
@@ -522,30 +472,25 @@ class GriSPy(object):
             neighbors of that centre.
         """
 
-        # Check centres has the correct dimension
-        self._check_centre_dimensionality(centres.shape)
+        # Validate inputs
+        utils.validate_centres(centres, self.data)
+        utils.validate_bool(sorted)
+        utils.validate_sortkind(kind)
+        utils.validate_shell_distances(
+            distance_lower_bound, distance_upper_bound, self.periodic,
+        )
 
         # Match distance bounds shapes with centres shape
         if np.isscalar(distance_lower_bound):
             distance_lower_bound *= np.ones(len(centres))
-        elif len(centres) != len(distance_lower_bound):
-            raise ValueError(
-                "If an array is given in 'distance_lower_bound', "
-                "its size must be the same as the number of centres."
-            )
+        else:
+            utils.validate_equalsize(centres, distance_lower_bound)
         if np.isscalar(distance_upper_bound):
             distance_upper_bound *= np.ones(len(centres))
-        elif len(centres) != len(distance_upper_bound):
-            raise ValueError(
-                "If an array is given in 'distance_upper_bound', "
-                "its size must be the same as the number of centres."
-            )
-        if np.any(distance_lower_bound > distance_upper_bound):
-            raise ValueError(
-                "One or more values in 'distance_lower_bound' is greater "
-                "than its 'distance_upper_bound' pair."
-            )
+        else:
+            utils.validate_equalsize(centres, distance_upper_bound)
 
+        # Get neighbors
         neighbor_cells = self._get_neighbor_cells(
             centres,
             distance_upper_bound=distance_upper_bound,
@@ -634,8 +579,11 @@ class GriSPy(object):
             Returns a list of m arrays. Each array has the indices to the
             neighbors of that centre.
         """
-        # Check centres has the correct dimension
-        self._check_centre_dimensionality(centres.shape)
+
+        # Validate input
+        utils.validate_centres(centres, self.data)
+        utils.validate_n_nearest(n, self.data, self.periodic)
+        utils.validate_sortkind(kind)
 
         # Initial definitions
         N_centres = len(centres)
@@ -658,7 +606,7 @@ class GriSPy(object):
         # Factor de escala para la distancia inicial
         mean_distance_factor = 1.0
         cell_size = self.k_bins[1, :] - self.k_bins[0, :]
-        cell_volume = np.prod(cell_size).astype(float)
+        cell_volume = np.prod(cell_size.astype(float))
         neighbors_number = np.array(list(map(len, neighbors_indices)))
         mean_distance = 0.5 * (n / (neighbors_number / cell_volume)) ** (
             1.0 / self.dim)
@@ -709,42 +657,6 @@ class GriSPy(object):
 
         return neighbors_distances, neighbors_indices
 
-    def save_grid(self, file="grispy.npy", overwrite=False):
-        """
-        Save all grid attributes in a binary file for future use.
-
-        Parameters
-        ----------
-        file: string, optional
-            File name where the grid will be saved. The file format is a numpy
-            binary file with extension '.npy'. If the extension is not
-            explicitely given it will be added automatically.
-            Default: grispy.npy
-        overwrite: bool, optional
-            If True the file will be overwritten in case it already exists.
-            Default: False
-        """
-        dic = {
-            "grid": self.grid,
-            "N_cells": self.N_cells,
-            "dim": self.dim,
-            "metric": self.metric,
-            "periodic": self.periodic,
-            "k_bins": self.k_bins,
-            "time": self.time,
-            "data": self.data
-        }
-
-        import os
-        if not overwrite and os.path.isfile(file):
-            raise FileExistsError(
-                f"The file {file} already exists. "
-                "You may want to use the keyword overwrite=True."
-            )
-
-        np.save(file, dic)
-        print(f"GriSPy grid attributes saved to: {file}")
-
     def set_periodicity(self, periodic={}):
         """
         Set periodicity conditions. This allows to define or change the
@@ -762,6 +674,9 @@ class GriSPy(object):
             Default: all axis set to None.
             Example, periodic = { 0: (0, 360), 1: None}.
         """
+        # Validate input
+        utils.validate_periodicity(periodic)
+
         self.periodic = {}
         if len(periodic) == 0:
             self.periodic_flag = False
@@ -789,5 +704,63 @@ class GriSPy(object):
                 self._periodic_edges = np.unique(self._periodic_edges, axis=0)
                 mask = self._periodic_edges.sum(axis=1, dtype=bool)
                 self._periodic_edges = self._periodic_edges[mask]
+
+    def save_grid(self, file="grispy.pickle", overwrite=False):
+        """ Save all grid attributes in a binary file for future use.
+        This method uses the pickle module to save an instance of GriSPy.
+        The protocol for pickle.dump() is the highest protocol available.
+
+        Parameters
+        ----------
+        file: string, optional
+            File name where the grid will be saved. Default: grispy.pickle
+        overwrite: bool, optional
+            If True the file will be overwritten in case it already exists.
+            Default: False
+        """
+        import os.path
+        import pickle
+        if not overwrite and os.path.isfile(file):
+            raise FileExistsError(
+                f"The file {file} already exists. "
+                "You may want to use the keyword overwrite=True."
+            )
+
+        with open(file, "wb") as fp:
+            pickle.dump(self, fp, protocol=pickle.HIGHEST_PROTOCOL)
+
+        print(f"GriSPy grid attributes saved to: {file}")
+        return None
+
+    @classmethod
+    def load_grid(cls, file):
+        """
+        Load a GriSPy instance previously saved with the save_grid() method.
+
+        Parameters
+        ----------
+        file: string, optional
+            File name where the grid was saved. The file format is a numpy
+            binary file with extension '.npy'. If the extension is not
+            explicitely given it will be added automatically.
+        overwrite: bool, optional
+            If True the file will be overwritten in case it already exists.
+            Default: False
+        """
+        import os.path
+        import pickle
+        if not os.path.isfile(file):
+            raise FileNotFoundError(f"There is no file named {file}")
+
+        with open(file, "rb") as fp:
+            gsp = pickle.load(fp)
+            if not isinstance(gsp, cls):
+                raise TypeError("Unpickled object is not a GriSPy instance.")
+
+        print(
+            "Succsefully loaded GriSPy grid created on {}".format(
+                gsp.time["datetime"])
+        )
+        return gsp
 
 ###############################################################################

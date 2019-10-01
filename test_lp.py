@@ -5,7 +5,6 @@ from numpy.testing import (
     assert_
 )
 
-import os
 import numpy as np
 from grispy import GriSPy
 import pytest
@@ -250,57 +249,3 @@ class Test_grispy:
             d = d[: self.n_nearest]
             assert_equal(len(b[i]), len(d))
             np.testing.assert_almost_equal(b[i], d, decimal=16)
-
-
-class Test_load_save_grid:
-    @pytest.fixture
-    def setUp(self):
-
-        self.data = np.array(
-            [
-                [0, 0, 0],
-                [0, 0, 1],
-                [0, 1, 0],
-                [0, 1, 1],
-                [1, 0, 0],
-                [1, 0, 1],
-                [1, 1, 0],
-                [1, 1, 1],
-            ]
-        )
-
-        self.gsp = GriSPy(self.data)
-
-    def test_save_grid(self, setUp):
-        filename = "test_grispy.npy"
-        self.gsp.save_grid(filename)
-        assert_(os.path.exists(filename) is True)
-
-    def test_load_grid(self, setUp):
-        filename = "test_grispy.npy"
-        assert_(os.path.exists(filename) is True)
-        tmp_grid = GriSPy(load_grid=filename)
-        assert_(isinstance(tmp_grid.dim, int))
-        assert_(isinstance(tmp_grid.data, np.ndarray))
-        assert_(isinstance(tmp_grid.k_bins, np.ndarray))
-        assert_(isinstance(tmp_grid.metric, str))
-        assert_(isinstance(tmp_grid.N_cells, int))
-        assert_(isinstance(tmp_grid.grid, dict))
-        assert_(isinstance(tmp_grid.periodic, dict))
-        assert_(isinstance(tmp_grid.periodic_flag, bool))
-        assert_(isinstance(tmp_grid.time, dict))
-        assert_equal(self.gsp.dim, tmp_grid.dim)
-        assert_equal(self.gsp.data, tmp_grid.data)
-        assert_equal(self.gsp.k_bins, tmp_grid.k_bins)
-        assert_equal(self.gsp.metric, tmp_grid.metric)
-        assert_equal(self.gsp.N_cells, tmp_grid.N_cells)
-        for k in tmp_grid.grid:
-            assert_equal(self.gsp.grid[k], tmp_grid.grid[k])
-        for k in tmp_grid.periodic:
-            assert_equal(self.gsp.periodic[k], tmp_grid.periodic[k])
-        assert_equal(self.gsp.periodic_flag, tmp_grid.periodic_flag)
-
-    def test_del_grid(self, setUp):
-        filename = "test_grispy.npy"
-        if os.path.exists(filename) is True:
-            os.remove(filename)

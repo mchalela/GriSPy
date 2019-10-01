@@ -19,13 +19,13 @@ class Test_Save:
         self.gsp = GriSPy(self.data)
 
     def test_save_firsttime(self, setUp):
-        file = "test_save_grid.npy"
+        file = "test_save_grid.gsp"
         self.gsp.save_grid(file=file)
         assert_(os.path.isfile(file))
         clean(file)
 
     def test_save_nooverwrite(self, setUp):
-        file = "test_save_grid.npy"
+        file = "test_save_grid.gsp"
 
         # Save a first time
         self.gsp.save_grid(file=file)
@@ -37,7 +37,7 @@ class Test_Save:
         clean(file)
 
     def test_save_overwrite(self, setUp):
-        file = "test_save_grid.npy"
+        file = "test_save_grid.gsp"
 
         # Save a first time
         self.gsp.save_grid(file=file)
@@ -59,17 +59,26 @@ class Test_Load:
 
     def test_load_nofile(self):
         with pytest.raises(FileNotFoundError):
-            gsp_tmp = GriSPy(load_grid="this_file_should_not_exist.npy")
+            gsp_tmp = GriSPy.load_grid("this_file_should_not_exist.gsp")
 
     def test_load_samestate(self, setUp):
-        file = "test_load_grid.npy"
+        file = "test_load_grid.gsp"
 
         # Save a first time
         self.gsp.save_grid(file=file)
         assert_(os.path.isfile(file))
 
         # Load again to check the state is the same
-        gsp_tmp = GriSPy(load_grid=file)
+        gsp_tmp = GriSPy.load_grid(file)
+        assert_(isinstance(gsp_tmp["dim"], int))
+        assert_(isinstance(gsp_tmp["data"], np.ndarray))
+        assert_(isinstance(gsp_tmp["k_bins"], np.ndarray))
+        assert_(isinstance(gsp_tmp["metric"], str))
+        assert_(isinstance(gsp_tmp["N_cells"], int))
+        assert_(isinstance(gsp_tmp["grid"], dict))
+        assert_(isinstance(gsp_tmp["periodic"], dict))
+        assert_(isinstance(gsp_tmp["periodic_flag"], bool))
+        assert_(isinstance(gsp_tmp["time"], dict))
         assert_equal(self.gsp["data"], gsp_tmp["data"])
         assert_equal(self.gsp["dim"], gsp_tmp["dim"])
         assert_equal(self.gsp["N_cells"], gsp_tmp["N_cells"])

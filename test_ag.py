@@ -13,7 +13,6 @@ def test_distance_A_01():
         copy_data=False,
         periodic=periodic,
         metric="euclid",
-        load_grid=None,
     )
     dist1 = gsp.distance(np.array([1, 1]), np.array([[2, 2]]))
     dist2 = gsp.distance(np.array([2, 2]), np.array([[1, 1]]))
@@ -30,7 +29,6 @@ def test_distance_A_02():
         copy_data=False,
         periodic=periodic,
         metric="sphere",
-        load_grid=None,
     )
     dist1 = gsp.distance(np.array([1, 1]), np.array([[2, 2]]))
     dist2 = gsp.distance(np.array([2, 2]), np.array([[1, 1]]))
@@ -47,7 +45,6 @@ def test_distance_B_01():
         copy_data=False,
         periodic=periodic,
         metric="euclid",
-        load_grid=None,
     )
     p_a = [1, 1]
     p_b = [2, 2]
@@ -68,7 +65,6 @@ def test_distance_B_02():
         copy_data=False,
         periodic=periodic,
         metric="sphere",
-        load_grid=None,
     )
     p_a = [1, 1]
     p_b = [2, 2]
@@ -89,7 +85,6 @@ def test_distance_C_01():
         copy_data=False,
         periodic=periodic,
         metric="euclid",
-        load_grid=None,
     )
     centre_0 = np.random.uniform(-10, 10, size=(2,))
     dist = gsp.distance(centre_0, data)
@@ -106,7 +101,6 @@ def test_distance_C_02():
         copy_data=False,
         periodic=periodic,
         metric="sphere",
-        load_grid=None,
     )
     centre_0 = np.random.uniform(-10, 10, size=(2,))
     dist = gsp.distance(centre_0, data)
@@ -123,7 +117,6 @@ def test_distance_D_01():
         copy_data=False,
         periodic=periodic,
         metric="euclid",
-        load_grid=None,
     )
     centre_0 = np.random.uniform(-10, 10, size=(2,))
     dist = gsp.distance(centre_0, data)
@@ -140,7 +133,6 @@ def test_distance_D_02():
         copy_data=False,
         periodic=periodic,
         metric="sphere",
-        load_grid=None,
     )
     centre_0 = np.random.uniform(-10, 10, size=(2,))
     dist = gsp.distance(centre_0, data)
@@ -158,7 +150,6 @@ def test__init__A_01():
             copy_data=False,
             periodic=periodic,
             metric="sphere",
-            load_grid=None,
         )
 
 
@@ -166,16 +157,13 @@ def test__init__A_02():
     # Data format
     data = np.array([])
     periodic = {0: None, 1: None}
-    with pytest.raises(
-        ValueError, match=r".*Data array has the wrong shape*"
-    ):
+    with pytest.raises(ValueError):
         gsp = GriSPy(
             data=data,
             N_cells=2,
             copy_data=False,
             periodic=periodic,
             metric="sphere",
-            load_grid=None,
         )
 
 
@@ -183,16 +171,13 @@ def test__init__A_03():
     # Data format
     data = np.array([1, 1, 1])
     periodic = {0: None, 1: None}
-    with pytest.raises(
-        ValueError, match=r".*Data array has the wrong shape*"
-    ):
+    with pytest.raises(ValueError):
         gsp = GriSPy(
             data=data,
             N_cells=2,
             copy_data=False,
             periodic=periodic,
             metric="sphere",
-            load_grid=None,
         )
 
 
@@ -200,14 +185,11 @@ def test__init__A_04():
     # Data value
     data = np.array([[]])
     periodic = {0: None, 1: None}
-    with pytest.raises(
-        ValueError, match=r".*Data must have at least 1 point*"
-    ):
+    with pytest.raises(ValueError):
         gsp = GriSPy(
             data=data,
             N_cells=2,
             copy_data=False,
             periodic=periodic,
             metric="sphere",
-            load_grid=None,
         )
