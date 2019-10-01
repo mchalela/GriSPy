@@ -48,12 +48,6 @@ class Test_Save:
         assert_(os.path.isfile(file))
         clean(file)
 
-    def test_save_invalidfile(self, setUp):
-        file = ["invalid_file_type.gsp"]
-
-        with pytest.raises(TypeError):
-            self.gsp.save_grid(file=file)
-
 
 class Test_Load:
     @pytest.fixture
@@ -93,23 +87,4 @@ class Test_Load:
         assert_equal(self.gsp["grid"], gsp_tmp["grid"])
         assert_equal(self.gsp["k_bins"], gsp_tmp["k_bins"])
         assert_equal(self.gsp["time"], gsp_tmp["time"])
-        clean(file)
-
-    def test_load_invalidfile(self, setUp):
-        # Invalid filename
-        file = ["invalid_file.gsp"]
-        with pytest.raises(TypeError):
-            gsp = GriSPy.load_grid(file=file)
-
-        # Invalid instance of GriSPy
-        bad_gsp = self.gsp.__dict__
-        file = "invalid_file.gsp"
-        import pickle
-        with open(file, "wb") as fp:
-            pickle.dump(bad_gsp, fp, protocol=pickle.HIGHEST_PROTOCOL)
-
-        assert_(os.path.isfile(file))
-        with pytest.raises(TypeError):
-            gsp = GriSPy.load_grid(file=file)
-
         clean(file)

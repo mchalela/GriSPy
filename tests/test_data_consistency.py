@@ -3,6 +3,7 @@ import numpy as np
 from grispy import GriSPy
 import pytest
 
+
 class Test_data_consistency:
 
     @pytest.fixture
@@ -115,6 +116,7 @@ class Test_data_consistency:
             assert_equal(np.shape(b[i]), (self.n_nearest,))
             assert_equal(np.shape(ind[i]), (self.n_nearest,))
 
+
 class Test_data_consistency_periodic:
 
     @pytest.fixture
@@ -167,6 +169,7 @@ class Test_data_consistency_periodic:
         )
         assert_(isinstance(mask, np.ndarray))
         assert_equal(mask.ndim, 1)
+
 
 def test__init__A_01():
     # Data type
@@ -221,7 +224,7 @@ def test__init__A_04():
             copy_data=False,
             periodic=periodic,
             metric="sphere",
-        )       
+        )
 
 
 class Test_valid_query_input:

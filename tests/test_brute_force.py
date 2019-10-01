@@ -3,6 +3,7 @@ import numpy as np
 from grispy import GriSPy
 import pytest
 
+
 class Test_grispy:
     @pytest.fixture
     def setUp_1d(self):
@@ -31,7 +32,7 @@ class Test_grispy:
         b, ind = self.gsp.nearest_neighbors(self.centres, n=self.n_nearest)
         for i in range(len(b)):
             assert_equal(sorted(b[i]), b[i])
- 
+
     def test_all_in_bubble(self, setUp_1d):
 
         b, ind = self.gsp.bubble_neighbors(
@@ -130,7 +131,6 @@ class Test_grispy:
             assert_equal(len(b[i]), len(d))
             np.testing.assert_almost_equal(b[i], sorted(d), decimal=14)
 
-
     def test_shell_precision(self, setUp_1d):
 
         b, ind = self.gsp.shell_neighbors(
@@ -196,6 +196,7 @@ class Test_grispy:
             d = d[: self.n_nearest]
             assert_equal(len(b[i]), len(d))
             np.testing.assert_almost_equal(b[i], d, decimal=16)
+
 
 class Test_periodicity_grispy:
     @pytest.fixture

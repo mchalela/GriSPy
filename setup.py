@@ -65,7 +65,7 @@ def do_setup():
             'Programming Language :: Python :: Implementation :: CPython',
             'Topic :: Scientific/Engineering'),
 
-        py_modules=['grispy', 'ez_setup'],
+        py_modules=['grispy', 'utils', 'ez_setup'],
 
         install_requires=REQUIREMENTS,
 
