@@ -306,9 +306,10 @@ class GriSPy(object):
 
     def _mirror(self, centre, distance_upper_bound):
         mirror_centre = centre - self._periodic_edges
-        mask = np.abs(mirror_centre) <= self._periodic_range
-        mask = np.sum(mask, 1, dtype=bool)
-        return mirror_centre[mask]
+        # mask = np.abs(mirror_centre) <= self._periodic_range
+        # mask = np.sum(mask, 1, dtype=bool)
+        # return mirror_centre[mask]
+        return mirror_centre
 
     def _mirror_universe(self, centres, distance_upper_bound):
         """Generate Terran centres in the Mirror Universe
@@ -688,13 +689,13 @@ class GriSPy(object):
                 import itertools
 
                 self._periodic_edges = np.zeros((self.dim, 3))
-                self._periodic_range = np.zeros((1, self.dim))
+                # self._periodic_range = np.zeros((1, self.dim))
                 for k in range(self.dim):
                     aux = periodic.get(k)
                     self.periodic[k] = aux
                     if aux:
                         self._periodic_edges[k] = np.insert(aux, 1, 0.)
-                        self._periodic_range[:, k] = aux[1] - aux[0]
+                        # self._periodic_range[:, k] = aux[1] - aux[0]
 
                 self._periodic_edges = np.reshape(
                     list(itertools.product(*self._periodic_edges)),
