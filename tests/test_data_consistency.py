@@ -173,3 +173,58 @@ class Test_data_consistency_periodic:
         )
         assert_(isinstance(mask, np.ndarray))
         assert_equal(mask.ndim, 1)
+
+def test__init__A_01():
+    # Data type
+    data = 4
+    periodic = {0: None, 1: None}
+    with pytest.raises(TypeError, match=r".*must be a numpy array*"):
+        gsp = GriSPy(
+            data=data,
+            N_cells=2,
+            copy_data=False,
+            periodic=periodic,
+            metric="sphere",
+        )
+
+
+def test__init__A_02():
+    # Data format
+    data = np.array([])
+    periodic = {0: None, 1: None}
+    with pytest.raises(ValueError):
+        gsp = GriSPy(
+            data=data,
+            N_cells=2,
+            copy_data=False,
+            periodic=periodic,
+            metric="sphere",
+        )
+
+
+def test__init__A_03():
+    # Data format
+    data = np.array([1, 1, 1])
+    periodic = {0: None, 1: None}
+    with pytest.raises(ValueError):
+        gsp = GriSPy(
+            data=data,
+            N_cells=2,
+            copy_data=False,
+            periodic=periodic,
+            metric="sphere",
+        )
+
+
+def test__init__A_04():
+    # Data value
+    data = np.array([[]])
+    periodic = {0: None, 1: None}
+    with pytest.raises(ValueError):
+        gsp = GriSPy(
+            data=data,
+            N_cells=2,
+            copy_data=False,
+            periodic=periodic,
+            metric="sphere",
+        )       
