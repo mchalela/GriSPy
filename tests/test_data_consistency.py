@@ -345,7 +345,7 @@ class Test_valid_init:
         self.periodic = {0: (-1, 1), 1: (-1, 1), 2: None}
         self.metric = "euclid"
         self.N_cells = 10
-        self.copy_data = False
+        self.copy_data = True
 
     def test_invalid_data(self, setUp):
         bad_data = np.random.uniform(-1, 1, size=(100, 3))

@@ -96,7 +96,20 @@ class Test_Load:
         clean(file)
 
     def test_load_invalidfile(self, setUp):
-        file = ["invalid_file_type.gsp"]
-
+        # Invalid filename
+        file = ["invalid_file.gsp"]
         with pytest.raises(TypeError):
             gsp = GriSPy.load_grid(file=file)
+
+        # Invalid instance of GriSPy
+        bad_gsp = self.gsp.__dict__
+        file = "invalid_file.gsp"
+        import pickle
+        with open(file, "wb") as fp:
+            pickle.dump(bad_gsp, fp, protocol=pickle.HIGHEST_PROTOCOL)
+
+        assert_(os.path.isfile(file))
+        with pytest.raises(TypeError):
+            gsp = GriSPy.load_grid(file=file)
+        
+        clean(file)
