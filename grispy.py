@@ -50,7 +50,7 @@ class GriSPy(object):
         dimensions in data, going from 0 to k-1. The value is a tuple with the
         domain limits and the data must be contained within these limits. If an
         axis is not specified, or if its value is None, it will be considered
-        as non-periodic. Important: The periodicity only works within one 
+        as non-periodic. Important: The periodicity only works within one
         periodic range. Default: all axis set to None.
         Example, periodic = { 0: (0, 360), 1: None}.
     metric: str, optional
@@ -746,7 +746,7 @@ class GriSPy(object):
         overwrite: bool, optional
             If True the file will be overwritten in case it already exists.
             Default: False
-        
+
         Returns
         -------
         GriSPy instance: object
