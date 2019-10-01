@@ -16,13 +16,16 @@ class GriSPy(object):
     boundary conditions can be provided for each axis individually.
 
     The algorithm has the following queries implemented:
-
     bubble_neighbors: find neighbors within a given radius. A different
-        radius for each centre can be provided.
+            radius for each centre can be provided.
     shell_neighbors: find neighbors within given lower and upper radius.
         Different lower and upper radius can be provided for each centre.
     nearest_neighbors: find the nth nearest neighbors for each centre.
+
+    Other methods:
+    set_periodicity: set periodicity condition after the grid was built.
     save_grid: save the grid for future use.
+    load_grid: load a grid previously saved.
 
     To be implemented:
     box_neighbors: find neighbors within a k-dimensional squared box of
@@ -47,12 +50,9 @@ class GriSPy(object):
         dimensions in data, going from 0 to k-1. The value is a tuple with the
         domain limits and the data must be contained within these limits. If an
         axis is not specified, or if its value is None, it will be considered
-        as non-periodic. Default: all axis set to None.
+        as non-periodic. Important: The periodicity only works within one 
+        periodic range. Default: all axis set to None.
         Example, periodic = { 0: (0, 360), 1: None}.
-    load_grid: str, optional
-        String with the file name of a previously saved GriSPy grid (see
-        save_grid method). If a grid is loaded, the "data" field stored within
-        it will take precedence over the "data" keyword passed on construction.
     metric: str, optional
         Metric definition to compute distances. Options: 'euclid' or 'sphere'.
         Notes: In the case of 'sphere' metric, input units must be degrees.
@@ -661,6 +661,7 @@ class GriSPy(object):
         """
         Set periodicity conditions. This allows to define or change the
         periodicity limits without having to construct the grid again.
+        Important: The periodicity only works within one periodic range.
 
         Parameters
         ----------
@@ -746,6 +747,11 @@ class GriSPy(object):
         overwrite: bool, optional
             If True the file will be overwritten in case it already exists.
             Default: False
+        
+        Returns
+        -------
+        GriSPy instance: object
+            Returns an instance of GriSPy with all its methods and atributes.
         """
         import os.path
         import pickle

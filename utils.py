@@ -266,17 +266,16 @@ def validate_n_nearest(n, data, periodic):
         )
 
     # check that n is not larger than the number of data points
+    # within 1 periodic range
     Np = len(data)
     valid_axis = len([v for v in periodic.values() if v is not None])
-    if data.shape[1] == 1:
-        Nvalid = Np * (1 + 2 * valid_axis)
-    else:
-        Nvalid = Np * (1 + 2 * valid_axis + 2 ** valid_axis)
+    Nvalid = Np * 3**valid_axis
     print(Nvalid, n)
     if n > Nvalid:
         raise ValueError(
             "Nth-nearest: Argument must be lower than the number of "
-            "data points, {}. Got instead {}".format(Nvalid, n)
+            "available data points within 1 periodic range, {}. "
+            "Got instead {}".format(Nvalid, n)
         )
 
     return None
