@@ -720,14 +720,12 @@ class GriSPy(object):
             If True the file will be overwritten in case it already exists.
             Default: False
         """
-        import os.path
-        import pickle
-        if not overwrite and os.path.isfile(file):
-            raise FileExistsError(
-                f"The file {file} already exists. "
-                "You may want to use the keyword overwrite=True."
-            )
+        # Validate input
+        utils.validate_filename(file)
+        utils.validate_bool(overwrite)
+        utils.validate_canwrite(file, overwrite)
 
+        import pickle
         with open(file, "wb") as fp:
             pickle.dump(self, fp, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -752,11 +750,14 @@ class GriSPy(object):
         GriSPy instance: object
             Returns an instance of GriSPy with all its methods and atributes.
         """
+        # Validate input
+        utils.validate_filename(file)
+
         import os.path
-        import pickle
         if not os.path.isfile(file):
             raise FileNotFoundError(f"There is no file named {file}")
 
+        import pickle
         with open(file, "rb") as fp:
             gsp = pickle.load(fp)
             if not isinstance(gsp, cls):

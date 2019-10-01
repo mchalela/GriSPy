@@ -48,6 +48,12 @@ class Test_Save:
         assert_(os.path.isfile(file))
         clean(file)
 
+    def test_save_invalidfile(self, setUp):
+        file = ["invalid_file_type.gsp"]
+
+        with pytest.raises(TypeError):
+            self.gsp.save_grid(file=file)
+
 
 class Test_Load:
     @pytest.fixture
@@ -88,3 +94,9 @@ class Test_Load:
         assert_equal(self.gsp["k_bins"], gsp_tmp["k_bins"])
         assert_equal(self.gsp["time"], gsp_tmp["time"])
         clean(file)
+
+    def test_load_invalidfile(self, setUp):
+        file = ["invalid_file_type.gsp"]
+
+        with pytest.raises(TypeError):
+            gsp = GriSPy.load_grid(file=file)

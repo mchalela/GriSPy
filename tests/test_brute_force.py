@@ -1,8 +1,4 @@
-from numpy.testing import (
-    assert_equal,
-    assert_
-)
-
+from numpy.testing import assert_equal, assert_
 import numpy as np
 from grispy import GriSPy
 import pytest

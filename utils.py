@@ -122,7 +122,7 @@ def validate_periodicity(periodic):
         if not (
             isinstance(v[0], (int, float)) and isinstance(v[1], (int, float))
         ):
-            raise ValueError(
+            raise TypeError(
                 "Periodicity: Argument must be a tuple of "
                 "2 real numbers as edge descriptors. "
             )
@@ -146,7 +146,7 @@ def validate_centres(centres, data):
         )
 
     # Check if data has the expected dimension
-    if centres.ndim != 2 and centres.shape[1] != data.shape[1]:
+    if centres.ndim != 2 or centres.shape[1] != data.shape[1]:
         raise ValueError(
             "Centres: Array has the wrong shape. Expected shape of (n, {}), "
             "got instead {}".format(data.ndim, centres.shape)
