@@ -707,7 +707,7 @@ class GriSPy(object):
                 mask = self._periodic_edges.sum(axis=1, dtype=bool)
                 self._periodic_edges = self._periodic_edges[mask]
 
-    def save_grid(self, file="grispy.pickle", overwrite=False):
+    def save_grid(self, file="grispy.gsp", overwrite=False):
         """ Save all grid attributes in a binary file for future use.
         This method uses the pickle module to save an instance of GriSPy.
         The protocol for pickle.dump() is the highest protocol available.
@@ -715,7 +715,7 @@ class GriSPy(object):
         Parameters
         ----------
         file: string, optional
-            File name where the grid will be saved. Default: grispy.pickle
+            File name where the grid will be saved. Default: grispy.gsp
         overwrite: bool, optional
             If True the file will be overwritten in case it already exists.
             Default: False
@@ -742,9 +742,7 @@ class GriSPy(object):
         Parameters
         ----------
         file: string, optional
-            File name where the grid was saved. The file format is a numpy
-            binary file with extension '.npy'. If the extension is not
-            explicitely given it will be added automatically.
+            File name where the grid was saved.
         overwrite: bool, optional
             If True the file will be overwritten in case it already exists.
             Default: False
