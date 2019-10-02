@@ -65,7 +65,7 @@ class Test_Load:
 
     def test_load_nofile(self):
         with pytest.raises(FileNotFoundError):
-            gsp_tmp = GriSPy.load_grid("this_file_should_not_exist.gsp")
+            GriSPy.load_grid("this_file_should_not_exist.gsp")
 
     def test_load_samestate(self, setUp):
         file = "test_load_grid.gsp"
@@ -99,7 +99,7 @@ class Test_Load:
         # Invalid filename
         file = ["invalid_file.gsp"]
         with pytest.raises(TypeError):
-            gsp = GriSPy.load_grid(file=file)
+            GriSPy.load_grid(file=file)
 
         # Invalid instance of GriSPy
         bad_gsp = self.gsp.__dict__
@@ -110,6 +110,6 @@ class Test_Load:
 
         assert_(os.path.isfile(file))
         with pytest.raises(TypeError):
-            gsp = GriSPy.load_grid(file=file)
+            GriSPy.load_grid(file=file)
 
         clean(file)

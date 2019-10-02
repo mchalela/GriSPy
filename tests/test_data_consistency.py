@@ -176,7 +176,7 @@ def test__init__A_01():
     data = 4
     periodic = {0: None, 1: None}
     with pytest.raises(TypeError, match=r".*must be a numpy array*"):
-        gsp = GriSPy(
+        GriSPy(
             data=data,
             N_cells=2,
             copy_data=False,
@@ -190,7 +190,7 @@ def test__init__A_02():
     data = np.array([])
     periodic = {0: None, 1: None}
     with pytest.raises(ValueError):
-        gsp = GriSPy(
+        GriSPy(
             data=data,
             N_cells=2,
             copy_data=False,
@@ -204,7 +204,7 @@ def test__init__A_03():
     data = np.array([1, 1, 1])
     periodic = {0: None, 1: None}
     with pytest.raises(ValueError):
-        gsp = GriSPy(
+        GriSPy(
             data=data,
             N_cells=2,
             copy_data=False,
@@ -218,7 +218,7 @@ def test__init__A_04():
     data = np.array([[]])
     periodic = {0: None, 1: None}
     with pytest.raises(ValueError):
-        gsp = GriSPy(
+        GriSPy(
             data=data,
             N_cells=2,
             copy_data=False,
@@ -247,7 +247,7 @@ class Test_valid_query_input:
         # Invalid type
         bad_centres = [[1, 1, 1], [2, 2, 2]]
         with pytest.raises(TypeError):
-            dd, ii = self.gsp.bubble_neighbors(
+            self.gsp.bubble_neighbors(
                 bad_centres,
                 distance_upper_bound=self.upper_radii,
                 sorted=self.sorted,
@@ -257,7 +257,7 @@ class Test_valid_query_input:
         bad_centres = np.random.uniform(-1, 1, size=(10, 3))
         bad_centres[4, 1] = np.inf    # add one invalid value
         with pytest.raises(ValueError):
-            dd, ii = self.gsp.bubble_neighbors(
+            self.gsp.bubble_neighbors(
                 bad_centres,
                 distance_upper_bound=self.upper_radii,
                 sorted=self.sorted,
@@ -267,7 +267,7 @@ class Test_valid_query_input:
         # Invalid shape
         bad_centres = np.random.uniform(-1, 1, size=(10, 2))
         with pytest.raises(ValueError):
-            dd, ii = self.gsp.bubble_neighbors(
+            self.gsp.bubble_neighbors(
                 bad_centres,
                 distance_upper_bound=self.upper_radii,
                 sorted=self.sorted,
@@ -277,7 +277,7 @@ class Test_valid_query_input:
         # Invalid shape
         bad_centres = np.array([[], [], []]).reshape((0, 3))
         with pytest.raises(ValueError):
-            dd, ii = self.gsp.bubble_neighbors(
+            self.gsp.bubble_neighbors(
                 bad_centres,
                 distance_upper_bound=self.upper_radii,
                 sorted=self.sorted,
@@ -289,7 +289,7 @@ class Test_valid_query_input:
         # Invalid type
         bad_upper_radii = list(np.random.uniform(0.6, 1, size=10))
         with pytest.raises(TypeError):
-            dd, ii = self.gsp.bubble_neighbors(
+            self.gsp.bubble_neighbors(
                 self.centres,
                 distance_upper_bound=bad_upper_radii,
                 sorted=self.sorted,
@@ -300,7 +300,7 @@ class Test_valid_query_input:
         bad_upper_radii = np.random.uniform(0.6, 1, size=10)
         bad_upper_radii[5] = -1.
         with pytest.raises(ValueError):
-            dd, ii = self.gsp.bubble_neighbors(
+            self.gsp.bubble_neighbors(
                 self.centres,
                 distance_upper_bound=bad_upper_radii,
                 sorted=self.sorted,
@@ -310,7 +310,7 @@ class Test_valid_query_input:
         # Different lenght than centres
         bad_upper_radii = np.random.uniform(0.6, 1, size=11)
         with pytest.raises(ValueError):
-            dd, ii = self.gsp.bubble_neighbors(
+            self.gsp.bubble_neighbors(
                 self.centres,
                 distance_upper_bound=bad_upper_radii,
                 sorted=self.sorted,
@@ -321,7 +321,7 @@ class Test_valid_query_input:
         lower_radii = np.random.uniform(0.1, 0.5, size=10)
         bad_upper_radii = np.random.uniform(0.6, 1, size=11)
         with pytest.raises(ValueError):
-            dd, ii = self.gsp.shell_neighbors(
+            self.gsp.shell_neighbors(
                 self.centres,
                 distance_upper_bound=bad_upper_radii,
                 distance_lower_bound=lower_radii,
@@ -332,7 +332,7 @@ class Test_valid_query_input:
         # Invalid value
         bad_upper_radii = 10.  # larger than periodic range
         with pytest.raises(ValueError):
-            dd, ii = self.gsp.bubble_neighbors(
+            self.gsp.bubble_neighbors(
                 self.centres,
                 distance_upper_bound=bad_upper_radii,
                 sorted=self.sorted,
@@ -354,7 +354,7 @@ class Test_valid_init:
         bad_data = np.random.uniform(-1, 1, size=(100, 3))
         bad_data[42, 1] = np.inf    # add one invalid value
         with pytest.raises(ValueError):
-            gsp = GriSPy(
+            GriSPy(
                 bad_data,
                 N_cells=self.N_cells,
                 periodic=self.periodic,
@@ -366,7 +366,7 @@ class Test_valid_init:
         # Axis 0 with invalid type: string instead of dict
         bad_periodic = '{0: [-1, 1], 1: (-1, 1), 2: None}'
         with pytest.raises(TypeError):
-            gsp = GriSPy(
+            GriSPy(
                 self.data,
                 N_cells=self.N_cells,
                 periodic=bad_periodic,
@@ -377,7 +377,7 @@ class Test_valid_init:
         # Axis 0 with invalid value type: list instead of tuple
         bad_periodic = {0: [-1, 1], 1: (-1, 1), 2: None}
         with pytest.raises(TypeError):
-            gsp = GriSPy(
+            GriSPy(
                 self.data,
                 N_cells=self.N_cells,
                 periodic=bad_periodic,
@@ -388,7 +388,7 @@ class Test_valid_init:
         # Axis is not integer
         bad_periodic = {'A': (-1, 1), 1: (-1, 1), 2: None}
         with pytest.raises(TypeError):
-            gsp = GriSPy(
+            GriSPy(
                 self.data,
                 N_cells=self.N_cells,
                 periodic=bad_periodic,
@@ -399,7 +399,7 @@ class Test_valid_init:
         # Edge 0 is larger than edge 1
         bad_periodic = {0: (1, -1), 1: (-1, 1), 2: None}
         with pytest.raises(ValueError):
-            gsp = GriSPy(
+            GriSPy(
                 self.data,
                 N_cells=self.N_cells,
                 periodic=bad_periodic,
@@ -410,7 +410,7 @@ class Test_valid_init:
         # Edge has wrong type
         bad_periodic = {0: (-1, [1]), 1: (-1, 1), 2: None}
         with pytest.raises(TypeError):
-            gsp = GriSPy(
+            GriSPy(
                 self.data,
                 N_cells=self.N_cells,
                 periodic=bad_periodic,
@@ -422,7 +422,7 @@ class Test_valid_init:
         # Metric name is not a string
         bad_metric = 42
         with pytest.raises(TypeError):
-            gsp = GriSPy(
+            GriSPy(
                 self.data,
                 N_cells=self.N_cells,
                 periodic=self.periodic,
@@ -433,7 +433,7 @@ class Test_valid_init:
         # Metric name is wrong
         bad_metric = "euclidean"
         with pytest.raises(ValueError):
-            gsp = GriSPy(
+            GriSPy(
                 self.data,
                 N_cells=self.N_cells,
                 periodic=self.periodic,
@@ -445,7 +445,7 @@ class Test_valid_init:
         # N_cells is not integer
         bad_N_cells = 10.5
         with pytest.raises(TypeError):
-            gsp = GriSPy(
+            GriSPy(
                 self.data,
                 N_cells=bad_N_cells,
                 periodic=self.periodic,
@@ -456,7 +456,7 @@ class Test_valid_init:
         # N_cells is not positive
         bad_N_cells = -10
         with pytest.raises(ValueError):
-            gsp = GriSPy(
+            GriSPy(
                 self.data,
                 N_cells=bad_N_cells,
                 periodic=self.periodic,
@@ -468,7 +468,7 @@ class Test_valid_init:
         # copy_data is not bool
         bad_copy_data = 42
         with pytest.raises(TypeError):
-            gsp = GriSPy(
+            GriSPy(
                 self.data,
                 N_cells=self.N_cells,
                 periodic=self.periodic,
