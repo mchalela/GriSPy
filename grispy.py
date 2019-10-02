@@ -609,10 +609,11 @@ class GriSPy(object):
         cell_size = self.k_bins[1, :] - self.k_bins[0, :]
         cell_volume = np.prod(cell_size.astype(float))
         neighbors_number = np.array(list(map(len, neighbors_indices)))
+        mask_zero_neighbors = neighbors_number == 0
+        neighbors_number[mask_zero_neighbors] = 1
         mean_distance = 0.5 * (n / (neighbors_number / cell_volume)) ** (
             1.0 / self.dim)
-        mask_mean = np.isinf(mean_distance)
-        mean_distance[mask_mean] = cell_size.min()
+
         upper_distance_tmp = mean_distance_factor * mean_distance
 
         neighbors_indices = [self._empty] * N_centres
