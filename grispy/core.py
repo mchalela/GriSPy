@@ -2,7 +2,7 @@ import numpy as np
 import time
 import datetime
 import attr
-import utils
+from . import utils
 
 
 @attr.s
