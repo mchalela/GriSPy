@@ -1,5 +1,5 @@
 # GriSPy (Grid Search in Python)
---------------------------------
+
 
 **GriSPy** is a regular grid search algorithm for quick nearest-neighbor lookup.
 
@@ -15,23 +15,22 @@ And the following methods are available:
 - **save_grid**: save the grid for future use.
 - **load_grid**: load a previously saved grid.
 
+--------------------------------
 
 ## Requirements
----------------
 
 You need Python 3.7 or later to run GriSPy. You can have multiple Python
 versions (2.x and 3.x) installed on the same system without problems.
 
 
 ## Development Install
-----------------------
 
 1.  Clone this repo and then inside the local
 2.  Execute
-    $ pip install -e .
+
+        $ pip install -e .
 
 ## Authors
-----------
 
 Martin Chalela (E-mail: tinchochalela@gmail.com),  
 Emanuel Sillero, Luis Pereyra and Alejandro Garcia
