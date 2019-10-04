@@ -306,10 +306,11 @@ class GriSPy(object):
 
     def _mirror(self, centre, distance_upper_bound):
         mirror_centre = centre - self._periodic_edges
-        # mask = np.abs(mirror_centre) <= self._periodic_range
-        # mask = np.sum(mask, 1, dtype=bool)
-        # return mirror_centre[mask]
-        return mirror_centre
+        mask = self._periodic_direc * distance_upper_bound
+        mask += mirror_centre
+        mask = (mask >= self._pd_low) * (mask <= self._pd_hi)
+        mask = np.prod(mask, 1, dtype=bool)
+        return mirror_centre[mask]
 
     def _mirror_universe(self, centres, distance_upper_bound):
         """Generate Terran centres in the Mirror Universe
@@ -687,26 +688,35 @@ class GriSPy(object):
             self.periodic_flag = any(
                 [x is not None for x in list(periodic.values())]
             )
-            if self.periodic_flag:
-                import itertools
 
-                self._periodic_edges = np.zeros((self.dim, 3))
-                # self._periodic_range = np.zeros((1, self.dim))
+            if self.periodic_flag:
+
+                self._pd_hi = np.ones((1, self.dim)) * np.inf
+                self._pd_low = np.ones((1, self.dim)) * -np.inf
+                self._periodic_edges = []
                 for k in range(self.dim):
                     aux = periodic.get(k)
                     self.periodic[k] = aux
                     if aux:
-                        self._periodic_edges[k] = np.insert(aux, 1, 0.)
-                        # self._periodic_range[:, k] = aux[1] - aux[0]
+                        self._pd_low[0, k] = aux[0]
+                        self._pd_hi[0, k] = aux[1]
+                        aux = np.insert(aux, 1, 0.)
+                    else:
+                        aux = np.zeros((1, 3))
+                    self._periodic_edges = np.hstack([
+                        self._periodic_edges,
+                        np.tile(aux, (3**(self.dim - 1 - k), 3**k)).T.ravel()
+                    ])
 
-                self._periodic_edges = np.reshape(
-                    list(itertools.product(*self._periodic_edges)),
-                    (3 ** self.dim, self.dim)
-                )
-                self._periodic_edges -= self._periodic_edges[::-1]
+                self._periodic_edges = self._periodic_edges.reshape(
+                    self.dim, 3**self.dim
+                ).T
                 self._periodic_edges = np.unique(self._periodic_edges, axis=0)
                 mask = self._periodic_edges.sum(axis=1, dtype=bool)
                 self._periodic_edges = self._periodic_edges[mask]
+
+                self._periodic_edges -= self._periodic_edges[::-1]
+                self._periodic_direc = np.sign(self._periodic_edges)
 
     def save_grid(self, file="grispy.gsp", overwrite=False):
         """ Save all grid attributes in a binary file for future use.
