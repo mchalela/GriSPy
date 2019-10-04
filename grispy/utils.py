@@ -47,7 +47,8 @@ def validate_N_cells(gsp, attr, value):
     # Check if N_cells is valid, i.e. higher than 1
     if value < 1:
         raise ValueError(
-            f"N_cells: Argument must be higher than 1. " "Got instead {value}"
+            "N_cells: Argument must be higher than 1. "
+            "Got instead {}".format(value)
         )
     return None
 
@@ -262,7 +263,8 @@ def validate_n_nearest(n, data, periodic):
     # Check if number is valid, i.e. higher than 1
     if n < 1:
         raise ValueError(
-            f"Nth-nearest: Argument must be higher than 1. " "Got instead {n}"
+            "Nth-nearest: Argument must be higher than 1. "
+            "Got instead {}".format(n)
         )
 
     # check that n is not larger than the number of data points
@@ -295,7 +297,7 @@ def validate_canwrite(file, overwrite):
     # Check if file is valid
     if not overwrite and os.path.isfile(file):
         raise FileExistsError(
-            f"The file {file} already exists. "
-            "You may want to use the keyword overwrite=True."
+            "The file {} already exists. "
+            "You may want to use the keyword overwrite=True.".format(file)
         )
     return None

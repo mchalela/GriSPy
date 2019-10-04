@@ -740,7 +740,7 @@ class GriSPy(object):
         with open(file, "wb") as fp:
             pickle.dump(self, fp, protocol=pickle.HIGHEST_PROTOCOL)
 
-        print(f"GriSPy grid attributes saved to: {file}")
+        print("GriSPy grid attributes saved to: {}".format(file))
         return None
 
     @classmethod
@@ -766,7 +766,7 @@ class GriSPy(object):
 
         import os.path
         if not os.path.isfile(file):
-            raise FileNotFoundError(f"There is no file named {file}")
+            raise FileNotFoundError("There is no file named {}".format(file))
 
         import pickle
         with open(file, "rb") as fp:
