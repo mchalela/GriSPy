@@ -1,5 +1,5 @@
 # GriSPy (Grid Search in Python)
-=======================================
+#=======================================
 
 **GriSPy** is a regular grid search algorithm for quick nearest-neighbor lookup.
 
@@ -37,4 +37,5 @@ Authors
 -------
 
 Martin Chalela (E-mail: tinchochalela@gmail.com),
+
 Emanuel Sillero, Luis Pereyra and Alejandro Garcia
