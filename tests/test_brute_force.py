@@ -1,4 +1,4 @@
-from numpy.testing import assert_equal, assert_
+from numpy.testing import assert_equal, assert_, assert_almost_equal
 import numpy as np
 from grispy import GriSPy
 import pytest
@@ -98,9 +98,7 @@ class Test_grispy:
     def test_bubble_precision(self, setUp_1d):
 
         b, ind = self.gsp.bubble_neighbors(
-            self.centres,
-            distance_upper_bound=self.upper_radii,
-            sorted=True
+            self.centres, distance_upper_bound=self.upper_radii, sorted=True
         )
 
         for i, centre in enumerate(self.centres):
@@ -109,13 +107,11 @@ class Test_grispy:
             mask = d < self.upper_radii
             d = d[mask]
             assert_equal(len(b[i]), len(d))
-            np.testing.assert_almost_equal(b[i], sorted(d), decimal=14)
+            assert_almost_equal(b[i], sorted(d), decimal=14)
 
         self.gsp.set_periodicity({0: (-self.lbox * 0.5, self.lbox * 0.5)})
         b, ind = self.gsp.bubble_neighbors(
-            self.centres,
-            distance_upper_bound=self.upper_radii,
-            sorted=True
+            self.centres, distance_upper_bound=self.upper_radii, sorted=True
         )
 
         for i, centre in enumerate(self.centres):
@@ -129,7 +125,7 @@ class Test_grispy:
             mask = d < self.upper_radii
             d = d[mask]
             assert_equal(len(b[i]), len(d))
-            np.testing.assert_almost_equal(b[i], sorted(d), decimal=14)
+            assert_almost_equal(b[i], sorted(d), decimal=14)
 
     def test_shell_precision(self, setUp_1d):
 
@@ -137,7 +133,7 @@ class Test_grispy:
             self.centres,
             distance_lower_bound=self.lower_radii,
             distance_upper_bound=self.upper_radii,
-            sorted=True
+            sorted=True,
         )
 
         for i, centre in enumerate(self.centres):
@@ -146,14 +142,14 @@ class Test_grispy:
             mask = (d <= self.upper_radii) * (d >= self.lower_radii)
             d = d[mask]
             assert_equal(len(b[i]), len(d))
-            np.testing.assert_almost_equal(b[i], sorted(d), decimal=14)
+            assert_almost_equal(b[i], sorted(d), decimal=14)
 
         self.gsp.set_periodicity({0: (-self.lbox * 0.5, self.lbox * 0.5)})
         b, ind = self.gsp.shell_neighbors(
             self.centres,
             distance_lower_bound=self.lower_radii,
             distance_upper_bound=self.upper_radii,
-            sorted=True
+            sorted=True,
         )
 
         for i, centre in enumerate(self.centres):
@@ -167,7 +163,7 @@ class Test_grispy:
             mask = (d <= self.upper_radii) * (d >= self.lower_radii)
             d = d[mask]
             assert_equal(len(b[i]), len(d))
-            np.testing.assert_almost_equal(b[i], sorted(d), decimal=14)
+            assert_almost_equal(b[i], sorted(d), decimal=14)
 
     def test_nearest_neighbors_precision(self, setUp_1d):
 
@@ -179,7 +175,7 @@ class Test_grispy:
             d = sorted(np.concatenate(d))
             d = d[: self.n_nearest]
             assert_equal(len(b[i]), len(d))
-            np.testing.assert_almost_equal(b[i], d, decimal=16)
+            assert_almost_equal(b[i], d, decimal=16)
 
         self.gsp.set_periodicity({0: (-self.lbox * 0.5, self.lbox * 0.5)})
         b, ind = self.gsp.nearest_neighbors(self.centres, n=self.n_nearest)
@@ -195,7 +191,7 @@ class Test_grispy:
             d = sorted(np.concatenate(d))
             d = d[: self.n_nearest]
             assert_equal(len(b[i]), len(d))
-            np.testing.assert_almost_equal(b[i], d, decimal=16)
+            assert_almost_equal(b[i], d, decimal=16)
 
 
 class Test_periodicity_grispy:
@@ -213,7 +209,6 @@ class Test_periodicity_grispy:
                 [0, 0, -2]
             ]
         )
-
         self.eps = 1e-6
         self.gsp = GriSPy(self.data)
 
@@ -251,7 +246,7 @@ class Test_periodicity_grispy:
         dis, ind = self.gsp.shell_neighbors(
             centres,
             distance_lower_bound=lower_radii - self.eps,
-            distance_upper_bound=upper_radii + self.eps
+            distance_upper_bound=upper_radii + self.eps,
         )
         dis, ind = dis[0], ind[0]
 
@@ -266,13 +261,7 @@ class Test_periodicity_grispy:
 
     def test_periodicity_in_bubble(self, setUp_1d):
 
-        centres = np.array(
-            [
-                [5.0, 0.0, 0.0],
-                [0.0, 5.0, 0.0],
-                [0.0, 0.0, 5.0]
-            ]
-        )
+        centres = np.array([[5.0, 0.0, 0.0], [0.0, 5.0, 0.0], [0.0, 0.0, 5.0]])
         upper_radii = 0.3 * self.lbox
 
         for j in range(3):
@@ -293,3 +282,99 @@ class Test_periodicity_grispy:
                 assert_equal(ind[i], i + (j * 2))
                 assert_(dis[i] <= upper_radii * (1.0 + self.eps))
                 assert_(dis[i] >= upper_radii * (1.0 - self.eps))
+
+
+class Test_hypersphere_grispy:
+    @pytest.fixture
+    def setUp_4d(self):
+
+        np.random.seed(1234)
+        self.lbox = 100.0
+        self.upper_radii = 0.25 * self.lbox
+        self.lower_radii = 0.20 * self.lbox
+        self.n_nearest = 32
+        self.eps = 1e-6
+
+        ############################################
+        #
+        # Follow
+        # http://mathworld.wolfram.com/HyperspherePointPicking.html
+        # Marsaglia, G.
+        # "Choosing a Point from the Surface of a Sphere."
+        # Ann. Math. Stat. 43, 645-646, 1972.
+        #
+        ############################################
+
+        npoints = 10 ** 5
+        x = np.random.uniform(-1.0, 1.0, size=(npoints, 1))
+        y = np.random.uniform(-1.0, 1.0, size=(npoints, 1))
+        z = np.random.uniform(-1.0, 1.0, size=(npoints, 1))
+        w = np.random.uniform(-1.0, 1.0, size=(npoints, 1))
+
+        tttt = (x ** 2 + y ** 2 < 1.0) * (z ** 2 + w ** 2 < 1.0)
+        npoints = np.sum(tttt)
+        self.radius = self.lbox * np.random.rand(npoints)
+        x = x[tttt]
+        y = y[tttt]
+        z = z[tttt]
+        w = w[tttt]
+
+        tttt = np.sqrt((1.0 - x ** 2 - y ** 2) / (z ** 2 + w ** 2))
+        x = self.radius * x
+        y = self.radius * y
+        z = self.radius * z * tttt
+        w = self.radius * w * tttt
+
+        tttt = np.sqrt(x ** 2 + y ** 2 + z ** 2 + w ** 2)
+        assert_almost_equal(self.radius, tttt, decimal=12)
+        self.data = np.array([x, y, z, w]).T
+
+        ############################################
+        ############################################
+
+        self.gsp = GriSPy(self.data)
+
+    def test_in_hiperbubble(self, setUp_4d):
+
+        centre = np.array([[0.0, 0.0, 0.0, 0.0]])
+
+        dis, ind = self.gsp.bubble_neighbors(
+            centre, distance_upper_bound=self.upper_radii, sorted=True
+        )
+        dis, ind = dis[0], ind[0]
+
+        mask = self.radius <= self.upper_radii * (1.0 + self.eps)
+        assert_equal(len(dis), len(ind))
+        assert_equal(len(dis), len(self.radius[mask]))
+        assert_almost_equal(dis, sorted(self.radius[mask]), decimal=14)
+
+    def test_in_hipersheell(self, setUp_4d):
+
+        centre = np.array([[0.0, 0.0, 0.0, 0.0]])
+
+        dis, ind = self.gsp.shell_neighbors(
+            centre,
+            distance_lower_bound=self.lower_radii,
+            distance_upper_bound=self.upper_radii,
+            sorted=True,
+        )
+        dis, ind = dis[0], ind[0]
+
+        mask = (self.radius <= self.upper_radii * (1.0 + self.eps)) * (
+            self.radius >= self.lower_radii * (1.0 - self.eps)
+        )
+        assert_equal(len(dis), len(ind))
+        assert_equal(len(dis), len(self.radius[mask]))
+        assert_almost_equal(dis, sorted(self.radius[mask]), decimal=14)
+
+    def test_hipernearest_neighbors(self, setUp_4d):
+
+        centre = np.array([[0.0, 0.0, 0.0, 0.0]])
+
+        dis, ind = self.gsp.nearest_neighbors(centre, n=self.n_nearest)
+        dis, ind = dis[0], ind[0]
+
+        tmp = sorted(self.radius)[: self.n_nearest]
+        assert_equal(len(dis), len(ind))
+        assert_equal(len(dis), len(tmp))
+        assert_almost_equal(dis, tmp, decimal=14)
