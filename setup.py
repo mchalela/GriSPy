@@ -50,18 +50,18 @@ def do_setup():
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
 
-        author=(
+        author=[
             "Martin Chalela",
             "Emanuel Sillero",
             "Luis Pereyra",
-            "Alejandro Garcia"),
+            "Alejandro Garcia"],
         author_email="tinchochalela@gmail.com",
         url="https://github.com/mchalela/GriSPy",
         license="MIT",
 
         keywords=["grispy", "nearest", "neighbors", "search", "grid"],
 
-        classifiers=(
+        classifiers=[
             "Development Status :: 4 - Beta",
             "Intended Audience :: Education",
             "Intended Audience :: Science/Research",
@@ -70,7 +70,7 @@ def do_setup():
             "Programming Language :: Python",
             "Programming Language :: Python :: 3.7",
             "Programming Language :: Python :: Implementation :: CPython",
-            "Topic :: Scientific/Engineering"),
+            "Topic :: Scientific/Engineering"],
 
         packages=["grispy"],
         py_modules=["ez_setup"],
