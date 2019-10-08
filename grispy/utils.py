@@ -188,7 +188,7 @@ def validate_distance_bound(distance, periodic):
     for v in periodic.values():
         if v is None:
             continue
-        if np.any(distance > v[1] - v[0]):
+        if np.any(distance > (v[1] - v[0])):
             raise ValueError(
                 "Distance can not be higher than the periodicity range"
             )
@@ -207,17 +207,6 @@ def validate_shell_distances(lower_bound, upper_bound, periodic):
         raise ValueError(
             "Distance: Lower bound must be lower than higher bound."
         )
-
-    # Check distance is not larger than periodic range
-    for v in periodic.values():
-        if v is None:
-            continue
-        if np.any(upper_bound > v[1] - v[0]) or np.any(
-            lower_bound > v[1] - v[0]
-        ):
-            raise ValueError(
-                "Distance can not be higher than the periodicity range"
-            )
 
     return None
 

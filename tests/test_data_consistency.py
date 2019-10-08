@@ -284,7 +284,7 @@ class Test_valid_query_input:
                 kind=self.kind,
             )
 
-    def test_invalid_bounds(self, setUp):
+    def test_invalid_bounds_bubble(self, setUp):
 
         # Invalid type
         bad_upper_radii = list(np.random.uniform(0.6, 1, size=10))
@@ -317,6 +317,18 @@ class Test_valid_query_input:
                 kind=self.kind,
             )
 
+        # Invalid value
+        bad_upper_radii = 10.  # larger than periodic range
+        with pytest.raises(ValueError):
+            self.gsp.bubble_neighbors(
+                self.centres,
+                distance_upper_bound=bad_upper_radii,
+                sorted=self.sorted,
+                kind=self.kind,
+            )
+
+    def test_invalid_bounds_shell(self, setUp):
+
         # Different lenght than centres
         lower_radii = np.random.uniform(0.1, 0.5, size=10)
         bad_upper_radii = np.random.uniform(0.6, 1, size=11)
@@ -329,18 +341,85 @@ class Test_valid_query_input:
                 kind=self.kind,
             )
 
-        # Invalid value
-        bad_upper_radii = 10.  # larger than periodic range
+        # Upper bound is lower than lower bound
+        lower_radii = np.random.uniform(0.1, 0.5, size=10)
+        bad_upper_radii = np.random.uniform(0.6, 1, size=10)
+        bad_upper_radii[4] = lower_radii[4] - 0.05
+        with pytest.raises(ValueError):
+            self.gsp.shell_neighbors(
+                self.centres,
+                distance_upper_bound=bad_upper_radii,
+                distance_lower_bound=lower_radii,
+                sorted=self.sorted,
+                kind=self.kind,
+            )
+
+    def test_invalid_bool(self, setUp):
+
+        # Invalid type
+        bad_sorted = "True"
+        with pytest.raises(TypeError):
+            self.gsp.bubble_neighbors(
+                self.centres,
+                distance_upper_bound=self.upper_radii,
+                sorted=bad_sorted,
+                kind=self.kind,
+            )
+
+    def test_invalid_sortkind(self, setUp):
+
+        # Invalid type
+        bad_kind = ["quicksort"]    # string inside list
+        with pytest.raises(TypeError):
+            self.gsp.bubble_neighbors(
+                self.centres,
+                distance_upper_bound=self.upper_radii,
+                sorted=self.sorted,
+                kind=bad_kind,
+            )
+
+        # Invalid name
+        bad_kind = "quick_sort"
         with pytest.raises(ValueError):
             self.gsp.bubble_neighbors(
                 self.centres,
-                distance_upper_bound=bad_upper_radii,
+                distance_upper_bound=self.upper_radii,
                 sorted=self.sorted,
+                kind=bad_kind,
+            )
+
+    def test_invalid_nnearest(self, setUp):
+
+        # Invalid type
+        bad_n = np.array([2])    # array instead of integer
+        with pytest.raises(TypeError):
+            self.gsp.nearest_neighbors(
+                self.centres,
+                n=bad_n,
+                kind=self.kind,
+            )
+
+        # Invalid value
+        bad_n = -5
+        with pytest.raises(ValueError):
+            self.gsp.nearest_neighbors(
+                self.centres,
+                n=bad_n,
+                kind=self.kind,
+            )
+
+        # Invalid value
+        bad_n = 10**10   # too large
+        with pytest.raises(ValueError):
+            self.gsp.nearest_neighbors(
+                self.centres,
+                n=bad_n,
                 kind=self.kind,
             )
 
 
 class Test_valid_init:
+
     @pytest.fixture
     def setUp(self):
         # Define valid input data
