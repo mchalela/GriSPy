@@ -39,7 +39,7 @@ class Test_Save:
 
     def test_save_invalidfile(self, setUp):
         file = ["invalid_file_type.gsp"]
-        with mock.patch('builtins.open', mock.mock_open()) as mf:
+        with mock.patch('builtins.open', mock.mock_open()):
             with pytest.raises(TypeError):
                 self.gsp.save_grid(file=file)
 
@@ -53,20 +53,22 @@ class Test_Load:
 
     def test_load_nofile(self):
         with mock.patch('os.path.isfile', return_value=False):
-            with pytest.raises(FileNotFoundError, match=r"There is no file named.*"):
+            with pytest.raises(
+                FileNotFoundError, match=r"There is no file named.*"
+            ):
                 GriSPy.load_grid("this_file_should_not_exist.gsp")
 
     def test_load_samestate_ag(self, setUp):
         file = "test_load_grid.gsp"
-        with mock.patch('builtins.open', mock.mock_open()) as mf:
+        with mock.patch('builtins.open', mock.mock_open()):
             with mock.patch('pickle.dump') as pd:
-            # Save a first time
+                # Save a first time
                 self.gsp.save_grid(file=file)
                 args_pd, kwargs_pd = pd.call_args_list[0]
-    
+
             # Load again to check the state is the same
                 with mock.patch('os.path.isfile', return_value=True):
-                    with mock.patch('pickle.load', return_value=args_pd[0]) as pl:
+                    with mock.patch('pickle.load', return_value=args_pd[0]):
                         gsp_tmp = GriSPy.load_grid(file)
                         assert_(isinstance(gsp_tmp["dim"], int))
                         assert_(isinstance(gsp_tmp["data"], np.ndarray))
@@ -89,14 +91,14 @@ class Test_Load:
     def test_load_invalidfile(self, setUp):
         # Invalid filename
         file = ["invalid_file.gsp"]
-        with mock.patch('builtins.open', mock.mock_open()) as mf:
+        with mock.patch('builtins.open', mock.mock_open()):
             with pytest.raises(TypeError):
                 GriSPy.load_grid(file=file)
 
-        # Invalid instance of GriSPy
+            # Invalid instance of GriSPy
             bad_gsp = self.gsp.__dict__
             file = "invalid_file.gsp"
             with mock.patch('os.path.isfile', return_value=True):
-                    with mock.patch('pickle.load', return_value=bad_gsp) as pl:
-                        with pytest.raises(TypeError):
-                            GriSPy.load_grid(file=file)
+                with mock.patch('pickle.load', return_value=bad_gsp):
+                    with pytest.raises(TypeError):
+                        GriSPy.load_grid(file=file)
