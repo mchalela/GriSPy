@@ -1,13 +1,23 @@
-from numpy.testing import assert_equal, assert_
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# This file is part of the
+#   GriSPy Project (https://github.com/mchalela/GriSPy).
+# Copyright (c) 2019, Martin Chalela
+# License: MIT
+#   Full Text: https://github.com/mchalela/GriSPy/blob/master/LICENSE
+
+
+import pytest
 import numpy as np
 from grispy import GriSPy
-import pytest
+from numpy.testing import assert_equal, assert_
 
 
 class Test_data_consistency:
 
     @pytest.fixture
-    def setUp(self):
+    def gsp(self):
 
         np.random.seed(1234)
         self.centres = np.random.rand(3, 5).T
@@ -29,22 +39,22 @@ class Test_data_consistency:
         self.lower_radii = [0.5]
         self.n_nearest = 5
 
-        self.gsp = GriSPy(self.data)
+        return GriSPy(self.data)
 
-    def test_grid_data(self, setUp):
-        assert_(isinstance(self.gsp.dim, int))
-        assert_(isinstance(self.gsp.data, np.ndarray))
-        assert_(isinstance(self.gsp.k_bins, np.ndarray))
-        assert_(isinstance(self.gsp.metric, str))
-        assert_(isinstance(self.gsp.N_cells, int))
-        assert_(isinstance(self.gsp.grid, dict))
-        assert_(isinstance(self.gsp.periodic, dict))
-        assert_(isinstance(self.gsp.periodic_flag, bool))
-        assert_(isinstance(self.gsp.time, dict))
+    def test_grid_data(self, gsp):
+        assert_(isinstance(gsp.dim, int))
+        assert_(isinstance(gsp.data, np.ndarray))
+        assert_(isinstance(gsp.k_bins, np.ndarray))
+        assert_(isinstance(gsp.metric, str))
+        assert_(isinstance(gsp.N_cells, int))
+        assert_(isinstance(gsp.grid, dict))
+        assert_(isinstance(gsp.periodic, dict))
+        assert_(isinstance(gsp.periodic_flag, bool))
+        assert_(isinstance(gsp.time, dict))
 
-    def test_bubble_single_query(self, setUp):
+    def test_bubble_single_query(self, gsp):
 
-        b, ind = self.gsp.bubble_neighbors(
+        b, ind = gsp.bubble_neighbors(
             np.array([[0, 0, 0]]), distance_upper_bound=self.upper_radii[0]
         )
         assert_(isinstance(b, list))
@@ -53,9 +63,9 @@ class Test_data_consistency:
         assert_equal(len(b), 1)
         assert_equal(len(ind), 1)
 
-    def test_shell_single_query(self, setUp):
+    def test_shell_single_query(self, gsp):
 
-        b, ind = self.gsp.shell_neighbors(
+        b, ind = gsp.shell_neighbors(
             np.array([[0, 0, 0]]),
             distance_lower_bound=self.lower_radii[0],
             distance_upper_bound=self.upper_radii[0],
@@ -66,9 +76,9 @@ class Test_data_consistency:
         assert_equal(len(b), 1)
         assert_equal(len(ind), 1)
 
-    def test_nearest_neighbors_single_query(self, setUp):
+    def test_nearest_neighbors_single_query(self, gsp):
 
-        b, ind = self.gsp.nearest_neighbors(
+        b, ind = gsp.nearest_neighbors(
             np.array([[0, 0, 0]]), n=self.n_nearest
         )
 
@@ -80,9 +90,9 @@ class Test_data_consistency:
         assert_equal(np.shape(b[0]), (self.n_nearest,))
         assert_equal(np.shape(ind[0]), (self.n_nearest,))
 
-    def test_bubble_multiple_query(self, setUp):
+    def test_bubble_multiple_query(self, gsp):
 
-        b, ind = self.gsp.bubble_neighbors(
+        b, ind = gsp.bubble_neighbors(
             self.centres, distance_upper_bound=self.upper_radii[0]
         )
         assert_(isinstance(b, list))
@@ -91,9 +101,9 @@ class Test_data_consistency:
         assert_equal(len(b), len(self.centres))
         assert_equal(len(ind), len(self.centres))
 
-    def test_shell_multiple_query(self, setUp):
+    def test_shell_multiple_query(self, gsp):
 
-        b, ind = self.gsp.shell_neighbors(
+        b, ind = gsp.shell_neighbors(
             self.centres,
             distance_lower_bound=self.lower_radii[0],
             distance_upper_bound=self.upper_radii[0],
@@ -104,9 +114,9 @@ class Test_data_consistency:
         assert_equal(len(b), len(self.centres))
         assert_equal(len(ind), len(self.centres))
 
-    def test_nearest_neighbors_multiple_query(self, setUp):
+    def test_nearest_neighbors_multiple_query(self, gsp):
 
-        b, ind = self.gsp.nearest_neighbors(self.centres, n=self.n_nearest)
+        b, ind = gsp.nearest_neighbors(self.centres, n=self.n_nearest)
         assert_(isinstance(b, list))
         assert_(isinstance(ind, list))
         assert_equal(len(b), len(ind))
@@ -120,7 +130,7 @@ class Test_data_consistency:
 class Test_data_consistency_periodic:
 
     @pytest.fixture
-    def setUp(self):
+    def gsp(self):
 
         np.random.seed(1234)
         self.centres = np.random.rand(3, 5).T
@@ -144,11 +154,11 @@ class Test_data_consistency_periodic:
 
         self.periodic = {0: (0.0, 1.0)}
 
-        self.gsp = GriSPy(self.data, periodic=self.periodic)
+        return GriSPy(self.data, periodic=self.periodic)
 
-    def test_mirror_universe(self, setUp):
+    def test_mirror_universe(self, gsp):
         r_cen = np.array([[0, 0, 0]])
-        t_cen, t_ind = self.gsp._mirror_universe(
+        t_cen, t_ind = gsp._mirror_universe(
             r_cen, distance_upper_bound=self.upper_radii
         )
         assert_(isinstance(t_cen, np.ndarray))
@@ -157,14 +167,14 @@ class Test_data_consistency_periodic:
         assert_equal(t_cen.ndim, t_cen.ndim)
         assert_equal(t_cen.shape[1], r_cen.shape[1])
 
-    def test_mirror(self, setUp):
-        t_cen = self.gsp._mirror(
+    def test_mirror(self, gsp):
+        t_cen = gsp._mirror(
             np.array([[0, 0, 0]]), distance_upper_bound=self.upper_radii
         )
         assert_(isinstance(t_cen, np.ndarray))
 
-    def test_near_boundary(self, setUp):
-        mask = self.gsp._near_boundary(
+    def test_near_boundary(self, gsp):
+        mask = gsp._near_boundary(
             np.array([[0, 0, 0]]), distance_upper_bound=self.upper_radii
         )
         assert_(isinstance(mask, np.ndarray))
@@ -229,11 +239,7 @@ def test__init__A_04():
 
 class Test_valid_query_input:
     @pytest.fixture
-    def setUp(self):
-
-        data = np.random.uniform(-1, 1, size=(100, 3))
-        periodic = {0: (-1, 1)}
-        self.gsp = GriSPy(data, periodic=periodic)
+    def gsp(self):
 
         # Define valid input data
         self.centres = np.random.uniform(-1, 1, size=(10, 3))
@@ -243,11 +249,15 @@ class Test_valid_query_input:
         self.sorted = True
         self.n = 5
 
-    def test_invalid_centres(self, setUp):
+        data = np.random.uniform(-1, 1, size=(100, 3))
+        periodic = {0: (-1, 1)}
+        return GriSPy(data, periodic=periodic)
+
+    def test_invalid_centres(self, gsp):
         # Invalid type
         bad_centres = [[1, 1, 1], [2, 2, 2]]
         with pytest.raises(TypeError):
-            self.gsp.bubble_neighbors(
+            gsp.bubble_neighbors(
                 bad_centres,
                 distance_upper_bound=self.upper_radii,
                 sorted=self.sorted,
@@ -257,7 +267,7 @@ class Test_valid_query_input:
         bad_centres = np.random.uniform(-1, 1, size=(10, 3))
         bad_centres[4, 1] = np.inf    # add one invalid value
         with pytest.raises(ValueError):
-            self.gsp.bubble_neighbors(
+            gsp.bubble_neighbors(
                 bad_centres,
                 distance_upper_bound=self.upper_radii,
                 sorted=self.sorted,
@@ -267,7 +277,7 @@ class Test_valid_query_input:
         # Invalid shape
         bad_centres = np.random.uniform(-1, 1, size=(10, 2))
         with pytest.raises(ValueError):
-            self.gsp.bubble_neighbors(
+            gsp.bubble_neighbors(
                 bad_centres,
                 distance_upper_bound=self.upper_radii,
                 sorted=self.sorted,
@@ -277,19 +287,19 @@ class Test_valid_query_input:
         # Invalid shape
         bad_centres = np.array([[], [], []]).reshape((0, 3))
         with pytest.raises(ValueError):
-            self.gsp.bubble_neighbors(
+            gsp.bubble_neighbors(
                 bad_centres,
                 distance_upper_bound=self.upper_radii,
                 sorted=self.sorted,
                 kind=self.kind,
             )
 
-    def test_invalid_bounds_bubble(self, setUp):
+    def test_invalid_bounds_bubble(self, gsp):
 
         # Invalid type
         bad_upper_radii = list(np.random.uniform(0.6, 1, size=10))
         with pytest.raises(TypeError):
-            self.gsp.bubble_neighbors(
+            gsp.bubble_neighbors(
                 self.centres,
                 distance_upper_bound=bad_upper_radii,
                 sorted=self.sorted,
@@ -300,7 +310,7 @@ class Test_valid_query_input:
         bad_upper_radii = np.random.uniform(0.6, 1, size=10)
         bad_upper_radii[5] = -1.
         with pytest.raises(ValueError):
-            self.gsp.bubble_neighbors(
+            gsp.bubble_neighbors(
                 self.centres,
                 distance_upper_bound=bad_upper_radii,
                 sorted=self.sorted,
@@ -310,7 +320,7 @@ class Test_valid_query_input:
         # Different lenght than centres
         bad_upper_radii = np.random.uniform(0.6, 1, size=11)
         with pytest.raises(ValueError):
-            self.gsp.bubble_neighbors(
+            gsp.bubble_neighbors(
                 self.centres,
                 distance_upper_bound=bad_upper_radii,
                 sorted=self.sorted,
@@ -320,20 +330,20 @@ class Test_valid_query_input:
         # Invalid value
         bad_upper_radii = 10.  # larger than periodic range
         with pytest.raises(ValueError):
-            self.gsp.bubble_neighbors(
+            gsp.bubble_neighbors(
                 self.centres,
                 distance_upper_bound=bad_upper_radii,
                 sorted=self.sorted,
                 kind=self.kind,
             )
 
-    def test_invalid_bounds_shell(self, setUp):
+    def test_invalid_bounds_shell(self, gsp):
 
         # Different lenght than centres
         lower_radii = np.random.uniform(0.1, 0.5, size=10)
         bad_upper_radii = np.random.uniform(0.6, 1, size=11)
         with pytest.raises(ValueError):
-            self.gsp.shell_neighbors(
+            gsp.shell_neighbors(
                 self.centres,
                 distance_upper_bound=bad_upper_radii,
                 distance_lower_bound=lower_radii,
@@ -346,7 +356,7 @@ class Test_valid_query_input:
         bad_upper_radii = np.random.uniform(0.6, 1, size=10)
         bad_upper_radii[4] = lower_radii[4] - 0.05
         with pytest.raises(ValueError):
-            self.gsp.shell_neighbors(
+            gsp.shell_neighbors(
                 self.centres,
                 distance_upper_bound=bad_upper_radii,
                 distance_lower_bound=lower_radii,
@@ -354,24 +364,24 @@ class Test_valid_query_input:
                 kind=self.kind,
             )
 
-    def test_invalid_bool(self, setUp):
+    def test_invalid_bool(self, gsp):
 
         # Invalid type
         bad_sorted = "True"
         with pytest.raises(TypeError):
-            self.gsp.bubble_neighbors(
+            gsp.bubble_neighbors(
                 self.centres,
                 distance_upper_bound=self.upper_radii,
                 sorted=bad_sorted,
                 kind=self.kind,
             )
 
-    def test_invalid_sortkind(self, setUp):
+    def test_invalid_sortkind(self, gsp):
 
         # Invalid type
         bad_kind = ["quicksort"]    # string inside list
         with pytest.raises(TypeError):
-            self.gsp.bubble_neighbors(
+            gsp.bubble_neighbors(
                 self.centres,
                 distance_upper_bound=self.upper_radii,
                 sorted=self.sorted,
@@ -381,19 +391,19 @@ class Test_valid_query_input:
         # Invalid name
         bad_kind = "quick_sort"
         with pytest.raises(ValueError):
-            self.gsp.bubble_neighbors(
+            gsp.bubble_neighbors(
                 self.centres,
                 distance_upper_bound=self.upper_radii,
                 sorted=self.sorted,
                 kind=bad_kind,
             )
 
-    def test_invalid_nnearest(self, setUp):
+    def test_invalid_nnearest(self, gsp):
 
         # Invalid type
         bad_n = np.array([2])    # array instead of integer
         with pytest.raises(TypeError):
-            self.gsp.nearest_neighbors(
+            gsp.nearest_neighbors(
                 self.centres,
                 n=bad_n,
                 kind=self.kind,
@@ -402,7 +412,7 @@ class Test_valid_query_input:
         # Invalid value
         bad_n = -5
         with pytest.raises(ValueError):
-            self.gsp.nearest_neighbors(
+            gsp.nearest_neighbors(
                 self.centres,
                 n=bad_n,
                 kind=self.kind,
@@ -411,7 +421,7 @@ class Test_valid_query_input:
         # Invalid value
         bad_n = 10**10   # too large
         with pytest.raises(ValueError):
-            self.gsp.nearest_neighbors(
+            gsp.nearest_neighbors(
                 self.centres,
                 n=bad_n,
                 kind=self.kind,
@@ -421,7 +431,7 @@ class Test_valid_query_input:
 class Test_valid_init:
 
     @pytest.fixture
-    def setUp(self):
+    def gsp(self):
         # Define valid input data
         self.data = np.random.uniform(-1, 1, size=(100, 3))
         self.periodic = {0: (-1, 1), 1: (-1, 1), 2: None}
@@ -429,7 +439,7 @@ class Test_valid_init:
         self.N_cells = 10
         self.copy_data = True
 
-    def test_invalid_data(self, setUp):
+    def test_invalid_data(self, gsp):
         bad_data = np.random.uniform(-1, 1, size=(100, 3))
         bad_data[42, 1] = np.inf    # add one invalid value
         with pytest.raises(ValueError):
@@ -441,7 +451,7 @@ class Test_valid_init:
                 copy_data=self.copy_data,
             )
 
-    def test_invalid_periodic(self, setUp):
+    def test_invalid_periodic(self, gsp):
         # Axis 0 with invalid type: string instead of dict
         bad_periodic = '{0: [-1, 1], 1: (-1, 1), 2: None}'
         with pytest.raises(TypeError):
@@ -497,7 +507,7 @@ class Test_valid_init:
                 copy_data=self.copy_data,
             )
 
-    def test_invalid_metric(self, setUp):
+    def test_invalid_metric(self, gsp):
         # Metric name is not a string
         bad_metric = 42
         with pytest.raises(TypeError):
@@ -520,7 +530,7 @@ class Test_valid_init:
                 copy_data=self.copy_data,
             )
 
-    def test_invalid_Ncells(self, setUp):
+    def test_invalid_Ncells(self, gsp):
         # N_cells is not integer
         bad_N_cells = 10.5
         with pytest.raises(TypeError):
@@ -543,7 +553,7 @@ class Test_valid_init:
                 copy_data=self.copy_data,
             )
 
-    def test_invalid_copy_data(self, setUp):
+    def test_invalid_copy_data(self, gsp):
         # copy_data is not bool
         bad_copy_data = 42
         with pytest.raises(TypeError):
