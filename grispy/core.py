@@ -8,6 +8,9 @@
 #   Full Text: https://github.com/mchalela/GriSPy/blob/master/LICENSE
 
 
+"""GriSPy core class."""
+
+
 import numpy as np
 import time
 import datetime
@@ -17,7 +20,8 @@ from . import utils
 
 @attr.s
 class GriSPy(object):
-    """ Grid Search in Python.
+    """Grid Search in Python.
+
     GriSPy is a regular grid search algorithm for quick nearest-neighbor
     lookup.
 
@@ -26,21 +30,21 @@ class GriSPy(object):
     boundary conditions can be provided for each axis individually.
 
     The algorithm has the following queries implemented:
-    bubble_neighbors: find neighbors within a given radius. A different
-            radius for each centre can be provided.
-    shell_neighbors: find neighbors within given lower and upper radius.
-        Different lower and upper radius can be provided for each centre.
-    nearest_neighbors: find the nth nearest neighbors for each centre.
+    - bubble_neighbors: find neighbors within a given radius. A different
+    radius for each centre can be provided.
+    - shell_neighbors: find neighbors within given lower and upper radius.
+    Different lower and upper radius can be provided for each centre.
+    - nearest_neighbors: find the nth nearest neighbors for each centre.
 
     Other methods:
-    set_periodicity: set periodicity condition after the grid was built.
-    save_grid: save the grid for future use.
-    load_grid: load a grid previously saved.
+    - set_periodicity: set periodicity condition after the grid was built.
+    - save_grid: save the grid for future use.
+    - load_grid: load a grid previously saved.
 
     To be implemented:
-    box_neighbors: find neighbors within a k-dimensional squared box of
-        a given size and orientation.
-    n_jobs: number of cores for parallel computation.
+    - box_neighbors: find neighbors within a k-dimensional squared box of
+    a given size and orientation.
+    - n_jobs: number of cores for parallel computation.
 
     Parameters
     ----------
@@ -88,7 +92,9 @@ class GriSPy(object):
         Dictionary containing the building time and the date of build.
         keys: 'buildtime', returns float with the time taken to build the grid,
         in seconds; 'datetime': formated string with the date of build.
+
     """
+
     # User input params
     data = attr.ib(
         default=None, kw_only=False, repr=False, validator=utils.validate_data,
@@ -101,6 +107,7 @@ class GriSPy(object):
     )
 
     def __attrs_post_init__(self):
+        """Init more params and build the grid."""
         if self.copy_data:
             self.data = self.data.copy()
         self.dim = self.data.shape[1]
@@ -109,11 +116,11 @@ class GriSPy(object):
         self._empty = np.array([], dtype=int)  # Useful for empty arrays
 
     def __getitem__(self, key):
+        """Get item."""
         return getattr(self, key)
 
     def _build_grid(self, epsilon=1.0e-6):
-        """ Builds the grid
-        """
+        """Build the grid."""
         t0 = time.time()
         data_ind = np.arange(len(self.data))
         self.k_bins = np.zeros((self.N_cells + 1, self.dim))
@@ -161,10 +168,12 @@ class GriSPy(object):
         self.time["datetime"] = currentDT.strftime("%Y-%b-%d %H:%M:%S")
 
     def distance(self, centre_0, centres):
-        """ Computes the distance between points
-        metric: 'euclid', 'sphere'
+        """Compute distance between points.
+
+        metric options: 'euclid', 'sphere'
 
         Notes: In the case of 'sphere' metric, the input units must be degrees.
+
         """
         if len(centres) == 0:
             return self._empty
@@ -189,8 +198,7 @@ class GriSPy(object):
             return np.rad2deg(sep)
 
     def _get_neighbor_distance(self, centres, neighbor_cells):
-        """ Retrieves the neighbor distances whithin the given cells
-        """
+        """Retrieve neighbor distances whithin the given cells."""
         neighbors_indices = []
         neighbors_distances = []
         for i in range(len(centres)):
@@ -219,8 +227,7 @@ class GriSPy(object):
         distance_lower_bound=0,
         shell_flag=False,
     ):
-        """ Retrieves the cells touched by the search radius
-        """
+        """Retrieve cells touched by the search radius."""
         cell_point = np.zeros((len(centres), self.dim), dtype=int)
         out_of_field = np.zeros(len(cell_point), dtype=bool)
         for k in range(self.dim):
@@ -323,8 +330,7 @@ class GriSPy(object):
         return mirror_centre[mask]
 
     def _mirror_universe(self, centres, distance_upper_bound):
-        """Generate Terran centres in the Mirror Universe
-        """
+        """Generate Terran centres in the Mirror Universe."""
         terran_centres = np.array([[]] * self.dim).T
         terran_indices = np.array([], dtype=int)
         near_boundary = self._near_boundary(centres, distance_upper_bound)
@@ -352,9 +358,7 @@ class GriSPy(object):
         sorted=False,
         kind="quicksort",
     ):
-        """
-        Find all points within given distances of each centre. Different
-        distances for each point can be provided.
+        """Find all points within given distances of each centre.
 
         Parameters
         ----------
@@ -383,8 +387,8 @@ class GriSPy(object):
         indices: list, length m
             Returns a list of m arrays. Each array has the indices to the
             neighbors of that centre.
-        """
 
+        """
         # Validate iputs
         utils.validate_centres(centres, self.data)
         utils.validate_distance_bound(distance_upper_bound, self.periodic)
@@ -447,9 +451,7 @@ class GriSPy(object):
         sorted=False,
         kind="quicksort",
     ):
-        """
-        Find all points within given lower and upper distances of each centre.
-        Different distances for each point can be provided.
+        """Find all points within given lower and upper distances of each centre.
 
         Parameters
         ----------
@@ -482,8 +484,8 @@ class GriSPy(object):
         indices: list, length m
             Returns a list of m arrays. Each array has the indices to the
             neighbors of that centre.
-        """
 
+        """
         # Validate inputs
         utils.validate_centres(centres, self.data)
         utils.validate_bool(sorted)
@@ -564,8 +566,7 @@ class GriSPy(object):
         return neighbors_distances, neighbors_indices
 
     def nearest_neighbors(self, centres, n=1, kind="quicksort"):
-        """
-        Find the n nearest-neighbors for each centre.
+        """Find the n nearest-neighbors for each centre.
 
         Parameters
         ----------
@@ -590,8 +591,8 @@ class GriSPy(object):
         indices: list, length m
             Returns a list of m arrays. Each array has the indices to the
             neighbors of that centre.
-        """
 
+        """
         # Validate input
         utils.validate_centres(centres, self.data)
         utils.validate_n_nearest(n, self.data, self.periodic)
@@ -671,9 +672,11 @@ class GriSPy(object):
         return neighbors_distances, neighbors_indices
 
     def set_periodicity(self, periodic={}):
-        """
-        Set periodicity conditions. This allows to define or change the
-        periodicity limits without having to construct the grid again.
+        """Set periodicity conditions.
+
+        This allows to define or change the periodicity limits without
+        having to construct the grid again.
+
         Important: The periodicity only works within one periodic range.
 
         Parameters
@@ -687,6 +690,7 @@ class GriSPy(object):
             it will be considered as non-periodic.
             Default: all axis set to None.
             Example, periodic = { 0: (0, 360), 1: None}.
+
         """
         # Validate input
         utils.validate_periodicity(periodic)
@@ -729,7 +733,8 @@ class GriSPy(object):
                 self._periodic_direc = np.sign(self._periodic_edges)
 
     def save_grid(self, file="grispy.gsp", overwrite=False):
-        """ Save all grid attributes in a binary file for future use.
+        """Save all grid attributes in a binary file for future use.
+
         This method uses the pickle module to save an instance of GriSPy.
         The protocol for pickle.dump() is the highest protocol available.
 
@@ -740,6 +745,7 @@ class GriSPy(object):
         overwrite: bool, optional
             If True the file will be overwritten in case it already exists.
             Default: False
+
         """
         # Validate input
         utils.validate_filename(file)
@@ -755,8 +761,7 @@ class GriSPy(object):
 
     @classmethod
     def load_grid(cls, file):
-        """
-        Load a GriSPy instance previously saved with the save_grid() method.
+        """Load a GriSPy instance previously saved with the save_grid() method.
 
         Parameters
         ----------
@@ -770,6 +775,7 @@ class GriSPy(object):
         -------
         GriSPy instance: object
             Returns an instance of GriSPy with all its methods and atributes.
+
         """
         # Validate input
         utils.validate_filename(file)

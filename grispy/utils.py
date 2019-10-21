@@ -8,9 +8,7 @@
 #   Full Text: https://github.com/mchalela/GriSPy/blob/master/LICENSE
 
 
-"""
-Functions to validate GriSPy input parameters
-"""
+"""Functions to validate GriSPy input parameters."""
 
 import numpy as np
 import os.path
@@ -22,7 +20,7 @@ import os.path
 
 
 def validate_data(gsp, attr, value):
-
+    """Validate init params: data."""
     # Chek if numpy array
     if not isinstance(value, np.ndarray):
         raise TypeError(
@@ -47,7 +45,7 @@ def validate_data(gsp, attr, value):
 
 
 def validate_N_cells(gsp, attr, value):
-
+    """Validate init params: N_cells."""
     # Chek if int
     if not isinstance(value, int):
         raise TypeError(
@@ -64,6 +62,7 @@ def validate_N_cells(gsp, attr, value):
 
 
 def validate_metric(gsp, attr, value):
+    """Validate init params: metric."""
     # Define valid metric names
     valid_metric_names = ["euclid", "sphere"]
 
@@ -89,10 +88,12 @@ def validate_metric(gsp, attr, value):
 
 
 def validate_periodicity(periodic):
-    # Periodicity has a differnt validator format
-    # because it can be changed in set_periodicity,
-    # so we only validate it there
+    """Validate method params: periodic.
 
+    Periodicity has a differnt validator format
+    because it can be changed in set_periodicity,
+    so we only validate it there
+    """
     # Chek if dict
     if not isinstance(periodic, dict):
         raise TypeError(
@@ -148,7 +149,7 @@ def validate_periodicity(periodic):
 
 
 def validate_centres(centres, data):
-
+    """Validate method params: centres."""
     # Chek if numpy array
     if not isinstance(centres, np.ndarray):
         raise TypeError(
@@ -174,15 +175,14 @@ def validate_centres(centres, data):
 
 
 def validate_equalsize(a, b):
-    # check if two arrays have the same lenght
+    """Check if two arrays have the same lenght."""
     if len(a) != len(b):
         raise ValueError("Arrays must have the same lenght.")
     return None
 
 
 def validate_distance_bound(distance, periodic):
-    # Distance bounds, upper and lower, can be scalar or numpy array
-
+    """Distance bounds, upper and lower, can be scalar or numpy array."""
     # Check if type is valid
     if not (np.isscalar(distance) or isinstance(distance, np.ndarray)):
         raise TypeError(
@@ -207,8 +207,7 @@ def validate_distance_bound(distance, periodic):
 
 
 def validate_shell_distances(lower_bound, upper_bound, periodic):
-    # Distance bounds, upper and lower, can be scalar or numpy array
-
+    """Distance bounds, upper and lower, can be scalar or numpy array."""
     validate_distance_bound(lower_bound, periodic)
     validate_distance_bound(upper_bound, periodic)
 
@@ -222,7 +221,7 @@ def validate_shell_distances(lower_bound, upper_bound, periodic):
 
 
 def validate_bool(flag):
-    # Check if bool
+    """Check if bool."""
     if not isinstance(flag, bool):
         raise TypeError(
             "Flag: Expected boolean. " "Got instead type {}".format(type(flag))
@@ -231,7 +230,7 @@ def validate_bool(flag):
 
 
 def validate_sortkind(kind):
-    # Define valid sorting algorithm names
+    """Define valid sorting algorithm names."""
     valid_kind_names = ["quicksort", "mergesort", "heapsort", "stable"]
 
     # Chek if string
@@ -252,7 +251,7 @@ def validate_sortkind(kind):
 
 
 def validate_n_nearest(n, data, periodic):
-
+    """Validate method params: n_nearest."""
     # Chek if int
     if not isinstance(n, int):
         raise TypeError(
@@ -283,7 +282,7 @@ def validate_n_nearest(n, data, periodic):
 
 
 def validate_filename(file):
-    # Chek if string
+    """Chek if string."""
     if not isinstance(file, str):
         raise TypeError(
             "File: Argument must be a string. "
@@ -293,7 +292,7 @@ def validate_filename(file):
 
 
 def validate_canwrite(file, overwrite):
-    # Check if file is valid
+    """Check if file is valid."""
     if not overwrite and os.path.isfile(file):
         raise FileExistsError(
             "The file {} already exists. "

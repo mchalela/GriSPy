@@ -7,6 +7,10 @@
 # License: MIT
 #   Full Text: https://github.com/mchalela/GriSPy/blob/master/LICENSE
 
+"""Grid Search in Python.
+
+GriSPy is a regular grid search algorithm for quick nearest-neighbor lookup.
+"""
 
 __all__ = ["GriSPy"]
 
