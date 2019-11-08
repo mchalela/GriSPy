@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/mchalela/GriSPy.svg?branch=master)](https://travis-ci.org/mchalela/GriSPy)
+
 # GriSPy (Grid Search in Python)
 
 
