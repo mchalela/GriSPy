@@ -13,6 +13,7 @@ import numpy as np
 from grispy import GriSPy
 from numpy.testing import assert_equal, assert_, assert_almost_equal
 
+
 class Test_auto:
 
     N = 2
@@ -20,14 +21,23 @@ class Test_auto:
 
     np.random.seed(8)
     Pos = np.random.uniform(0, lbox, size=(N, 3))
-    C = np.copy(Pos) 
+    C = np.copy(Pos)
 
     gsp = GriSPy(Pos)
-    dist, index = gsp.bubble_neighbors(C, distance_upper_bound=1.0)
+    dist, index = gsp.bubble_neighbors(C, distance_upper_bound=1.5)
 
     for idx in range(N):
         assert_(len(dist[idx]) == 1)
         assert_(len(index[idx]) == 1)
+
+    periodic = {0: (0, lbox), 1: (0, lbox), 2: (0, lbox)}
+    gsp = GriSPy(Pos, periodic=periodic)
+    dist, index = gsp.bubble_neighbors(C, distance_upper_bound=1.5)
+
+    for idx in range(N):
+        assert_(len(dist[idx]) == 1)
+        assert_(len(index[idx]) == 1)
+
 
 class Test_grispy:
     @pytest.fixture
@@ -225,7 +235,8 @@ class Test_periodicity_grispy:
 
         self.lbox = 10.0
         self.data = np.array(
-            [[2, 0, 0], [-2, 0, 0], [0, 2, 0], [0, -2, 0], [0, 0, 2], [0, 0, -2]]
+            [[2, 0, 0], [-2, 0, 0],
+                [0, 2, 0], [0, -2, 0], [0, 0, 2], [0, 0, -2]]
         )
         self.eps = 1e-6
         return GriSPy(self.data)
@@ -287,7 +298,8 @@ class Test_periodicity_grispy:
 
             centre = centres[j].reshape(1, 3)
 
-            dis, ind = gsp.bubble_neighbors(centre, distance_upper_bound=upper_radii)
+            dis, ind = gsp.bubble_neighbors(centre,
+                                            distance_upper_bound=upper_radii)
             dis, ind = dis[0], ind[0]
 
             aux = np.argsort(ind)
