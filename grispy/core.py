@@ -152,7 +152,7 @@ class GriSPy(object):
             )
             deleted_cells = np.diff(np.append(-1, split_ind)).astype(bool)
             split_ind = split_ind[deleted_cells]
-            if split_ind[-1] >= data_ind[-1]:
+            if split_ind[-1] > data_ind[-1]:
                 split_ind = split_ind[:-1]
 
             list_ind = np.split(data_ind[compact_ind_sort], split_ind[1:])
