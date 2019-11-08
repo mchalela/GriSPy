@@ -15,28 +15,37 @@ from numpy.testing import assert_equal, assert_, assert_almost_equal
 
 
 class Test_auto:
+    @pytest.fixture
+    def gsp(self):
 
-    N = 2
-    lbox = 100.0
+        np.random.seed(8)
+        N = 2
+        self.lbox = 100.0
+        self.data = np.random.uniform(0, self.lbox, size=(N, 3))
+        self.centres = np.copy(self.data)
 
-    np.random.seed(8)
-    Pos = np.random.uniform(0, lbox, size=(N, 3))
-    C = np.copy(Pos)
+        return GriSPy(self.data)
 
-    gsp = GriSPy(Pos)
-    dist, index = gsp.bubble_neighbors(C, distance_upper_bound=1.5)
+    def test_auto(self, gsp):
 
-    for idx in range(N):
-        assert_(len(dist[idx]) == 1)
-        assert_(len(index[idx]) == 1)
+        dist, index = gsp.bubble_neighbors(
+            self.centres, distance_upper_bound=1.5
+        )
+        for idx in range(len(self.centres)):
+            assert_(len(dist[idx]) == 1)
+            assert_(len(index[idx]) == 1)
 
-    periodic = {0: (0, lbox), 1: (0, lbox), 2: (0, lbox)}
-    gsp = GriSPy(Pos, periodic=periodic)
-    dist, index = gsp.bubble_neighbors(C, distance_upper_bound=1.5)
+    def test_auto_peridic(self, gsp):
 
-    for idx in range(N):
-        assert_(len(dist[idx]) == 1)
-        assert_(len(index[idx]) == 1)
+        gsp.set_periodicity(
+            {0: (0, self.lbox), 1: (0, self.lbox), 2: (0, self.lbox)}
+        )
+        dist, index = gsp.bubble_neighbors(
+            self.centres, distance_upper_bound=1.5
+        )
+        for idx in range(len(self.centres)):
+            assert_(len(dist[idx]) == 1)
+            assert_(len(index[idx]) == 1)
 
 
 class Test_grispy:

@@ -725,11 +725,10 @@ class GriSPy(object):
                 self._periodic_edges = self._periodic_edges.reshape(
                     self.dim, 3**self.dim
                 ).T
+                self._periodic_edges -= self._periodic_edges[::-1]
                 self._periodic_edges = np.unique(self._periodic_edges, axis=0)
                 mask = self._periodic_edges.sum(axis=1, dtype=bool)
                 self._periodic_edges = self._periodic_edges[mask]
-
-                self._periodic_edges -= self._periodic_edges[::-1]
                 self._periodic_direc = np.sign(self._periodic_edges)
 
     def save_grid(self, file="grispy.gsp", overwrite=False):
