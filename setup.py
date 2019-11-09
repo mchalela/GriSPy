@@ -31,8 +31,10 @@ import os.path
 # CONSTANTS
 # =============================================================================
 
-REQUIREMENTS = ["numpy==1.17.2", "attrs==19.1.0", "ipdb==0.12.2",
-                "matplotlib==3.1.1", "tox==3.14.0", "wheel==0.33.6"]
+REQUIREMENTS = ["numpy==1.17.2", "scipy==1.3.1",
+                "attrs==19.1.0", "ipdb==0.12.2",
+                "matplotlib==3.1.1", "tox==3.14.0",
+                "wheel==0.33.6"]
 
 here = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(here, "README.md")) as fp:

@@ -11,6 +11,7 @@
 """GriSPy core class."""
 
 
+from scipy.spatial.distance import cdist
 import numpy as np
 import time
 import datetime
@@ -119,6 +120,12 @@ class GriSPy(object):
         """Get item."""
         return getattr(self, key)
 
+    def _digitize(self, data, bins):
+        """Return data bin index."""
+        N = len(bins) - 1
+        d = (N * (data - bins[0]) / (bins[-1] - bins[0])).astype(np.int)
+        return d
+
     def _build_grid(self, epsilon=1.0e-6):
         """Build the grid."""
         t0 = time.time()
@@ -132,11 +139,10 @@ class GriSPy(object):
                 k_data.max() + epsilon,
                 self.N_cells + 1,
             )
-            k_digit[:, k] = np.digitize(k_data, bins=self.k_bins[:, k]) - 1
+            k_digit[:, k] = self._digitize(k_data, bins=self.k_bins[:, k])
 
         # Check that there is at least one point per cell
-        # if self.N_cells ** self.dim < len(self.data):
-        if True:
+        if self.N_cells ** self.dim < len(self.data):
             compact_ind = np.ravel_multi_index(
                 k_digit.T,
                 (self.N_cells,) * self.dim,
@@ -161,13 +167,21 @@ class GriSPy(object):
             self.grid = {}
             for i, j in enumerate(k_digit):
                 self.grid[tuple(j)] = list(list_ind[i])
+        else:
+            self.grid = {}
+            for i in range(len(self.data)):
+                cell_point = tuple(k_digit[i, :])
+                if cell_point not in self.grid:
+                    self.grid[cell_point] = [i]
+                else:
+                    self.grid[cell_point].append(i)
 
         # Record date and build time
         self.time = {"buildtime": time.time() - t0}
         currentDT = datetime.datetime.now()
         self.time["datetime"] = currentDT.strftime("%Y-%b-%d %H:%M:%S")
 
-    def distance(self, centre_0, centres):
+    def _distance(self, centre_0, centres):
         """Compute distance between points.
 
         metric options: 'euclid', 'sphere'
@@ -178,7 +192,10 @@ class GriSPy(object):
         if len(centres) == 0:
             return self._empty
         if self.metric == "euclid":
-            return np.sqrt(((centres - centre_0) ** 2).sum(axis=1))
+            c0 = centre_0.reshape((-1, self.dim))
+            d = cdist(c0, centres).reshape((-1,))
+            return d
+
         elif self.metric == "sphere":
             lon1 = np.deg2rad(centre_0[0])
             lat1 = np.deg2rad(centre_0[1])
@@ -215,7 +232,7 @@ class GriSPy(object):
             # Une en una sola lista todos sus vecinos
             neighbors_indices += [np.concatenate(ind_tmp).astype(int)]
             neighbors_distances += [
-                self.distance(centres[i], self.data[neighbors_indices[i], :])
+                self._distance(centres[i], self.data[neighbors_indices[i], :])
             ]
         return neighbors_distances, neighbors_indices
 
@@ -232,7 +249,7 @@ class GriSPy(object):
         out_of_field = np.zeros(len(cell_point), dtype=bool)
         for k in range(self.dim):
             cell_point[:, k] = (
-                np.digitize(centres[:, k], bins=self.k_bins[:, k]) - 1
+                self._digitize(centres[:, k], bins=self.k_bins[:, k])
             )
             out_of_field[
                 (centres[:, k] - distance_upper_bound > self.k_bins[-1, k])
@@ -249,16 +266,16 @@ class GriSPy(object):
         k_cell_max = np.zeros((len(centres), self.dim), dtype=int)
         for k in range(self.dim):
             k_cell_min[:, k] = (
-                np.digitize(
+                self._digitize(
                     centres[:, k] - distance_upper_bound,
                     bins=self.k_bins[:, k],
-                ) - 1
+                )
             )
             k_cell_max[:, k] = (
-                np.digitize(
+                self._digitize(
                     centres[:, k] + distance_upper_bound,
                     bins=self.k_bins[:, k],
-                ) - 1
+                )
             )
 
             k_cell_min[k_cell_min[:, k] < 0, k] = 0
@@ -290,14 +307,14 @@ class GriSPy(object):
             ]
             cells_physical = np.array(cells_physical).T
             mask_cells = (
-                self.distance(
+                self._distance(
                     centres[i], cells_physical
                 ) < distance_upper_bound[i] + cell_radii
             )
 
             if shell_flag:
                 mask_cells *= (
-                    self.distance(
+                    self._distance(
                         centres[i], cells_physical
                     ) > distance_lower_bound[i] - cell_radii
                 )
