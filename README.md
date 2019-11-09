@@ -1,5 +1,5 @@
 # GriSPy (Grid Search in Python)
-[![Build Status](https://travis-ci.org/mchalela/GriSPy.svg?branch=master)](https://travis-ci.org/mchalela/GriSPy)
+[![Build Status](https://travis-ci.org/mchalela/GriSPy.svg?branch=master)](https://travis-ci.org/mchalela/GriSPy) [![codecov](https://codecov.io/gh/Tmchalela/GriSPy/branch/master/graph/badge.svg)](https://codecov.io/gh/mchalela/GriSPy)
 
 **GriSPy** is a regular grid search algorithm for quick nearest-neighbor lookup.
 
