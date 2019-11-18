@@ -196,7 +196,22 @@ class GriSPy(object):
             d = cdist(c0, centres).reshape((-1,))
             return d
 
-        elif self.metric == "sphere":
+        elif self.metric == "haversine":
+            lon1 = np.deg2rad(centre_0[0])
+            lat1 = np.deg2rad(centre_0[1])
+            lon2 = np.deg2rad(centres[:, 0])
+            lat2 = np.deg2rad(centres[:, 1])
+
+            sdlon = np.sin((lon2 - lon1) / 2.)
+            sdlat = np.sin((lat2 - lat1) / 2.)
+            clat1 = np.cos(lat1)
+            clat2 = np.cos(lat2)
+            num1 = sdlat ** 2
+            num2 = clat1 * clat2 * sdlon ** 2
+            sep = 2 * np.arcsin(np.sqrt(num1 + num2))
+            return np.rad2deg(sep)
+
+        elif self.metric == "vincenty":
             lon1 = np.deg2rad(centre_0[0])
             lat1 = np.deg2rad(centre_0[1])
             lon2 = np.deg2rad(centres[:, 0])

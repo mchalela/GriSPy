@@ -64,7 +64,7 @@ def validate_N_cells(gsp, attr, value):
 def validate_metric(gsp, attr, value):
     """Validate init params: metric."""
     # Define valid metric names
-    valid_metric_names = ["euclid", "sphere"]
+    valid_metric_names = ["euclid", "haversine", "vincenty"]
 
     # Chek if string
     if not isinstance(value, str):
