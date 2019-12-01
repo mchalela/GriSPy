@@ -50,7 +50,7 @@ DESCRIPTION = "Grid Search in Python"
 def do_setup():
     setup(
         name="grispy",
-        version="2019.10",
+        version="2019.12",
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
 

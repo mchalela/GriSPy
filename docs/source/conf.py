@@ -12,20 +12,26 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('..'))
-sys.path.insert(0, os.path.abspath('../..'))
-
-#import grispy
 
 # -- Project information -----------------------------------------------------
 
 project = 'GriSPy'
-copyright = '2019, Martin Chalela, Emanuel Sillero, Luis Pereyra, Mario Alejandro Garcia, Juan B. Cabral'
-author = 'Martin Chalela, Emanuel Sillero, Luis Pereyra, Mario Alejandro Garcia, Juan B. Cabral'
+copyright = '2019, Martin Chalela, Emanuel Sillero, Luis Pereyra and Alejandro Garcia'
+author = 'Martin Chalela, Emanuel Sillero, Luis Pereyra and Alejandro Garcia'
 
+# Get the version from grispy file itself (not imported)
+with open(os.path.join('../..', 'setup.py'), 'r') as f:
+    for line in f:
+        if 'version=' in line:
+            __version__ = line.replace("version=", '').replace('"', '').replace(',', '')
+            break
+
+# The short X.Y version.
+version = __version__
 # The full version, including alpha/beta/rc tags
-release = '0.0.1'
+release = __version__
+
 
 # -- General configuration ---------------------------------------------------
 
@@ -33,19 +39,30 @@ release = '0.0.1'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'sphinx.ext.autodoc',
+    'sphinx.ext.coverage',
+    'sphinx.ext.mathjax',
+    'sphinx.ext.napoleon',
 
     'sphinx.ext.intersphinx',
-    'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
-    'sphinx.ext.autosummary']
+    'sphinx.ext.autosummary'
+]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
+# The suffix(es) of source filenames.
+# You can specify multiple suffix as a list of string:
+source_suffix = ['.rst', '.md']
+
+# The master toctree document.
+master_doc = 'index'
+
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = []
 
 
 # -- Options for HTML output -------------------------------------------------
