@@ -17,7 +17,7 @@ Import GriSPy and others packages::
 Create random points and centres::
 
 	>>> Npoints = 10 ** 3
-	>>> Ncentres = 1
+	>>> Ncentres = 2
 	>>> dim = 2
 	>>> Lbox = 100.0
 
@@ -43,7 +43,7 @@ Query for neighbors within upper_radii::
 
 	>>> upper_radii = 10.0
 	>>> bubble_dist, bubble_ind = gsp.bubble_neighbors(
-	...    	data, distance_upper_bound=upper_radii
+	...    	centres, distance_upper_bound=upper_radii
 	... )
 	
 
@@ -78,7 +78,7 @@ Plot shell results::
 	>>> plt.title("Shell query")
 	>>> plt.scatter(data[:, 0], data[:, 1], c="k", marker=".", s=2)
 	>>> for i in range(Ncentres):
-	...	ind_i = bubble_ind[i]
+	...	ind_i = shell_ind[i]
 	...	plt.scatter(data[ind_i, 0], data[ind_i, 1], c="C2", marker="o", s=5)
 	>>> plt.plot(centres[:,0],centres[:,1],'ro',ms=10)
 
