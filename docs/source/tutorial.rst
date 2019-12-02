@@ -9,19 +9,17 @@ This example generates a 2D random uniform distribution, and them uses GriSPy to
 
 Import GriSPy and others packages::
 
-	>>> import importlib
 	>>> import numpy as np
 	>>> import matplotlib.pyplot as plt
 
-	>>> import grispy ; importlib.reload(grispy)
-	>>> GriSPy = grispy.GriSPy
+	>>> from grispy import GriSPy
 
 Create random points and centres::
 
-	>>> Npoints = 10 ** 2
+	>>> Npoints = 10 ** 3
 	>>> Ncentres = 1
 	>>> dim = 2
-	>>> Lbox = 10.0
+	>>> Lbox = 100.0
 
 	>>> np.random.seed(0)
 	>>> data = np.random.uniform(0, Lbox, size=(Npoints, dim))
@@ -37,14 +35,13 @@ Set periodicity. Periodic conditions on x-axis (or axis=0) and y-axis (or axis=1
 	>>> periodic = {0: (0, Lbox), 1: (0, Lbox)}
 	>>> gsp.set_periodicity(periodic)
 
-Also you can build a periodic grid in same step::
+Also you can build a periodic grid in the same step::
 
 	>>> gsp = GriSPy(data, periodic=periodic)
 
 Query for neighbors within upper_radii::
 
-	>>> upper_radii = 1.0
-	>>> lower_radii = 8.9
+	>>> upper_radii = 10.0
 	>>> bubble_dist, bubble_ind = gsp.bubble_neighbors(
 	...    	data, distance_upper_bound=upper_radii
 	... )
@@ -52,6 +49,8 @@ Query for neighbors within upper_radii::
 
 Query for neighbors in a shell within lower_radii and upper_radii::
 
+	>>> upper_radii = 10.0
+	>>> lower_radii = 8.0
 	>>> shell_dist, shell_ind = gsp.shell_neighbors(centres,
 	... 	distance_lower_bound=lower_radii,
 	... 	distance_upper_bound=upper_radii
@@ -59,7 +58,7 @@ Query for neighbors in a shell within lower_radii and upper_radii::
 
 Query for nth nearest neighbors::
 	
-	>>> n_nearest = 100
+	>>> n_nearest = 10
 	>>> near_dist, near_ind = gsp.nearest_neighbors(centres, n=n_nearest)
 
 
