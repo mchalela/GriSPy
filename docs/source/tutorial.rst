@@ -3,7 +3,7 @@ Tutorial
 
 **Example in 2D Uniform Distribution**
 
-This example generates a 2D random uniform distribution, and them uses GriSPy to search neighbors within a given radius and/or the n-nearest neighbors
+This example generates a 2D random uniform distribution, and then uses GriSPy to search neighbors within a given radius and/or the n-nearest neighbors
 
 ----------------------------------------------------------------
 
