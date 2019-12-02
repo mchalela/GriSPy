@@ -67,9 +67,8 @@ Plot bubble results::
 	>>> plt.figure()
 	>>> plt.title("Bubble query")
 	>>> plt.scatter(data[:, 0], data[:, 1], c="k", marker=".", s=3)
-	>>> for i in range(Ncentres):
-	...	ind_i = bubble_ind[i]
-	...	plt.scatter(data[ind_i, 0], data[ind_i, 1], c="C3", marker="o", s=5)
+	>>> for ind in bubble_ind:
+	...	plt.scatter(data[ind, 0], data[ind, 1], c="C3", marker="o", s=5)
 	>>> plt.plot(centres[:,0],centres[:,1],'ro',ms=10)
 
 Plot shell results::
@@ -77,9 +76,8 @@ Plot shell results::
 	>>> plt.figure()
 	>>> plt.title("Shell query")
 	>>> plt.scatter(data[:, 0], data[:, 1], c="k", marker=".", s=2)
-	>>> for i in range(Ncentres):
-	...	ind_i = shell_ind[i]
-	...	plt.scatter(data[ind_i, 0], data[ind_i, 1], c="C2", marker="o", s=5)
+	>>> for ind in shell_ind:
+	...	plt.scatter(data[ind, 0], data[ind, 1], c="C2", marker="o", s=5)
 	>>> plt.plot(centres[:,0],centres[:,1],'ro',ms=10)
 
 Plot nearest results::
@@ -87,7 +85,6 @@ Plot nearest results::
 	>>> plt.figure()
 	>>> plt.title("n-Nearest query")
 	>>> plt.scatter(data[:, 0], data[:, 1], c="k", marker=".", s=2)
-	>>> for i in range(Ncentres):
-	...	ind_i = near_ind[i]
-	...	plt.scatter(data[ind_i, 0], data[ind_i, 1], c="C0", marker="o", s=5)
+	>>> for ind in near_ind:
+	...	plt.scatter(data[ind, 0], data[ind, 1], c="C0", marker="o", s=5)
 	>>> plt.plot(centres[:,0],centres[:,1],'ro',ms=10)
