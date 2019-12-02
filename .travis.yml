@@ -30,5 +30,11 @@ matrix:
           env: TOXENV=docstyle
           dist: xenial
           sudo: true
+
+        - python: 3.7
+          env: TOXENV=docs
+          dist: xenial
+          sudo: true
+
 after_success:
   bash <(curl -s https://codecov.io/bash)
