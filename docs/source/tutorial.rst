@@ -23,7 +23,7 @@ Create random points and centres::
 
 	>>> np.random.seed(0)
 	>>> data = np.random.uniform(0, Lbox, size=(Npoints, dim))
-	>>> centres = np.random.uniform(-Lbox / 2, Lbox / 2, size=(Ncentres, dim))
+	>>> centres = np.random.uniform(0, Lbox, size=(Ncentres, dim))
 
 Build the grid with the data::
 
