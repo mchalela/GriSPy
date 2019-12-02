@@ -9,7 +9,7 @@ GriSPy documentation
 
 **GriSPy** (Grid Search in Python) is a regular grid search algorithm for quick nearest-neighbor lookup.
 
-This class indexes a set of k-dimensional points in a regular grid providing a fast aproach for nearest neighbors queries. Optional periodic boundary conditions can be provided for each axis individually.
+This class indexes a set of k-dimensional points in a regular grid providing a fast aproach for nearest neighbors queries. Optional periodic boundary conditions can be provided for each axis individually. Additionally GriSPy provides the posibility of working with individual search radius for each query point in fixed-radius searches and minimum and maximum search radius for shell queries.
 
 | **Authors**
 | Martin Chalela (E-mail: tinchochalela@gmail.com), 
