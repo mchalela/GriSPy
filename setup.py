@@ -23,7 +23,7 @@
 from ez_setup import use_setuptools
 use_setuptools()
 
-from setuptools import setup, find_packages  # noqa
+from setuptools import setup
 
 import os.path
 
@@ -53,6 +53,7 @@ def do_setup():
         version="2019.12",
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
+        long_description_content_type='text/markdown',
 
         author=[
             "Martin Chalela",
@@ -81,10 +82,6 @@ def do_setup():
 
         install_requires=REQUIREMENTS,
 
-        # extras_require={  # Optional
-        #    "example": ["example"],
-        #    "test": ["pytest","coverage","pytest-cov"],
-        # }
     )
 
 
