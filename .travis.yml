@@ -1,10 +1,11 @@
 language: python
 sudo: true
 
-addons:
-  apt:
-    packages:
-      - pandoc
+before_install:
+  - sudo apt-get -y install pandoc
+
+before_script: 
+  - pandoc --version
 
 install:
   - pip install tox
