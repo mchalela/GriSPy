@@ -1,8 +1,11 @@
 language: python
-sudo: true
-before_install:
-  - sudo apt-get -qq update
-  - sudo apt-get install -y pandoc
+sudo: false
+
+addons:
+  apt:
+    packages:
+      - pandoc
+      
 install:
   - pip install tox
 script:
