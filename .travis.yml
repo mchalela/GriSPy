@@ -2,6 +2,7 @@ language: python
 sudo: false
 install:
   - pip install tox
+  - sudo apt-get install pandoc
 script:
   - tox -r
 matrix:
@@ -35,15 +36,6 @@ matrix:
           env: TOXENV=docs
           dist: xenial
           sudo: true
-
-addons:
-  apt:
-    packages:
-      - pandoc
-  homebrew:
-    update: true
-    packages:
-      - pandoc
 
 after_success:
   bash <(curl -s https://codecov.io/bash)
