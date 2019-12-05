@@ -36,5 +36,14 @@ matrix:
           dist: xenial
           sudo: true
 
+addons:
+  apt:
+    packages:
+      - pandoc
+  homebrew:
+    update: true
+    packages:
+      - pandoc
+
 after_success:
   bash <(curl -s https://codecov.io/bash)
