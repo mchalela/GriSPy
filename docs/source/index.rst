@@ -22,7 +22,8 @@ This class indexes a set of k-dimensional points in a regular grid providing a f
    :caption: Contents:
 
    installation
-   Tutorial.ipynb
+   licence
+   tutorial.ipynb
    api
 
 
