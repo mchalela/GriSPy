@@ -2,11 +2,9 @@ language: python
 sudo: true
 
 before_install:
-  - sudo apt-get -y install pandoc
-
-before_script: 
+  - sudo wget https://github.com/jgm/pandoc/releases/download/2.7.3/pandoc-2.7.3-1-amd64.deb
+  - sudo dpkg -i pandoc-2.7.3-1-amd64.deb
   - pandoc --version
-  - alias pandoc='pandoc --data-dir=/home/travis/.pandoc'
 
 install:
   - pip install tox
