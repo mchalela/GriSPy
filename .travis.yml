@@ -6,6 +6,7 @@ before_install:
 
 before_script: 
   - pandoc --version
+  - alias pandoc='pandoc --data-dir=/home/travis/.pandoc'
 
 install:
   - pip install tox
