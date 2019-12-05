@@ -18,11 +18,11 @@ This class indexes a set of k-dimensional points in a regular grid providing a f
 ----------------------------------------------------------------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Contents:
 
    installation
-   tutorial
+   Tutorial.ipynb
    api
 
 
