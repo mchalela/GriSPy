@@ -270,7 +270,6 @@ def validate_n_nearest(n, data, periodic):
     Np = len(data)
     valid_axis = len([v for v in periodic.values() if v is not None])
     Nvalid = Np * 3**valid_axis
-    print(Nvalid, n)
     if n > Nvalid:
         raise ValueError(
             "Nth-nearest: Argument must be lower than the number of "

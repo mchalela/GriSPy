@@ -166,7 +166,7 @@ class GriSPy(object):
 
             self.grid = {}
             for i, j in enumerate(k_digit):
-                self.grid[tuple(j)] = list(list_ind[i])
+                self.grid[tuple(j)] = tuple(list_ind[i])
         else:
             self.grid = {}
             for i in range(len(self.data)):
