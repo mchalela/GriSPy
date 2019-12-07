@@ -8,16 +8,43 @@
 #   Full Text: https://github.com/mchalela/GriSPy/blob/master/LICENSE
 
 
+# =============================================================================
+# DOCS
+# =============================================================================
+
 """GriSPy core class."""
 
+# =============================================================================
+# IMPORTS
+# =============================================================================
+
+import time
+import datetime
 
 from scipy.spatial.distance import cdist
 import numpy as np
-import time
-import datetime
+
 import attr
+
 from . import utils
 
+
+# =============================================================================
+# CONSTANTS
+# =============================================================================
+
+METRICS = {
+    "euclid": None,
+    "haversine": None,
+    "vincenty": None}
+
+
+EMPTY_ARRAY = np.array([], dtype=int)
+
+
+# =============================================================================
+# CLASS
+# =============================================================================
 
 @attr.s
 class GriSPy(object):
@@ -97,15 +124,16 @@ class GriSPy(object):
     """
 
     # User input params
-    data = attr.ib(
-        default=None, kw_only=False, repr=False, validator=utils.validate_data,
-    )
-    N_cells = attr.ib(default=20, validator=utils.validate_N_cells)
-    periodic = attr.ib(default={})  # The validator runs in set_periodicity()
-    metric = attr.ib(default="euclid", validator=utils.validate_metric)
+    data = attr.ib(default=None, kw_only=False, repr=False)
+    N_cells = attr.ib(default=20)
+    periodic = attr.ib(factory=dict)  # The validator runs in set_periodicity()
+    metric = attr.ib(default="euclid")
     copy_data = attr.ib(
-        default=False, validator=attr.validators.instance_of(bool),
-    )
+        default=False, validator=attr.validators.instance_of(bool))
+
+    # =========================================================================
+    # ATTRS INITIALIZATION
+    # =========================================================================
 
     def __attrs_post_init__(self):
         """Init more params and build the grid."""
@@ -114,7 +142,60 @@ class GriSPy(object):
         self.dim = self.data.shape[1]
         self.set_periodicity(self.periodic)
         self._build_grid()
-        self._empty = np.array([], dtype=int)  # Useful for empty arrays
+
+    @data.validator
+    def _validate_data(self, attribute, value):
+        """Validate init params: data."""
+        # Chek if numpy array
+        if not isinstance(value, np.ndarray):
+            raise TypeError(
+                "Data: Argument must be a numpy array."
+                "Got instead type {}".format(type(value))
+            )
+        # Check if data has the expected dimension
+        if value.ndim != 2:
+            raise ValueError(
+                "Data: Array has the wrong shape. Expected shape of (n, k), "
+                "got instead {}".format(value.shape)
+            )
+        # Check if data has the expected dimension
+        if len(value.flatten()) == 0:
+            raise ValueError("Data: Array must have at least 1 point")
+
+        # Check if every data point is valid
+        if not np.isfinite(value).all():
+            raise ValueError("Data: Array must have real numbers")
+
+    @N_cells.validator
+    def _validate_N_cells(self, attr, value):
+        """Validate init params: N_cells."""
+        # Chek if int
+        if not isinstance(value, int):
+            raise TypeError(
+                "N_cells: Argument must be an integer. "
+                "Got instead type {}".format(type(value))
+            )
+        # Check if N_cells is valid, i.e. higher than 1
+        if value < 1:
+            raise ValueError(
+                "N_cells: Argument must be higher than 1. "
+                "Got instead {}".format(value)
+            )
+
+    @metric.validator
+    def _validate_metric(self, attr, value):
+        """Validate init params: metric."""
+        # Check if name is valid
+        if value not in METRICS:
+            metric_names = ", ".join(METRICS)
+            raise ValueError(
+                "Metric: Got an invalid name: '{}'. "
+                "Options are: {}".format(value, metric_names)
+            )
+
+    # =========================================================================
+    # INTERNAL IMPLEMENTATION
+    # =========================================================================
 
     def __getitem__(self, key):
         """Get item."""
@@ -190,7 +271,7 @@ class GriSPy(object):
 
         """
         if len(centres) == 0:
-            return self._empty
+            return EMPTY_ARRAY.copy()
         if self.metric == "euclid":
             c0 = centre_0.reshape((-1, self.dim))
             d = cdist(c0, centres).reshape((-1,))
@@ -235,8 +316,8 @@ class GriSPy(object):
         neighbors_distances = []
         for i in range(len(centres)):
             if len(neighbor_cells[i]) == 0:  # no hay celdas vecinas
-                neighbors_indices += [self._empty]
-                neighbors_distances += [self._empty]
+                neighbors_indices += [EMPTY_ARRAY.copy()]
+                neighbors_distances += [EMPTY_ARRAY.copy()]
                 continue
             # Genera una lista con los vecinos de cada celda
             # print neighbor_cells[i]
@@ -274,7 +355,8 @@ class GriSPy(object):
             ] = True
 
         if np.all(out_of_field):
-            return [self._empty] * len(centres)  # no neighbor cells
+            # no neighbor cells
+            return [EMPTY_ARRAY.copy() for _ in centres]
 
         # Armo la caja con celdas a explorar
         k_cell_min = np.zeros((len(centres), self.dim), dtype=int)
@@ -337,7 +419,7 @@ class GriSPy(object):
             if np.any(mask_cells):
                 neighbor_cells[i] = neighbor_cells[i][mask_cells]
             else:
-                neighbor_cells[i] = self._empty
+                neighbor_cells[i] = EMPTY_ARRAY.copy()
         return neighbor_cells
 
     def _near_boundary(self, centres, distance_upper_bound):
@@ -382,7 +464,10 @@ class GriSPy(object):
                 )
         return terran_centres, terran_indices
 
-    # User methods
+    # =========================================================================
+    # API
+    # =========================================================================
+
     def bubble_neighbors(
         self,
         centres,
@@ -660,8 +745,8 @@ class GriSPy(object):
 
         upper_distance_tmp = mean_distance_factor * mean_distance
 
-        neighbors_indices = [self._empty] * N_centres
-        neighbors_distances = [self._empty] * N_centres
+        neighbors_indices = [EMPTY_ARRAY.copy() for _ in range(N_centres)]
+        neighbors_distances = [EMPTY_ARRAY.copy() for _ in range(N_centres)]
         while not np.all(n_found):
             neighbors_distances_tmp,\
                 neighbors_indices_tmp = self.shell_neighbors(
@@ -788,7 +873,6 @@ class GriSPy(object):
             pickle.dump(self, fp, protocol=pickle.HIGHEST_PROTOCOL)
 
         print("GriSPy grid attributes saved to: {}".format(file))
-        return None
 
     @classmethod
     def load_grid(cls, file):

@@ -510,7 +510,7 @@ class Test_valid_init:
     def test_invalid_metric(self, gsp):
         # Metric name is not a string
         bad_metric = 42
-        with pytest.raises(TypeError):
+        with pytest.raises(ValueError):
             GriSPy(
                 self.data,
                 N_cells=self.N_cells,

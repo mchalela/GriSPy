@@ -14,74 +14,6 @@ import numpy as np
 import os.path
 
 # ---------------------------------
-# Validators for init params
-# Written in the format expected by attr.validators
-# --------------------------------
-
-
-def validate_data(gsp, attr, value):
-    """Validate init params: data."""
-    # Chek if numpy array
-    if not isinstance(value, np.ndarray):
-        raise TypeError(
-            "Data: Argument must be a numpy array."
-            "Got instead type {}".format(type(value))
-        )
-    # Check if data has the expected dimension
-    if value.ndim != 2:
-        raise ValueError(
-            "Data: Array has the wrong shape. Expected shape of (n, k), "
-            "got instead {}".format(value.shape)
-        )
-    # Check if data has the expected dimension
-    if len(value.flatten()) == 0:
-        raise ValueError("Data: Array must have at least 1 point")
-
-    # Check if every data point is valid
-    if not np.isfinite(value).all():
-        raise ValueError("Data: Array must have real numbers")
-
-    return None
-
-
-def validate_N_cells(gsp, attr, value):
-    """Validate init params: N_cells."""
-    # Chek if int
-    if not isinstance(value, int):
-        raise TypeError(
-            "N_cells: Argument must be an integer. "
-            "Got instead type {}".format(type(value))
-        )
-    # Check if N_cells is valid, i.e. higher than 1
-    if value < 1:
-        raise ValueError(
-            "N_cells: Argument must be higher than 1. "
-            "Got instead {}".format(value)
-        )
-    return None
-
-
-def validate_metric(gsp, attr, value):
-    """Validate init params: metric."""
-    # Define valid metric names
-    valid_metric_names = ["euclid", "haversine", "vincenty"]
-
-    # Chek if string
-    if not isinstance(value, str):
-        raise TypeError(
-            "Metric: Argument must be a string. "
-            "Got instead type {}".format(type(value))
-        )
-
-    # Check if name is valid
-    if value not in valid_metric_names:
-        raise ValueError(
-            "Metric: Got an invalid name: '{}'. "
-            "Options are: {}".format(value, valid_metric_names)
-        )
-
-
-# ---------------------------------
 # Validators for method params
 # Meant to be called within each method
 # --------------------------------
@@ -103,7 +35,7 @@ def validate_periodicity(periodic):
 
     # If dict is empty means no periodicity, stop validation.
     if len(periodic) == 0:
-        return None
+        return
 
     # Check if keys are valid
     for k in periodic.keys():
@@ -145,7 +77,6 @@ def validate_periodicity(periodic):
                 "Periodicity: First argument in tuple must be "
                 "lower than second argument."
             )
-    return None
 
 
 def validate_centres(centres, data):
@@ -171,14 +102,11 @@ def validate_centres(centres, data):
     if not np.isfinite(centres).all():
         raise ValueError("Centres: Array must have real numbers")
 
-    return None
-
 
 def validate_equalsize(a, b):
     """Check if two arrays have the same lenght."""
     if len(a) != len(b):
         raise ValueError("Arrays must have the same lenght.")
-    return None
 
 
 def validate_distance_bound(distance, periodic):
@@ -203,8 +131,6 @@ def validate_distance_bound(distance, periodic):
                 "Distance can not be higher than the periodicity range"
             )
 
-    return None
-
 
 def validate_shell_distances(lower_bound, upper_bound, periodic):
     """Distance bounds, upper and lower, can be scalar or numpy array."""
@@ -217,8 +143,6 @@ def validate_shell_distances(lower_bound, upper_bound, periodic):
             "Distance: Lower bound must be lower than higher bound."
         )
 
-    return None
-
 
 def validate_bool(flag):
     """Check if bool."""
@@ -226,7 +150,6 @@ def validate_bool(flag):
         raise TypeError(
             "Flag: Expected boolean. " "Got instead type {}".format(type(flag))
         )
-    return None
 
 
 def validate_sortkind(kind):
@@ -246,8 +169,6 @@ def validate_sortkind(kind):
             "Kind: Got an invalid name: '{}'. "
             "Options are: {}".format(kind, valid_kind_names)
         )
-
-    return None
 
 
 def validate_n_nearest(n, data, periodic):
@@ -277,8 +198,6 @@ def validate_n_nearest(n, data, periodic):
             "Got instead {}".format(Nvalid, n)
         )
 
-    return None
-
 
 def validate_filename(file):
     """Chek if string."""
@@ -287,7 +206,6 @@ def validate_filename(file):
             "File: Argument must be a string. "
             "Got instead type {}".format(type(file))
         )
-    return None
 
 
 def validate_canwrite(file, overwrite):
@@ -297,4 +215,3 @@ def validate_canwrite(file, overwrite):
             "The file {} already exists. "
             "You may want to use the keyword overwrite=True.".format(file)
         )
-    return None
