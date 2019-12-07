@@ -11,13 +11,12 @@
 """Functions to validate GriSPy input parameters."""
 
 import numpy as np
-import os.path
+
 
 # ---------------------------------
 # Validators for method params
 # Meant to be called within each method
 # --------------------------------
-
 
 def validate_periodicity(periodic):
     """Validate method params: periodic.
@@ -196,22 +195,4 @@ def validate_n_nearest(n, data, periodic):
             "Nth-nearest: Argument must be lower than the number of "
             "available data points within 1 periodic range, {}. "
             "Got instead {}".format(Nvalid, n)
-        )
-
-
-def validate_filename(file):
-    """Chek if string."""
-    if not isinstance(file, str):
-        raise TypeError(
-            "File: Argument must be a string. "
-            "Got instead type {}".format(type(file))
-        )
-
-
-def validate_canwrite(file, overwrite):
-    """Check if file is valid."""
-    if not overwrite and os.path.isfile(file):
-        raise FileExistsError(
-            "The file {} already exists. "
-            "You may want to use the keyword overwrite=True.".format(file)
         )
