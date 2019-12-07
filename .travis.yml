@@ -8,6 +8,7 @@ before_install:
 
 install:
   - pip install tox
+  - pip install coveralls
 
 script:
   - tox -r
@@ -45,4 +46,4 @@ matrix:
           sudo: true
 
 after_success:
-  bash <(curl -s https://codecov.io/bash)
+  - coveralls
