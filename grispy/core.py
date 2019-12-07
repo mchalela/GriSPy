@@ -21,12 +21,11 @@
 import time
 import datetime
 
-from scipy.spatial.distance import cdist
 import numpy as np
 
 import attr
 
-from . import utils
+from . import utils, distances
 
 
 # =============================================================================
@@ -34,9 +33,9 @@ from . import utils
 # =============================================================================
 
 METRICS = {
-    "euclid": None,
-    "haversine": None,
-    "vincenty": None}
+    "euclid": distances.euclid,
+    "haversine": distances.haversine,
+    "vincenty": distances.vincenty}
 
 
 EMPTY_ARRAY = np.array([], dtype=int)
@@ -186,12 +185,11 @@ class GriSPy(object):
     def _validate_metric(self, attr, value):
         """Validate init params: metric."""
         # Check if name is valid
-        if value not in METRICS:
+        if value not in METRICS and not callable(value):
             metric_names = ", ".join(METRICS)
             raise ValueError(
                 "Metric: Got an invalid name: '{}'. "
-                "Options are: {}".format(value, metric_names)
-            )
+                "Options are: {} or a callable".format(value, metric_names))
 
     # =========================================================================
     # INTERNAL IMPLEMENTATION
@@ -272,43 +270,9 @@ class GriSPy(object):
         """
         if len(centres) == 0:
             return EMPTY_ARRAY.copy()
-        if self.metric == "euclid":
-            c0 = centre_0.reshape((-1, self.dim))
-            d = cdist(c0, centres).reshape((-1,))
-            return d
-
-        elif self.metric == "haversine":
-            lon1 = np.deg2rad(centre_0[0])
-            lat1 = np.deg2rad(centre_0[1])
-            lon2 = np.deg2rad(centres[:, 0])
-            lat2 = np.deg2rad(centres[:, 1])
-
-            sdlon = np.sin((lon2 - lon1) / 2.)
-            sdlat = np.sin((lat2 - lat1) / 2.)
-            clat1 = np.cos(lat1)
-            clat2 = np.cos(lat2)
-            num1 = sdlat ** 2
-            num2 = clat1 * clat2 * sdlon ** 2
-            sep = 2 * np.arcsin(np.sqrt(num1 + num2))
-            return np.rad2deg(sep)
-
-        elif self.metric == "vincenty":
-            lon1 = np.deg2rad(centre_0[0])
-            lat1 = np.deg2rad(centre_0[1])
-            lon2 = np.deg2rad(centres[:, 0])
-            lat2 = np.deg2rad(centres[:, 1])
-
-            sdlon = np.sin(lon2 - lon1)
-            cdlon = np.cos(lon2 - lon1)
-            slat1 = np.sin(lat1)
-            slat2 = np.sin(lat2)
-            clat1 = np.cos(lat1)
-            clat2 = np.cos(lat2)
-            num1 = clat2 * sdlon
-            num2 = clat1 * slat2 - slat1 * clat2 * cdlon
-            denominator = slat1 * slat2 + clat1 * clat2 * cdlon
-            sep = np.arctan2(np.sqrt(num1 ** 2 + num2 ** 2), denominator)
-            return np.rad2deg(sep)
+        metric_func = (
+            self.metric if callable(self.metric) else METRICS[self.metric])
+        return metric_func(centre_0, centres, self.dim)
 
     def _get_neighbor_distance(self, centres, neighbor_cells):
         """Retrieve neighbor distances whithin the given cells."""
