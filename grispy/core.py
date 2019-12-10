@@ -95,8 +95,7 @@ class GriSPy(object):
         periodic range. Default: all axis set to None.
         Example, periodic = { 0: (0, 360), 1: None}.
     metric: str, optional
-        Metric definition to compute distances. Options: 'euclid' or 'sphere'.
-        Notes: In the case of 'sphere' metric, input units must be degrees.
+        Metric definition to compute distances. Options: 'euclid', 'haversine' 'vincenty' or a custom callable.
 
     Attributes
     ----------

@@ -27,7 +27,7 @@ versions (2.x and 3.x) installed on the same system without problems.
 
 ## Development Install
 
-1.  Clone this repo and then inside the local
+1.  Clone this repo and then inside the local directory
 2.  Execute
 
         $ pip install -e .
