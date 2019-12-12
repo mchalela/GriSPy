@@ -53,7 +53,6 @@ BuildStats = namedtuple("BuildStats", ["buildtime", "datetime"])
 # MAIN CLASS
 # =============================================================================
 
-
 @attr.s
 class GriSPy(object):
     """Grid Search in Python.
@@ -110,7 +109,6 @@ class GriSPy(object):
 
     Attributes
     ----------
-
     dim: int
         The dimension of a single data-point.
     grid_: dict
@@ -120,6 +118,8 @@ class GriSPy(object):
         are located within the given cell.
     k_bins: ndarray, shape (N_cells+1,k)
         The limits of the grid cells in each dimension.
+    periodic_flag_: bool
+        If any dimension has periodicity.
     time_: grispy.core.BuildStats
         Object containing the building time and the date of build.
 
@@ -134,9 +134,11 @@ class GriSPy(object):
         default=False, validator=attr.validators.instance_of(bool))
 
     # params
-    grid_ = attr.ib(init=False, repr=False)
-    time_ = attr.ib(init=False, repr=False)
     dim_ = attr.ib(init=False, repr=False)
+    grid_ = attr.ib(init=False, repr=False)
+    kbins_ = attr.ib(init=False, repr=False)
+    periodic_flag_ = attr.ib(init=False, repr=False)
+    time_ = attr.ib(init=False, repr=False)
 
     # =========================================================================
     # ATTRS INITIALIZATION
@@ -149,14 +151,13 @@ class GriSPy(object):
         if self.copy_data:
             self.data = self.data.copy()
         self.dim_ = self.data.shape[1]
-        self.set_periodicity(self.periodic)
-        self.grid_ = self._build_grid()
+        self.periodic_flag_ = self._set_periodicity(self.periodic)
+        self.grid_, self.k_bins_ = self._build_grid()
 
         # Record date and build time
         self.time_ = BuildStats(
             buildtime=time.time() - t0,
             datetime=datetime.datetime.now())
-
 
     @data.validator
     def _validate_data(self, attribute, value):
@@ -224,16 +225,16 @@ class GriSPy(object):
     def _build_grid(self, epsilon=1.0e-6):
         """Build the grid."""
         data_ind = np.arange(len(self.data))
-        self.k_bins = np.zeros((self.N_cells + 1, self.dim_))
+        k_bins = np.zeros((self.N_cells + 1, self.dim_))
         k_digit = np.zeros(self.data.shape, dtype=int)
         for k in range(self.dim_):
             k_data = self.data[:, k]
-            self.k_bins[:, k] = np.linspace(
+            k_bins[:, k] = np.linspace(
                 k_data.min() - epsilon,
                 k_data.max() + epsilon,
                 self.N_cells + 1,
             )
-            k_digit[:, k] = self._digitize(k_data, bins=self.k_bins[:, k])
+            k_digit[:, k] = self._digitize(k_data, bins=k_bins[:, k])
 
         # Check that there is at least one point per cell
         grid = {}
@@ -249,8 +250,7 @@ class GriSPy(object):
             k_digit = k_digit[compact_ind_sort]
 
             split_ind = np.searchsorted(
-                compact_ind, np.arange(self.N_cells ** self.dim_)
-            )
+                compact_ind, np.arange(self.N_cells ** self.dim_))
             deleted_cells = np.diff(np.append(-1, split_ind)).astype(bool)
             split_ind = split_ind[deleted_cells]
             if split_ind[-1] > data_ind[-1]:
@@ -268,7 +268,7 @@ class GriSPy(object):
                     grid[cell_point] = [i]
                 else:
                     grid[cell_point].append(i)
-        return grid
+        return grid, k_bins
 
     def _distance(self, centre_0, centres):
         """Compute distance between points.
@@ -319,13 +319,13 @@ class GriSPy(object):
         out_of_field = np.zeros(len(cell_point), dtype=bool)
         for k in range(self.dim_):
             cell_point[:, k] = (
-                self._digitize(centres[:, k], bins=self.k_bins[:, k])
+                self._digitize(centres[:, k], bins=self.k_bins_[:, k])
             )
             out_of_field[
-                (centres[:, k] - distance_upper_bound > self.k_bins[-1, k])
+                (centres[:, k] - distance_upper_bound > self.k_bins_[-1, k])
             ] = True
             out_of_field[
-                (centres[:, k] + distance_upper_bound < self.k_bins[0, k])
+                (centres[:, k] + distance_upper_bound < self.k_bins_[0, k])
             ] = True
 
         if np.all(out_of_field):
@@ -339,13 +339,13 @@ class GriSPy(object):
             k_cell_min[:, k] = (
                 self._digitize(
                     centres[:, k] - distance_upper_bound,
-                    bins=self.k_bins[:, k],
+                    bins=self.k_bins_[:, k],
                 )
             )
             k_cell_max[:, k] = (
                 self._digitize(
                     centres[:, k] + distance_upper_bound,
-                    bins=self.k_bins[:, k],
+                    bins=self.k_bins_[:, k],
                 )
             )
 
@@ -354,7 +354,7 @@ class GriSPy(object):
             k_cell_min[k_cell_min[:, k] >= self.N_cells, k] = self.N_cells - 1
             k_cell_max[k_cell_max[:, k] >= self.N_cells, k] = self.N_cells - 1
 
-        cell_size = self.k_bins[1, :] - self.k_bins[0, :]
+        cell_size = self.k_bins_[1, :] - self.k_bins_[0, :]
         cell_radii = 0.5 * np.sum(cell_size ** 2) ** 0.5
 
         neighbor_cells = []
@@ -373,7 +373,7 @@ class GriSPy(object):
             # luego descarto las celdas que no toca el circulo definido por
             # la distancia
             cells_physical = [
-                self.k_bins[neighbor_cells[i][:, k], k] + 0.5 * cell_size[k]
+                self.k_bins_[neighbor_cells[i][:, k], k] + 0.5 * cell_size[k]
                 for k in range(self.dim_)
             ]
             cells_physical = np.array(cells_physical).T
@@ -438,6 +438,68 @@ class GriSPy(object):
                 )
         return terran_centres, terran_indices
 
+    def _set_periodicity(self, periodic={}):
+        """Set periodicity conditions.
+
+        This allows to define or change the periodicity limits without
+        having to construct the grid again.
+
+        Important: The periodicity only works within one periodic range.
+
+        Parameters
+        ----------
+        periodic: dict, optional
+            Dictionary indicating if the data domain is periodic in some or all
+            its dimensions. The key is an integer that corresponds to the
+            number of dimensions in data, going from 0 to k-1. The value is a
+            tuple with the domain limits and the data must be contained within
+            these limits. If an axis is not specified, or if its value is None,
+            it will be considered as non-periodic.
+            Default: all axis set to None.
+            Example, periodic = { 0: (0, 360), 1: None}.
+
+        """
+        # Validate input
+        utils.validate_periodicity(periodic)
+
+        self.periodic = {}
+        if len(periodic) == 0:
+            periodic_flag = False
+        else:
+            periodic_flag = any(
+                [x is not None for x in list(periodic.values())]
+            )
+
+            if periodic_flag:
+
+                self._pd_hi = np.ones((1, self.dim_)) * np.inf
+                self._pd_low = np.ones((1, self.dim_)) * -np.inf
+                self._periodic_edges = []
+                for k in range(self.dim_):
+                    aux = periodic.get(k)
+                    self.periodic[k] = aux
+                    if aux:
+                        self._pd_low[0, k] = aux[0]
+                        self._pd_hi[0, k] = aux[1]
+                        aux = np.insert(aux, 1, 0.)
+                    else:
+                        aux = np.zeros((1, 3))
+                    self._periodic_edges = np.hstack([
+                        self._periodic_edges,
+                        np.tile(aux, (3**(self.dim_ - 1 - k), 3**k)).T.ravel()
+                    ])
+
+                self._periodic_edges = self._periodic_edges.reshape(
+                    self.dim_, 3**self.dim_
+                ).T
+                self._periodic_edges -= self._periodic_edges[::-1]
+                self._periodic_edges = np.unique(self._periodic_edges, axis=0)
+                mask = self._periodic_edges.sum(axis=1, dtype=bool)
+                self._periodic_edges = self._periodic_edges[mask]
+                self._periodic_direc = np.sign(self._periodic_edges)
+
+        return periodic_flag
+
     # =========================================================================
     # API
     # =========================================================================
@@ -500,7 +562,7 @@ class GriSPy(object):
         )
 
         # We need to generate mirror centres for periodic boundaries...
-        if self.periodic_flag:
+        if self.periodic_flag_:
             terran_centres, terran_indices = self._mirror_universe(
                 centres, distance_upper_bound
             )
@@ -607,7 +669,7 @@ class GriSPy(object):
         )
 
         # We need to generate mirror centres for periodic boundaries...
-        if self.periodic_flag:
+        if self.periodic_flag_:
             terran_centres, terran_indices = self._mirror_universe(
                 centres, distance_upper_bound
             )
@@ -709,7 +771,7 @@ class GriSPy(object):
         # 'distancia media' = 0.5 * (n/denstiy)**(1/dim)
         # Factor de escala para la distancia inicial
         mean_distance_factor = 1.0
-        cell_size = self.k_bins[1, :] - self.k_bins[0, :]
+        cell_size = self.k_bins_[1, :] - self.k_bins_[0, :]
         cell_volume = np.prod(cell_size.astype(float))
         neighbors_number = np.array(list(map(len, neighbors_indices)))
         mask_zero_neighbors = neighbors_number == 0
@@ -761,63 +823,3 @@ class GriSPy(object):
                 )
 
         return neighbors_distances, neighbors_indices
-
-    def set_periodicity(self, periodic={}):
-        """Set periodicity conditions.
-
-        This allows to define or change the periodicity limits without
-        having to construct the grid again.
-
-        Important: The periodicity only works within one periodic range.
-
-        Parameters
-        ----------
-        periodic: dict, optional
-            Dictionary indicating if the data domain is periodic in some or all
-            its dimensions. The key is an integer that corresponds to the
-            number of dimensions in data, going from 0 to k-1. The value is a
-            tuple with the domain limits and the data must be contained within
-            these limits. If an axis is not specified, or if its value is None,
-            it will be considered as non-periodic.
-            Default: all axis set to None.
-            Example, periodic = { 0: (0, 360), 1: None}.
-
-        """
-        # Validate input
-        utils.validate_periodicity(periodic)
-
-        self.periodic = {}
-        if len(periodic) == 0:
-            self.periodic_flag = False
-        else:
-            self.periodic_flag = any(
-                [x is not None for x in list(periodic.values())]
-            )
-
-            if self.periodic_flag:
-
-                self._pd_hi = np.ones((1, self.dim_)) * np.inf
-                self._pd_low = np.ones((1, self.dim_)) * -np.inf
-                self._periodic_edges = []
-                for k in range(self.dim_):
-                    aux = periodic.get(k)
-                    self.periodic[k] = aux
-                    if aux:
-                        self._pd_low[0, k] = aux[0]
-                        self._pd_hi[0, k] = aux[1]
-                        aux = np.insert(aux, 1, 0.)
-                    else:
-                        aux = np.zeros((1, 3))
-                    self._periodic_edges = np.hstack([
-                        self._periodic_edges,
-                        np.tile(aux, (3**(self.dim_ - 1 - k), 3**k)).T.ravel()
-                    ])
-
-                self._periodic_edges = self._periodic_edges.reshape(
-                    self.dim_, 3**self.dim_
-                ).T
-                self._periodic_edges -= self._periodic_edges[::-1]
-                self._periodic_edges = np.unique(self._periodic_edges, axis=0)
-                mask = self._periodic_edges.sum(axis=1, dtype=bool)
-                self._periodic_edges = self._periodic_edges[mask]
-                self._periodic_direc = np.sign(self._periodic_edges)

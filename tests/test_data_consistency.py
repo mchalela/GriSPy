@@ -52,10 +52,10 @@ class Test_data_consistency:
         assert_(isinstance(gsp.periodic, dict))
 
     def test_grid_attrs(self, gsp):
-        assert_(isinstance(gsp.k_bins, np.ndarray))
+        assert_(isinstance(gsp.k_bins_, np.ndarray))
         assert_(isinstance(gsp.grid_, dict))
         assert_(isinstance(gsp.dim_, int))
-        assert_(isinstance(gsp.periodic_flag, bool))
+        assert_(isinstance(gsp.periodic_flag_, bool))
         assert_(isinstance(gsp.time_, BuildStats))
 
     def test_bubble_single_query(self, gsp):
