@@ -20,6 +20,7 @@
 
 import time
 import datetime
+from collections import namedtuple
 
 import numpy as np
 
@@ -42,8 +43,16 @@ EMPTY_ARRAY = np.array([], dtype=int)
 
 
 # =============================================================================
-# CLASS
+#  TIME CLASS
 # =============================================================================
+
+BuildStats = namedtuple("BuildStats", ["buildtime", "datetime"])
+
+
+# =============================================================================
+# MAIN CLASS
+# =============================================================================
+
 
 @attr.s
 class GriSPy(object):
@@ -98,14 +107,10 @@ class GriSPy(object):
         Metric definition to compute distances. Options: 'euclid', 'haversine'
         'vincenty' or a custom callable.
 
+
     Attributes
     ----------
-    data: ndarray, shape (n,k)
-        The n data points of dimension k to be indexed. This array is not
-        copied, and so modifying this data may result in erroneous results.
-        The data can be copied if the grid is built with copy_data=True.
-    N_cells: int
-        The number of cells of each dimension to build the grid.
+
     dim: int
         The dimension of a single data-point.
     grid: dict
@@ -115,10 +120,8 @@ class GriSPy(object):
         are located within the given cell.
     k_bins: ndarray, shape (N_cells+1,k)
         The limits of the grid cells in each dimension.
-    time: dict
-        Dictionary containing the building time and the date of build.
-        keys: 'buildtime', returns float with the time taken to build the grid,
-        in seconds; 'datetime': formated string with the date of build.
+    time_: grispy.core.BuildStats
+        Object containing the building time and the date of build.
 
     """
 
@@ -130,17 +133,29 @@ class GriSPy(object):
     copy_data = attr.ib(
         default=False, validator=attr.validators.instance_of(bool))
 
+    # params
+    time_ = attr.ib(init=False, repr=False)
+
+
     # =========================================================================
     # ATTRS INITIALIZATION
     # =========================================================================
 
     def __attrs_post_init__(self):
         """Init more params and build the grid."""
+        t0 = time.time()
+
         if self.copy_data:
             self.data = self.data.copy()
         self.dim = self.data.shape[1]
         self.set_periodicity(self.periodic)
         self._build_grid()
+
+        # Record date and build time
+        self.time_ = BuildStats(
+            buildtime=time.time() - t0,
+            datetime=datetime.datetime.now())
+
 
     @data.validator
     def _validate_data(self, attribute, value):
@@ -207,7 +222,6 @@ class GriSPy(object):
 
     def _build_grid(self, epsilon=1.0e-6):
         """Build the grid."""
-        t0 = time.time()
         data_ind = np.arange(len(self.data))
         self.k_bins = np.zeros((self.N_cells + 1, self.dim))
         k_digit = np.zeros(self.data.shape, dtype=int)
@@ -254,11 +268,6 @@ class GriSPy(object):
                     self.grid[cell_point] = [i]
                 else:
                     self.grid[cell_point].append(i)
-
-        # Record date and build time
-        self.time = {"buildtime": time.time() - t0}
-        currentDT = datetime.datetime.now()
-        self.time["datetime"] = currentDT.strftime("%Y-%b-%d %H:%M:%S")
 
     def _distance(self, centre_0, centres):
         """Compute distance between points.

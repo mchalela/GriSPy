@@ -9,8 +9,12 @@
 
 
 import pytest
+
 import numpy as np
+
 from grispy import GriSPy
+from grispy.core import BuildStats
+
 from numpy.testing import assert_equal, assert_
 
 
@@ -41,16 +45,18 @@ class Test_data_consistency:
 
         return GriSPy(self.data)
 
-    def test_grid_data(self, gsp):
-        assert_(isinstance(gsp.dim, int))
+    def test_grid_arguments(self, gsp):
         assert_(isinstance(gsp.data, np.ndarray))
-        assert_(isinstance(gsp.k_bins, np.ndarray))
         assert_(isinstance(gsp.metric, str))
         assert_(isinstance(gsp.N_cells, int))
-        assert_(isinstance(gsp.grid, dict))
         assert_(isinstance(gsp.periodic, dict))
+
+    def test_grid_attrs(self, gsp):
+        assert_(isinstance(gsp.k_bins, np.ndarray))
+        assert_(isinstance(gsp.grid, dict))
+        assert_(isinstance(gsp.dim, int))
         assert_(isinstance(gsp.periodic_flag, bool))
-        assert_(isinstance(gsp.time, dict))
+        assert_(isinstance(gsp.time_, BuildStats))
 
     def test_bubble_single_query(self, gsp):
 
