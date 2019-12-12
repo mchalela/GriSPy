@@ -113,7 +113,7 @@ class GriSPy(object):
 
     dim: int
         The dimension of a single data-point.
-    grid: dict
+    grid_: dict
         This dictionary contains the data indexed in a grid. The key is a
         tuple with the k-dimensional index of each grid cell. Empty cells
         do not have a key. The value is a list of data points indices which
@@ -235,6 +235,7 @@ class GriSPy(object):
             k_digit[:, k] = self._digitize(k_data, bins=self.k_bins[:, k])
 
         # Check that there is at least one point per cell
+        self.grid = {}
         if self.N_cells ** self.dim < len(self.data):
             compact_ind = np.ravel_multi_index(
                 k_digit.T,
@@ -257,11 +258,9 @@ class GriSPy(object):
             list_ind = np.split(data_ind[compact_ind_sort], split_ind[1:])
             k_digit = k_digit[split_ind]
 
-            self.grid = {}
             for i, j in enumerate(k_digit):
                 self.grid[tuple(j)] = tuple(list_ind[i])
         else:
-            self.grid = {}
             for i in range(len(self.data)):
                 cell_point = tuple(k_digit[i, :])
                 if cell_point not in self.grid:
