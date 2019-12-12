@@ -136,7 +136,7 @@ class GriSPy(object):
     # params
     dim_ = attr.ib(init=False, repr=False)
     grid_ = attr.ib(init=False, repr=False)
-    kbins_ = attr.ib(init=False, repr=False)
+    k_bins_ = attr.ib(init=False, repr=False)
     periodic_flag_ = attr.ib(init=False, repr=False)
     time_ = attr.ib(init=False, repr=False)
 
