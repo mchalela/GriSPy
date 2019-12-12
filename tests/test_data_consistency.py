@@ -53,8 +53,8 @@ class Test_data_consistency:
 
     def test_grid_attrs(self, gsp):
         assert_(isinstance(gsp.k_bins, np.ndarray))
-        assert_(isinstance(gsp.grid, dict))
-        assert_(isinstance(gsp.dim, int))
+        assert_(isinstance(gsp.grid_, dict))
+        assert_(isinstance(gsp.dim_, int))
         assert_(isinstance(gsp.periodic_flag, bool))
         assert_(isinstance(gsp.time_, BuildStats))
 

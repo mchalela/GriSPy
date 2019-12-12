@@ -134,8 +134,9 @@ class GriSPy(object):
         default=False, validator=attr.validators.instance_of(bool))
 
     # params
+    grid_ = attr.ib(init=False, repr=False)
     time_ = attr.ib(init=False, repr=False)
-
+    dim_ = attr.ib(init=False, repr=False)
 
     # =========================================================================
     # ATTRS INITIALIZATION
@@ -147,9 +148,9 @@ class GriSPy(object):
 
         if self.copy_data:
             self.data = self.data.copy()
-        self.dim = self.data.shape[1]
+        self.dim_ = self.data.shape[1]
         self.set_periodicity(self.periodic)
-        self._build_grid()
+        self.grid_ = self._build_grid()
 
         # Record date and build time
         self.time_ = BuildStats(
@@ -223,9 +224,9 @@ class GriSPy(object):
     def _build_grid(self, epsilon=1.0e-6):
         """Build the grid."""
         data_ind = np.arange(len(self.data))
-        self.k_bins = np.zeros((self.N_cells + 1, self.dim))
+        self.k_bins = np.zeros((self.N_cells + 1, self.dim_))
         k_digit = np.zeros(self.data.shape, dtype=int)
-        for k in range(self.dim):
+        for k in range(self.dim_):
             k_data = self.data[:, k]
             self.k_bins[:, k] = np.linspace(
                 k_data.min() - epsilon,
@@ -235,11 +236,11 @@ class GriSPy(object):
             k_digit[:, k] = self._digitize(k_data, bins=self.k_bins[:, k])
 
         # Check that there is at least one point per cell
-        self.grid = {}
-        if self.N_cells ** self.dim < len(self.data):
+        grid = {}
+        if self.N_cells ** self.dim_ < len(self.data):
             compact_ind = np.ravel_multi_index(
                 k_digit.T,
-                (self.N_cells,) * self.dim,
+                (self.N_cells,) * self.dim_,
                 order="F",
             )
 
@@ -248,7 +249,7 @@ class GriSPy(object):
             k_digit = k_digit[compact_ind_sort]
 
             split_ind = np.searchsorted(
-                compact_ind, np.arange(self.N_cells ** self.dim)
+                compact_ind, np.arange(self.N_cells ** self.dim_)
             )
             deleted_cells = np.diff(np.append(-1, split_ind)).astype(bool)
             split_ind = split_ind[deleted_cells]
@@ -259,14 +260,15 @@ class GriSPy(object):
             k_digit = k_digit[split_ind]
 
             for i, j in enumerate(k_digit):
-                self.grid[tuple(j)] = tuple(list_ind[i])
+                grid[tuple(j)] = tuple(list_ind[i])
         else:
             for i in range(len(self.data)):
                 cell_point = tuple(k_digit[i, :])
-                if cell_point not in self.grid:
-                    self.grid[cell_point] = [i]
+                if cell_point not in grid:
+                    grid[cell_point] = [i]
                 else:
-                    self.grid[cell_point].append(i)
+                    grid[cell_point].append(i)
+        return grid
 
     def _distance(self, centre_0, centres):
         """Compute distance between points.
@@ -280,7 +282,7 @@ class GriSPy(object):
             return EMPTY_ARRAY.copy()
         metric_func = (
             self.metric if callable(self.metric) else METRICS[self.metric])
-        return metric_func(centre_0, centres, self.dim)
+        return metric_func(centre_0, centres, self.dim_)
 
     def _get_neighbor_distance(self, centres, neighbor_cells):
         """Retrieve neighbor distances whithin the given cells."""
@@ -294,7 +296,7 @@ class GriSPy(object):
             # Genera una lista con los vecinos de cada celda
             # print neighbor_cells[i]
             ind_tmp = [
-                self.grid.get(tuple(neighbor_cells[i][j]), [])
+                self.grid_.get(tuple(neighbor_cells[i][j]), [])
                 for j in range(len(neighbor_cells[i]))
             ]
             # Une en una sola lista todos sus vecinos
@@ -313,9 +315,9 @@ class GriSPy(object):
         shell_flag=False,
     ):
         """Retrieve cells touched by the search radius."""
-        cell_point = np.zeros((len(centres), self.dim), dtype=int)
+        cell_point = np.zeros((len(centres), self.dim_), dtype=int)
         out_of_field = np.zeros(len(cell_point), dtype=bool)
-        for k in range(self.dim):
+        for k in range(self.dim_):
             cell_point[:, k] = (
                 self._digitize(centres[:, k], bins=self.k_bins[:, k])
             )
@@ -331,9 +333,9 @@ class GriSPy(object):
             return [EMPTY_ARRAY.copy() for _ in centres]
 
         # Armo la caja con celdas a explorar
-        k_cell_min = np.zeros((len(centres), self.dim), dtype=int)
-        k_cell_max = np.zeros((len(centres), self.dim), dtype=int)
-        for k in range(self.dim):
+        k_cell_min = np.zeros((len(centres), self.dim_), dtype=int)
+        k_cell_max = np.zeros((len(centres), self.dim_), dtype=int)
+        for k in range(self.dim_):
             k_cell_min[:, k] = (
                 self._digitize(
                     centres[:, k] - distance_upper_bound,
@@ -360,7 +362,7 @@ class GriSPy(object):
             # Para cada centro i, agrego un arreglo con shape (:,k)
             k_grids = [
                 np.arange(k_cell_min[i, k], k_cell_max[i, k] + 1)
-                for k in range(self.dim)
+                for k in range(self.dim_)
             ]
             k_grids = np.meshgrid(*k_grids)
             neighbor_cells += [
@@ -372,7 +374,7 @@ class GriSPy(object):
             # la distancia
             cells_physical = [
                 self.k_bins[neighbor_cells[i][:, k], k] + 0.5 * cell_size[k]
-                for k in range(self.dim)
+                for k in range(self.dim_)
             ]
             cells_physical = np.array(cells_physical).T
             mask_cells = (
@@ -395,8 +397,8 @@ class GriSPy(object):
         return neighbor_cells
 
     def _near_boundary(self, centres, distance_upper_bound):
-        mask = np.zeros((len(centres), self.dim), dtype=bool)
-        for k in range(self.dim):
+        mask = np.zeros((len(centres), self.dim_), dtype=bool)
+        for k in range(self.dim_):
             if self.periodic[k] is None:
                 continue
             mask[:, k] = abs(
@@ -417,7 +419,7 @@ class GriSPy(object):
 
     def _mirror_universe(self, centres, distance_upper_bound):
         """Generate Terran centres in the Mirror Universe."""
-        terran_centres = np.array([[]] * self.dim).T
+        terran_centres = np.array([[]] * self.dim_).T
         terran_indices = np.array([], dtype=int)
         near_boundary = self._near_boundary(centres, distance_upper_bound)
         if not np.any(near_boundary):
@@ -713,7 +715,7 @@ class GriSPy(object):
         mask_zero_neighbors = neighbors_number == 0
         neighbors_number[mask_zero_neighbors] = 1
         mean_distance = 0.5 * (n / (neighbors_number / cell_volume)) ** (
-            1.0 / self.dim)
+            1.0 / self.dim_)
 
         upper_distance_tmp = mean_distance_factor * mean_distance
 
@@ -794,10 +796,10 @@ class GriSPy(object):
 
             if self.periodic_flag:
 
-                self._pd_hi = np.ones((1, self.dim)) * np.inf
-                self._pd_low = np.ones((1, self.dim)) * -np.inf
+                self._pd_hi = np.ones((1, self.dim_)) * np.inf
+                self._pd_low = np.ones((1, self.dim_)) * -np.inf
                 self._periodic_edges = []
-                for k in range(self.dim):
+                for k in range(self.dim_):
                     aux = periodic.get(k)
                     self.periodic[k] = aux
                     if aux:
@@ -808,11 +810,11 @@ class GriSPy(object):
                         aux = np.zeros((1, 3))
                     self._periodic_edges = np.hstack([
                         self._periodic_edges,
-                        np.tile(aux, (3**(self.dim - 1 - k), 3**k)).T.ravel()
+                        np.tile(aux, (3**(self.dim_ - 1 - k), 3**k)).T.ravel()
                     ])
 
                 self._periodic_edges = self._periodic_edges.reshape(
-                    self.dim, 3**self.dim
+                    self.dim_, 3**self.dim_
                 ).T
                 self._periodic_edges -= self._periodic_edges[::-1]
                 self._periodic_edges = np.unique(self._periodic_edges, axis=0)
