@@ -440,6 +440,7 @@ class Test_valid_init:
     @pytest.fixture
     def gsp(self):
         # Define valid input data
+        np.random.seed(1234)
         self.data = np.random.uniform(-1, 1, size=(100, 3))
         self.periodic = {0: (-1, 1), 1: (-1, 1), 2: None}
         self.metric = "euclid"
@@ -571,3 +572,49 @@ class Test_valid_init:
                 metric=self.metric,
                 copy_data=bad_copy_data,
             )
+
+
+class Test_set_periodicity:
+
+    @pytest.fixture
+    def gsp(self):
+        random = np.random.RandomState(3596)
+        self.centres = random.rand(3, 5).T
+        data = np.array([
+            [0, 0, 0],
+            [0, 0, 1],
+            [0, 1, 0],
+            [0, 1, 1],
+            [1, 0, 0],
+            [1, 0, 1],
+            [1, 1, 0],
+            [1, 1, 1]])
+        return GriSPy(data)
+
+    def test_set_periodicity_inplace(self, gsp):
+        periodicity = {0: (-50, 50)}
+
+        assert gsp.periodic_flag_ is False
+        assert gsp.periodic == {}
+
+        result = gsp.set_periodicity(periodicity, inplace=True)
+
+        assert result is None
+        assert gsp.periodic_flag_
+        assert gsp.periodic == {0: (-50, 50), 1: None, 2: None}
+
+    def test_set_periodicity_no_inplace(self, gsp):
+        periodicity = {0: (-50, 50)}
+
+        assert gsp.periodic_flag_ is False
+        assert gsp.periodic == {}
+
+        result = gsp.set_periodicity(periodicity)
+
+        assert isinstance(result, GriSPy)
+        assert result is not gsp
+        assert result.periodic_flag_
+        assert result.periodic == {0: (-50, 50), 1: None, 2: None}
+
+        assert gsp.periodic_flag_ is False
+        assert gsp.periodic == {}

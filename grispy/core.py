@@ -571,14 +571,10 @@ class GriSPy(object):
         if inplace:
 
             periodic_attr = attr.fields(GriSPy).periodic
-            periodic_attr.validator(periodic_attr, periodic)
-
+            periodic_attr.validator(self, periodic_attr, periodic)
             self.periodic, self.periodic_conf_ = self._build_periodicity(
                 periodic=periodic, dim=self.dim_)
-            self.grid_, self.k_bins_ = self._build_grid(
-                data=self.data,
-                N_cells=self.N_cells,
-                dim=self.dim_)
+
         else:
             return GriSPy(
                 data=self.data, N_cells=self.N_cells,
