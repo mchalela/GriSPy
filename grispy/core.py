@@ -286,6 +286,12 @@ class GriSPy(object):
         return getattr(self, key)
 
     def _build_periodicity(self, periodic, dim):
+        """Cleanup the periodicity configuration.
+
+        Remove the unnecessary axis from the periodic dict and also creates
+        a configuration for use in the search.
+
+        """
         cleaned_periodic = {}
         if len(periodic) == 0:
             periodic_flag = False
@@ -402,17 +408,17 @@ class GriSPy(object):
                 neighbors_indices += [EMPTY_ARRAY.copy()]
                 neighbors_distances += [EMPTY_ARRAY.copy()]
                 continue
+
             # Genera una lista con los vecinos de cada celda
             # print neighbor_cells[i]
             ind_tmp = [
                 self.grid_.get(tuple(neighbor_cells[i][j]), [])
-                for j in range(len(neighbor_cells[i]))
-            ]
+                for j in range(len(neighbor_cells[i]))]
+
             # Une en una sola lista todos sus vecinos
             neighbors_indices += [np.concatenate(ind_tmp).astype(int)]
             neighbors_distances += [
-                self._distance(centres[i], self.data[neighbors_indices[i], :])
-            ]
+                self._distance(centres[i], self.data[neighbors_indices[i], :])]
         return neighbors_distances, neighbors_indices
 
     # Neighbor-cells methods
@@ -446,12 +452,9 @@ class GriSPy(object):
         k_cell_max = np.zeros((len(centres), self.dim_), dtype=int)
         for k in range(self.dim_):
             k_cell_min[:, k] = self._digitize(
-                    centres[:, k] - distance_upper_bound,
-                    bins=self.k_bins_[:, k])
+                centres[:, k] - distance_upper_bound, bins=self.k_bins_[:, k])
             k_cell_max[:, k] = self._digitize(
-                    centres[:, k] + distance_upper_bound,
-                    bins=self.k_bins_[:, k])
-
+                centres[:, k] + distance_upper_bound, bins=self.k_bins_[:, k])
 
             k_cell_min[k_cell_min[:, k] < 0, k] = 0
             k_cell_max[k_cell_max[:, k] < 0, k] = 0
@@ -637,36 +640,33 @@ class GriSPy(object):
 
         # Get neighbors
         neighbor_cells = self._get_neighbor_cells(
-            centres, distance_upper_bound
-        )
+            centres, distance_upper_bound)
+
         neighbors_distances, neighbors_indices = self._get_neighbor_distance(
-            centres, neighbor_cells
-        )
+            centres, neighbor_cells)
 
         # We need to generate mirror centres for periodic boundaries...
         if self.periodic_flag_:
             terran_centres, terran_indices = self._mirror_universe(
-                centres, distance_upper_bound
-            )
+                centres, distance_upper_bound)
+
             # terran_centres are the centres in the mirror universe for those
             # near the boundary.
             terran_neighbor_cells = self._get_neighbor_cells(
-                terran_centres, distance_upper_bound[terran_indices]
-            )
+                terran_centres, distance_upper_bound[terran_indices])
+
             terran_neighbors_distances, \
                 terran_neighbors_indices = self._get_neighbor_distance(
-                    terran_centres, terran_neighbor_cells
-                )
+                    terran_centres, terran_neighbor_cells)
 
             for i, t in zip(terran_indices, np.arange(len(terran_centres))):
                 # i runs over normal indices that have a terran counterpart
                 # t runs over terran indices, 0 to len(terran_centres)
                 neighbors_distances[i] = np.concatenate(
-                    (neighbors_distances[i], terran_neighbors_distances[t])
-                )
+                    (neighbors_distances[i], terran_neighbors_distances[t]))
+
                 neighbors_indices[i] = np.concatenate(
-                    (neighbors_indices[i], terran_neighbors_indices[t])
-                )
+                    (neighbors_indices[i], terran_neighbors_indices[t]))
 
         for i in range(len(centres)):
             mask_distances = neighbors_distances[i] <= distance_upper_bound[i]
@@ -676,6 +676,7 @@ class GriSPy(object):
                 sorted_ind = np.argsort(neighbors_distances[i], kind=kind)
                 neighbors_distances[i] = neighbors_distances[i][sorted_ind]
                 neighbors_indices[i] = neighbors_indices[i][sorted_ind]
+
         return neighbors_distances, neighbors_indices
 
     def shell_neighbors(
@@ -862,9 +863,9 @@ class GriSPy(object):
         neighbors_distances = [EMPTY_ARRAY.copy() for _ in range(N_centres)]
         while not np.all(n_found):
             ndis_tmp, nidx_tmp = self.shell_neighbors(
-                    centres[~n_found],
-                    distance_lower_bound=lower_distance_tmp[~n_found],
-                    distance_upper_bound=upper_distance_tmp[~n_found])
+                centres[~n_found],
+                distance_lower_bound=lower_distance_tmp[~n_found],
+                distance_upper_bound=upper_distance_tmp[~n_found])
 
             for i_tmp, i in enumerate(centres_lookup_ind[~n_found]):
                 if n_found[i]:
@@ -886,7 +887,6 @@ class GriSPy(object):
                     neighbors_distances[i], ndis_tmp[i_tmp][sorted_ind]))
 
                 neighbors_indices[i] = np.hstack((
-                        neighbors_indices[i],
-                        neighbors_indices_tmp[i_tmp][sorted_ind]))
+                    neighbors_indices[i], nidx_tmp[i_tmp][sorted_ind]))
 
         return neighbors_distances, neighbors_indices
