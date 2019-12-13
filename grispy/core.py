@@ -49,6 +49,12 @@ EMPTY_ARRAY = np.array([], dtype=int)
 BuildStats = namedtuple("BuildStats", ["buildtime", "datetime"])
 
 
+PeriodicityConf = namedtuple(
+    "PeriodicityConf", [
+        "periodic_flag", "pd_hi", "pd_low",
+        "periodic_edges", "periodic_direc"])
+
+
 # =============================================================================
 # MAIN CLASS
 # =============================================================================
@@ -120,6 +126,9 @@ class GriSPy(object):
         The limits of the grid cells in each dimension.
     periodic_flag_: bool
         If any dimension has periodicity.
+    periodic_conf_: grispy.core.PeriodicityConf
+        Statistics and intermediate results to make easy and fast the searchs
+        with periodicity.
     time_: grispy.core.BuildStats
         Object containing the building time and the date of build.
 
@@ -128,7 +137,7 @@ class GriSPy(object):
     # User input params
     data = attr.ib(default=None, kw_only=False, repr=False)
     N_cells = attr.ib(default=20)
-    periodic = attr.ib(factory=dict)  # The validator runs in set_periodicity()
+    periodic = attr.ib(factory=dict)
     metric = attr.ib(default="euclid")
     copy_data = attr.ib(
         default=False, validator=attr.validators.instance_of(bool))
@@ -137,7 +146,7 @@ class GriSPy(object):
     dim_ = attr.ib(init=False, repr=False)
     grid_ = attr.ib(init=False, repr=False)
     k_bins_ = attr.ib(init=False, repr=False)
-    periodic_flag_ = attr.ib(init=False, repr=False)
+    periodic_conf_ = attr.ib(init=False, repr=False)
     time_ = attr.ib(init=False, repr=False)
 
     # =========================================================================
@@ -151,8 +160,14 @@ class GriSPy(object):
         if self.copy_data:
             self.data = self.data.copy()
         self.dim_ = self.data.shape[1]
-        self.periodic_flag_ = self._set_periodicity(self.periodic)
-        self.grid_, self.k_bins_ = self._build_grid()
+
+        self.periodic, self.periodic_conf_ = self._build_periodicity(
+            periodic=self.periodic, dim=self.dim_)
+
+        self.grid_, self.k_bins_ = self._build_grid(
+            data=self.data,
+            N_cells=self.N_cells,
+            dim=self.dim_)
 
         # Record date and build time
         self.time_ = BuildStats(
@@ -166,14 +181,12 @@ class GriSPy(object):
         if not isinstance(value, np.ndarray):
             raise TypeError(
                 "Data: Argument must be a numpy array."
-                "Got instead type {}".format(type(value))
-            )
+                "Got instead type {}".format(type(value)))
         # Check if data has the expected dimension
         if value.ndim != 2:
             raise ValueError(
                 "Data: Array has the wrong shape. Expected shape of (n, k), "
-                "got instead {}".format(value.shape)
-            )
+                "got instead {}".format(value.shape))
         # Check if data has the expected dimension
         if len(value.flatten()) == 0:
             raise ValueError("Data: Array must have at least 1 point")
@@ -189,14 +202,12 @@ class GriSPy(object):
         if not isinstance(value, int):
             raise TypeError(
                 "N_cells: Argument must be an integer. "
-                "Got instead type {}".format(type(value))
-            )
+                "Got instead type {}".format(type(value)))
         # Check if N_cells is valid, i.e. higher than 1
         if value < 1:
             raise ValueError(
                 "N_cells: Argument must be higher than 1. "
-                "Got instead {}".format(value)
-            )
+                "Got instead {}".format(value))
 
     @metric.validator
     def _validate_metric(self, attr, value):
@@ -208,6 +219,64 @@ class GriSPy(object):
                 "Metric: Got an invalid name: '{}'. "
                 "Options are: {} or a callable".format(value, metric_names))
 
+    @periodic.validator
+    def _validate_periodic(self, attr, value):
+
+        # Chek if dict
+        if not isinstance(value, dict):
+            raise TypeError(
+                "Periodicity: Argument must be a dictionary. "
+                "Got instead type {}".format(type(value)))
+
+        # If dict is empty means no perioity, stop validation.
+        if len(value) == 0:
+            return
+
+        # Check if keys and values are valid
+        for k, v in value.items():
+            # Check if integer
+            if not isinstance(k, int):
+                raise TypeError(
+                    "Periodicity: Keys must be integers. "
+                    "Got instead type {}".format(type(k)))
+            # Check if positive. No raise because negative values may work
+            if k < 0:
+                print(
+                    "WARNING: I got a negative periodic axis. "
+                    "Yo better know what you are doing.")
+
+            # Check if tuple or None
+            if not (isinstance(v, tuple) or v is None):
+                raise TypeError(
+                    "Periodicity: Values must be tuples. "
+                    "Got instead type {}".format(type(v)))
+            if v is None:
+                continue
+
+            # Check if edges are valid numbers
+            has_valid_number = all([
+                isinstance(v[0], (int, float)),
+                isinstance(v[1], (int, float))])
+            if not has_valid_number:
+                raise TypeError(
+                    "Periodicity: Argument must be a tuple of "
+                    "2 real numbers as edge descriptors. ")
+
+            # Check that first number is lower than second
+            if not v[0] < v[1]:
+                raise ValueError(
+                    "Periodicity: First argument in tuple must be "
+                    "lower than second argument.")
+
+    # =========================================================================
+    # PROPERTIES
+    # =========================================================================
+
+    @property
+    def periodic_flag_(self):
+        """Proxy to ``periodic_conf_.periodic_flag``."""
+        return self.periodic_conf_.periodic_flag
+
     # =========================================================================
     # INTERNAL IMPLEMENTATION
     # =========================================================================
@@ -216,41 +285,81 @@ class GriSPy(object):
         """Get item."""
         return getattr(self, key)
 
+    def _build_periodicity(self, periodic, dim):
+        cleaned_periodic = {}
+        if len(periodic) == 0:
+            periodic_flag = False
+            pd_hi, pd_low = None, None
+            periodic_edges, periodic_direc = None, None
+        else:
+            periodic_flag = any(
+                [x is not None for x in list(periodic.values())])
+
+            if periodic_flag:
+
+                pd_hi = np.ones((1, dim)) * np.inf
+                pd_low = np.ones((1, dim)) * -np.inf
+                periodic_edges = []
+                for k in range(dim):
+                    aux = periodic.get(k)
+                    cleaned_periodic[k] = aux
+                    if aux:
+                        pd_low[0, k] = aux[0]
+                        pd_hi[0, k] = aux[1]
+                        aux = np.insert(aux, 1, 0.)
+                    else:
+                        aux = np.zeros((1, 3))
+                    periodic_edges = np.hstack([
+                        periodic_edges,
+                        np.tile(aux, (3**(dim - 1 - k), 3**k)).T.ravel()
+                    ])
+
+                periodic_edges = periodic_edges.reshape(
+                    dim, 3**dim).T
+                periodic_edges -= periodic_edges[::-1]
+                periodic_edges = np.unique(periodic_edges, axis=0)
+
+                mask = periodic_edges.sum(axis=1, dtype=bool)
+                periodic_edges = periodic_edges[mask]
+
+                periodic_direc = np.sign(periodic_edges)
+
+        return cleaned_periodic, PeriodicityConf(
+            periodic_flag=periodic_flag,
+            pd_hi=pd_hi, pd_low=pd_low,
+            periodic_edges=periodic_edges, periodic_direc=periodic_direc)
+
     def _digitize(self, data, bins):
         """Return data bin index."""
         N = len(bins) - 1
         d = (N * (data - bins[0]) / (bins[-1] - bins[0])).astype(np.int)
         return d
 
-    def _build_grid(self, epsilon=1.0e-6):
+    def _build_grid(self, data, N_cells, dim, epsilon=1.0e-6):
         """Build the grid."""
-        data_ind = np.arange(len(self.data))
-        k_bins = np.zeros((self.N_cells + 1, self.dim_))
-        k_digit = np.zeros(self.data.shape, dtype=int)
-        for k in range(self.dim_):
-            k_data = self.data[:, k]
+        data_ind = np.arange(len(data))
+        k_bins = np.zeros((N_cells + 1, dim))
+        k_digit = np.zeros(data.shape, dtype=int)
+        for k in range(dim):
+            k_data = data[:, k]
             k_bins[:, k] = np.linspace(
                 k_data.min() - epsilon,
                 k_data.max() + epsilon,
-                self.N_cells + 1,
-            )
+                N_cells + 1)
             k_digit[:, k] = self._digitize(k_data, bins=k_bins[:, k])
 
         # Check that there is at least one point per cell
         grid = {}
-        if self.N_cells ** self.dim_ < len(self.data):
+        if N_cells ** dim < len(data):
             compact_ind = np.ravel_multi_index(
-                k_digit.T,
-                (self.N_cells,) * self.dim_,
-                order="F",
-            )
+                k_digit.T, (N_cells,) * dim, order="F")
 
             compact_ind_sort = np.argsort(compact_ind)
             compact_ind = compact_ind[compact_ind_sort]
             k_digit = k_digit[compact_ind_sort]
 
             split_ind = np.searchsorted(
-                compact_ind, np.arange(self.N_cells ** self.dim_))
+                compact_ind, np.arange(N_cells ** dim))
             deleted_cells = np.diff(np.append(-1, split_ind)).astype(bool)
             split_ind = split_ind[deleted_cells]
             if split_ind[-1] > data_ind[-1]:
@@ -262,7 +371,7 @@ class GriSPy(object):
             for i, j in enumerate(k_digit):
                 grid[tuple(j)] = tuple(list_ind[i])
         else:
-            for i in range(len(self.data)):
+            for i in range(len(data)):
                 cell_point = tuple(k_digit[i, :])
                 if cell_point not in grid:
                     grid[cell_point] = [i]
@@ -410,10 +519,16 @@ class GriSPy(object):
         return mask.sum(axis=1, dtype=bool)
 
     def _mirror(self, centre, distance_upper_bound):
-        mirror_centre = centre - self._periodic_edges
-        mask = self._periodic_direc * distance_upper_bound
-        mask += mirror_centre
-        mask = (mask >= self._pd_low) * (mask <= self._pd_hi)
+        pd_hi, pd_low, periodic_edges, periodic_direc = (
+            self.periodic_conf_.pd_hi, self.periodic_conf_.pd_low,
+            self.periodic_conf_.periodic_edges,
+            self.periodic_conf_.periodic_direc)
+
+        mirror_centre = centre - periodic_edges
+
+        mask = periodic_direc * distance_upper_bound
+        mask = mask + mirror_centre
+        mask = (mask >= pd_low) * (mask <= pd_hi)
         mask = np.prod(mask, 1, dtype=bool)
         return mirror_centre[mask]
 
@@ -438,7 +553,11 @@ class GriSPy(object):
                 )
         return terran_centres, terran_indices
 
-    def _set_periodicity(self, periodic={}):
+    # =========================================================================
+    # PERIODICITY
+    # =========================================================================
+
+    def set_periodicity(self, periodic, inplace=False):
         """Set periodicity conditions.
 
         This allows to define or change the periodicity limits without
@@ -459,49 +578,25 @@ class GriSPy(object):
             Example, periodic = { 0: (0, 360), 1: None}.
 
         """
-        # Validate input
-        utils.validate_periodicity(periodic)
+        if inplace:
 
-        self.periodic = {}
-        if len(periodic) == 0:
-            periodic_flag = False
+            periodic_attr = attr.fields(GriSPy).periodic
+            periodic_attr.validator(periodic_attr, periodic)
+
+            self.periodic, self.periodic_conf_ = self._build_periodicity(
+                periodic=periodic, dim=self.dim_)
+            self.grid_, self.k_bins_ = self._build_grid(
+                data=self.data,
+                N_cells=self.N_cells,
+                dim=self.dim_)
         else:
-            periodic_flag = any(
-                [x is not None for x in list(periodic.values())]
-            )
-
-            if periodic_flag:
-
-                self._pd_hi = np.ones((1, self.dim_)) * np.inf
-                self._pd_low = np.ones((1, self.dim_)) * -np.inf
-                self._periodic_edges = []
-                for k in range(self.dim_):
-                    aux = periodic.get(k)
-                    self.periodic[k] = aux
-                    if aux:
-                        self._pd_low[0, k] = aux[0]
-                        self._pd_hi[0, k] = aux[1]
-                        aux = np.insert(aux, 1, 0.)
-                    else:
-                        aux = np.zeros((1, 3))
-                    self._periodic_edges = np.hstack([
-                        self._periodic_edges,
-                        np.tile(aux, (3**(self.dim_ - 1 - k), 3**k)).T.ravel()
-                    ])
-
-                self._periodic_edges = self._periodic_edges.reshape(
-                    self.dim_, 3**self.dim_
-                ).T
-                self._periodic_edges -= self._periodic_edges[::-1]
-                self._periodic_edges = np.unique(self._periodic_edges, axis=0)
-                mask = self._periodic_edges.sum(axis=1, dtype=bool)
-                self._periodic_edges = self._periodic_edges[mask]
-                self._periodic_direc = np.sign(self._periodic_edges)
-
-        return periodic_flag
+            return GriSPy(
+                data=self.data, N_cells=self.N_cells,
+                metric=self.metric, copy_data=self.copy_data,
+                periodic=periodic)
 
     # =========================================================================
-    # API
+    # SEARCH API
     # =========================================================================
 
     def bubble_neighbors(
@@ -760,12 +855,11 @@ class GriSPy(object):
 
         # Abro la celda del centro como primer paso
         centre_cell = self._get_neighbor_cells(
-            centres, distance_upper_bound=upper_distance_tmp
-        )
+            centres, distance_upper_bound=upper_distance_tmp)
+
         # crear funcion que regrese vecinos sin calcular distancias
         neighbors_distances, neighbors_indices = self._get_neighbor_distance(
-            centres, centre_cell
-        )
+            centres, centre_cell)
 
         # Calculo una primera aproximacion con la
         # 'distancia media' = 0.5 * (n/denstiy)**(1/dim)

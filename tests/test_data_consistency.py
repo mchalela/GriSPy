@@ -13,7 +13,7 @@ import pytest
 import numpy as np
 
 from grispy import GriSPy
-from grispy.core import BuildStats
+from grispy.core import BuildStats, PeriodicityConf
 
 from numpy.testing import assert_equal, assert_
 
@@ -56,6 +56,7 @@ class Test_data_consistency:
         assert_(isinstance(gsp.grid_, dict))
         assert_(isinstance(gsp.dim_, int))
         assert_(isinstance(gsp.periodic_flag_, bool))
+        assert_(isinstance(gsp.periodic_conf_, PeriodicityConf))
         assert_(isinstance(gsp.time_, BuildStats))
 
     def test_bubble_single_query(self, gsp):
