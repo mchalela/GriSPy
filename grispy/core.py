@@ -26,7 +26,7 @@ import numpy as np
 
 import attr
 
-from . import utils, distances
+from . import distances, validators as vlds
 
 
 # =============================================================================
@@ -624,15 +624,15 @@ class GriSPy(object):
 
         """
         # Validate iputs
-        utils.validate_centres(centres, self.data)
-        utils.validate_distance_bound(distance_upper_bound, self.periodic)
-        utils.validate_bool(sorted)
-        utils.validate_sortkind(kind)
+        vlds.validate_centres(centres, self.data)
+        vlds.validate_distance_bound(distance_upper_bound, self.periodic)
+        vlds.validate_bool(sorted)
+        vlds.validate_sortkind(kind)
         # Match distance_upper_bound shape with centres shape
         if np.isscalar(distance_upper_bound):
             distance_upper_bound *= np.ones(len(centres))
         else:
-            utils.validate_equalsize(centres, distance_upper_bound)
+            vlds.validate_equalsize(centres, distance_upper_bound)
 
         # Get neighbors
         neighbor_cells = self._get_neighbor_cells(
@@ -719,21 +719,21 @@ class GriSPy(object):
 
         """
         # Validate inputs
-        utils.validate_centres(centres, self.data)
-        utils.validate_bool(sorted)
-        utils.validate_sortkind(kind)
-        utils.validate_shell_distances(
+        vlds.validate_centres(centres, self.data)
+        vlds.validate_bool(sorted)
+        vlds.validate_sortkind(kind)
+        vlds.validate_shell_distances(
             distance_lower_bound, distance_upper_bound, self.periodic)
 
         # Match distance bounds shapes with centres shape
         if np.isscalar(distance_lower_bound):
             distance_lower_bound *= np.ones(len(centres))
         else:
-            utils.validate_equalsize(centres, distance_lower_bound)
+            vlds.validate_equalsize(centres, distance_lower_bound)
         if np.isscalar(distance_upper_bound):
             distance_upper_bound *= np.ones(len(centres))
         else:
-            utils.validate_equalsize(centres, distance_upper_bound)
+            vlds.validate_equalsize(centres, distance_upper_bound)
 
         # Get neighbors
         neighbor_cells = self._get_neighbor_cells(
@@ -822,9 +822,9 @@ class GriSPy(object):
 
         """
         # Validate input
-        utils.validate_centres(centres, self.data)
-        utils.validate_n_nearest(n, self.data, self.periodic)
-        utils.validate_sortkind(kind)
+        vlds.validate_centres(centres, self.data)
+        vlds.validate_n_nearest(n, self.data, self.periodic)
+        vlds.validate_sortkind(kind)
 
         # Initial definitions
         N_centres = len(centres)

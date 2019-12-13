@@ -18,65 +18,6 @@ import numpy as np
 # Meant to be called within each method
 # --------------------------------
 
-def validate_periodicity(periodic):
-    """Validate method params: periodic.
-
-    Periodicity has a differnt validator format
-    because it can be changed in set_periodicity,
-    so we only validate it there
-    """
-    # Chek if dict
-    if not isinstance(periodic, dict):
-        raise TypeError(
-            "Periodicity: Argument must be a dictionary. "
-            "Got instead type {}".format(type(periodic))
-        )
-
-    # If dict is empty means no periodicity, stop validation.
-    if len(periodic) == 0:
-        return
-
-    # Check if keys are valid
-    for k in periodic.keys():
-        # Check if integer
-        if not isinstance(k, int):
-            raise TypeError(
-                "Periodicity: Keys must be integers. "
-                "Got instead type {}".format(type(k))
-            )
-        # Check if positive. No raise because negative values may work
-        if k < 0:
-            print(
-                "WARNING: I got a negative periodic axis. "
-                "Yo better know what you are doing."
-            )
-    # Check if values are valid
-    for v in periodic.values():
-        # Check if tuple or None
-        if not (isinstance(v, tuple) or v is None):
-            raise TypeError(
-                "Periodicity: Values must be tuples. "
-                "Got instead type {}".format(type(v))
-            )
-        if v is None:
-            continue
-
-        # Check if edges are valid numbers
-        if not (
-            isinstance(v[0], (int, float)) and isinstance(v[1], (int, float))
-        ):
-            raise TypeError(
-                "Periodicity: Argument must be a tuple of "
-                "2 real numbers as edge descriptors. "
-            )
-
-        # Check that first number is lower than second
-        if not v[0] < v[1]:
-            raise ValueError(
-                "Periodicity: First argument in tuple must be "
-                "lower than second argument."
-            )
-
 
 def validate_centres(centres, data):
     """Validate method params: centres."""
