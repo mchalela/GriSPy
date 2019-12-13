@@ -77,9 +77,7 @@ def do_setup():
         packages=["grispy"],
         py_modules=["ez_setup"],
 
-        install_requires=REQUIREMENTS,
-
-    )
+        install_requires=REQUIREMENTS)
 
 
 if __name__ == "__main__":
