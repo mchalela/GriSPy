@@ -1,7 +1,10 @@
 # GriSPy (Grid Search in Python)
-[![Build Status](https://travis-ci.org/mchalela/GriSPy.svg?branch=master)](https://travis-ci.org/mchalela/GriSPy) [![Documentation Status](https://readthedocs.org/projects/grispy/badge/?version=latest)](https://grispy.readthedocs.io/en/latest/?badge=latest)
-[![License: MIT](https://img.shields.io/badge/License-MIT-red.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.6](https://img.shields.io/badge/python-3.7-blue.svg)](https://www.python.org/downloads/release/python-370/)
+[![Build Status](https://travis-ci.org/mchalela/GriSPy.svg?branch=master)](https://travis-ci.org/mchalela/GriSPy)
+[![Documentation Status](https://readthedocs.org/projects/grispy/badge/?version=latest)](https://grispy.readthedocs.io/en/latest/?badge=latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.6+](https://img.shields.io/badge/python-3.6+-blue.svg)](https://www.python.org/downloads/release/python-370/)
+
+
 
 ![logo](https://github.com/mchalela/GriSPy/raw/master/res/logo_mid.png)
 
