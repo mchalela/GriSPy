@@ -566,6 +566,10 @@ class GriSPy(object):
             it will be considered as non-periodic.
             Default: all axis set to None.
             Example, periodic = { 0: (0, 360), 1: None}.
+        inplace: boolean, optional (default=False)
+            If its True, set the periodicity on the current GriSPy instance
+            and return None. Otherwise a new instance is created and
+            returned.
 
         """
         if inplace:

@@ -2,3 +2,4 @@ ipykernel
 Sphinx
 sphinx-rtd-theme
 nbsphinx
+textdistance
