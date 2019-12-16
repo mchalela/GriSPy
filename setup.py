@@ -20,12 +20,14 @@
 # IMPORTS
 # =============================================================================
 
+import os
+import pathlib
+
 from ez_setup import use_setuptools
 use_setuptools()
 
 from setuptools import setup
 
-import os.path
 
 # =============================================================================
 # CONSTANTS
@@ -33,9 +35,17 @@ import os.path
 
 REQUIREMENTS = ["numpy", "scipy", "attrs", "matplotlib"]
 
-here = os.path.abspath(os.path.dirname(__file__))
-with open(os.path.join(here, "README.md")) as fp:
+PATH = pathlib.Path(os.path.abspath(os.path.dirname(__file__)))
+
+with open(PATH / "README.md") as fp:
     LONG_DESCRIPTION = fp.read()
+
+with open(PATH / "grispy" / "__init__.py") as fp:
+    for l in fp.readlines():
+        if l.startswith("__version__ = "):
+            VERSION = l.split("=", 1)[-1].replace('"', '').strip()
+            break
+
 
 DESCRIPTION = "Grid Search in Python"
 
@@ -47,7 +57,7 @@ DESCRIPTION = "Grid Search in Python"
 def do_setup():
     setup(
         name="grispy",
-        version="0.0.1",
+        version=VERSION,
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
         long_description_content_type='text/markdown',

@@ -12,7 +12,19 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('..'))
+import pathlib
+
+
+# this path is pointing to project/docs/source
+CURRENT_PATH = pathlib.Path(os.path.abspath(os.path.dirname(__file__)))
+GRISPY_PATH = CURRENT_PATH.parent.parent
+
+sys.path.insert(0, str(GRISPY_PATH))
+
+from setup import VERSION
+
+import grispy
+
 
 # -- Project information -----------------------------------------------------
 
@@ -20,17 +32,10 @@ project = 'GriSPy'
 copyright = '2019, Martin Chalela, Emanuel Sillero, Luis Pereyra and Alejandro Garcia'
 author = 'Martin Chalela, Emanuel Sillero, Luis Pereyra and Alejandro Garcia'
 
-# Get the version from grispy file itself (not imported)
-with open(os.path.join('../..', 'setup.py'), 'r') as f:
-    for line in f:
-        if 'version=' in line:
-            __version__ = line.replace("version=", '').replace('"', '').replace(',', '')
-            break
-
 # The short X.Y version.
-version = __version__
+version = VERSION
 # The full version, including alpha/beta/rc tags
-release = __version__
+release = VERSION
 
 
 # -- General configuration ---------------------------------------------------
