@@ -8,15 +8,34 @@ API Module
 
 | And the following methods are available:
 |	- **set_periodicity**: define the periodicity conditions.
-| 	- **save_grid**: save the grid for future use.
-| 	- **load_grid**: load a previously saved grid.
 
 -----------------------------------------------------------------
 
 .. toctree::
    :maxdepth: 2
 
+Module ``grispy.core``
+----------------------
+
 .. automodule:: grispy.core
+   :members:
+   :show-inheritance:
+   :member-order: bysource
+
+
+Module ``grispy.distances``
+---------------------------
+
+.. automodule:: grispy.distances
+   :members:
+   :show-inheritance:
+   :member-order: bysource
+
+
+Module ``grispy.validators``
+-----------------------------
+
+.. automodule:: grispy.validators
    :members:
    :show-inheritance:
    :member-order: bysource

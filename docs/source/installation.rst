@@ -2,7 +2,7 @@ Requirements
 ------------
 
 You need Python 3.6 or later to run GriSPy. You can have multiple Python
-versions (2.x and 3.x) installed on the same system without problems.
+versions (3.x) installed on the same system without problems.
 
 
 Installation

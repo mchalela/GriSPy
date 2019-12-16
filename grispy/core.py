@@ -20,7 +20,6 @@
 
 import time
 import datetime
-from collections import namedtuple
 
 import numpy as np
 
@@ -46,13 +45,34 @@ EMPTY_ARRAY = np.array([], dtype=int)
 #  TIME CLASS
 # =============================================================================
 
-BuildStats = namedtuple("BuildStats", ["buildtime", "datetime"])
+@attr.s(frozen=True)
+class BuildStats:
+    """Statistics about the grid creation.
+
+    Attributes
+    ----------
+    buildtime: float
+        The number of seconds expended in build the grid.
+    periodicity_set_at: datetime.datetime
+        The date and time when the periodicity was setted.
+    datetime: datetime.datetime
+        The date and time of build.
+    """
+
+    buildtime = attr.ib()
+    periodicity_set_at = attr.ib()
+    datetime = attr.ib()
 
 
-PeriodicityConf = namedtuple(
-    "PeriodicityConf", [
-        "periodic_flag", "pd_hi", "pd_low",
-        "periodic_edges", "periodic_direc"])
+@attr.s(frozen=True)
+class PeriodicityConf:
+    """Internal representation of the periodicity of the Grid."""
+
+    periodic_flag = attr.ib()
+    pd_hi = attr.ib()
+    pd_low = attr.ib()
+    periodic_edges = attr.ib()
+    periodic_direc = attr.ib()
 
 
 # =============================================================================
@@ -170,9 +190,10 @@ class GriSPy(object):
             dim=self.dim_)
 
         # Record date and build time
+        now = datetime.datetime.now()
         self.time_ = BuildStats(
             buildtime=time.time() - t0,
-            datetime=datetime.datetime.now())
+            periodicity_set_at=now, datetime=now)
 
     @data.validator
     def _validate_data(self, attribute, value):
@@ -579,6 +600,10 @@ class GriSPy(object):
             self.periodic, self.periodic_conf_ = self._build_periodicity(
                 periodic=periodic, dim=self.dim_)
 
+            self.time_ = BuildStats(
+                buildtime=self.time_.buildtime,
+                datetime=self.time_.datetime,
+                periodicity_set_at=datetime.datetime.now())
         else:
             return GriSPy(
                 data=self.data, N_cells=self.N_cells,
