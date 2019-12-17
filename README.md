@@ -30,16 +30,15 @@ You need Python 3.6 or later to run GriSPy. You can have multiple Python
 versions (2.x and 3.x) installed on the same system without problems.
 
 
-## Standard Install
+## Standard Installation
 
-GriSPy is available at [PyPI](https://pypi.org/project/grispy/). You can install it via the pip command:
+GriSPy is available at [PyPI](https://pypi.org/project/grispy/). You can install it via the pip command
 
         $ pip install grispy
 
 ## Development Install
 
-1.  Clone this repo and then inside the local directory
-2.  Execute
+Clone this repo and then inside the local directory execute
 
         $ pip install -e .
 
