@@ -19,18 +19,22 @@ GriSPy has the following queries implemented:
 - **shell_neighbors**: find neighbors within given lower and upper radius. Different lower and upper radius can be provided for each centre.
 - **nearest_neighbors**: find the nth nearest neighbors for each centre.
 
-And the following methods are available:
+And the following method is available:
 - **set_periodicity**: define the periodicity conditions.
-- **save_grid**: save the grid for future use.
-- **load_grid**: load a previously saved grid.
 
 --------------------------------
 
 ## Requirements
 
-You need Python 3.7 or later to run GriSPy. You can have multiple Python
+You need Python 3.6 or later to run GriSPy. You can have multiple Python
 versions (2.x and 3.x) installed on the same system without problems.
 
+
+## Standard Install
+
+GriSPy is available at [PyPI](https://pypi.org/project/grispy/). You can install it via the pip command:
+
+        $ pip install grispy
 
 ## Development Install
 

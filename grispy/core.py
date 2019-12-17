@@ -99,8 +99,6 @@ class GriSPy(object):
 
     Other methods:
     - set_periodicity: set periodicity condition after the grid was built.
-    - save_grid: save the grid for future use.
-    - load_grid: load a grid previously saved.
 
     To be implemented:
     - box_neighbors: find neighbors within a k-dimensional squared box of
@@ -142,7 +140,7 @@ class GriSPy(object):
         tuple with the k-dimensional index of each grid cell. Empty cells
         do not have a key. The value is a list of data points indices which
         are located within the given cell.
-    k_bins: ndarray, shape (N_cells+1,k)
+    k_bins_: ndarray, shape (N_cells+1,k)
         The limits of the grid cells in each dimension.
     periodic_flag_: bool
         If any dimension has periodicity.
@@ -862,27 +860,11 @@ class GriSPy(object):
         lower_distance_tmp = np.zeros(N_centres)
         upper_distance_tmp = np.zeros(N_centres)
 
-        # Abro la celda del centro como primer paso
-        centre_cell = self._get_neighbor_cells(
-            centres, distance_upper_bound=upper_distance_tmp)
-
-        # crear funcion que regrese vecinos sin calcular distancias
-        neighbors_distances, neighbors_indices = self._get_neighbor_distance(
-            centres, centre_cell)
-
-        # Calculo una primera aproximacion con la
-        # 'distancia media' = 0.5 * (n/denstiy)**(1/dim)
-        # Factor de escala para la distancia inicial
-        mean_distance_factor = 1.0
+        # First estimation is the cell radii
         cell_size = self.k_bins_[1, :] - self.k_bins_[0, :]
-        cell_volume = np.prod(cell_size.astype(float))
-        neighbors_number = np.array(list(map(len, neighbors_indices)))
-        mask_zero_neighbors = neighbors_number == 0
-        neighbors_number[mask_zero_neighbors] = 1
-        mean_distance = 0.5 * (n / (neighbors_number / cell_volume)) ** (
-            1.0 / self.dim_)
+        cell_radii = 0.5 * np.sum(cell_size ** 2) ** 0.5
 
-        upper_distance_tmp = mean_distance_factor * mean_distance
+        upper_distance_tmp = cell_radii * np.ones(N_centres)
 
         neighbors_indices = [EMPTY_ARRAY.copy() for _ in range(N_centres)]
         neighbors_distances = [EMPTY_ARRAY.copy() for _ in range(N_centres)]
