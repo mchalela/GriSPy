@@ -42,6 +42,21 @@ GriSPy is available at [PyPI](https://pypi.org/project/grispy/). You can install
 Clone this repo and then inside the local directory execute
 
         $ pip install -e .
+        
+## Citation
+
+Citation
+--------
+
+If you use scikit-criteria in a scientific publication, we would appreciate
+citations to the following paper:
+
+    Cabral, Juan B., Nadia Ayelen Luczywo, and José Luis Zanazzi 2016
+    Scikit-Criteria: Colección de Métodos de Análisis Multi-Criterio Integrado
+    Al Stack Científico de Python. In XLV Jornadas Argentinas de Informática E
+    Investigación Operativa (45JAIIO)-XIV Simposio Argentino de Investigación
+    Operativa (SIO) (Buenos Aires, 2016) Pp. 59-66.
+    http://45jaiio.sadio.org.ar/sites/default/files/Sio-23.pdf.
 
 ## Authors
 
