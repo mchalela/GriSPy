@@ -48,15 +48,11 @@ Clone this repo and then inside the local directory execute
 Citation
 --------
 
-If you use scikit-criteria in a scientific publication, we would appreciate
+If you use *GriSPy* in a scientific publication, we would appreciate
 citations to the following paper:
 
-    Cabral, Juan B., Nadia Ayelen Luczywo, and José Luis Zanazzi 2016
-    Scikit-Criteria: Colección de Métodos de Análisis Multi-Criterio Integrado
-    Al Stack Científico de Python. In XLV Jornadas Argentinas de Informática E
-    Investigación Operativa (45JAIIO)-XIV Simposio Argentino de Investigación
-    Operativa (SIO) (Buenos Aires, 2016) Pp. 59-66.
-    http://45jaiio.sadio.org.ar/sites/default/files/Sio-23.pdf.
+> Chalela, M., Sillero, E., Pereyra, L., García, M. A., Cabral, J. B., Lares, M., & Merchán, M. (2019). 
+> GriSPy: A Python package for Fixed-Radius Nearest Neighbors Search. arXiv preprint arXiv:1912.09585.
 
 ## Authors
 
