@@ -74,6 +74,8 @@ citations to the following paper:
      journal={arXiv preprint arXiv:1912.09585},
      year={2019}
    }
+   
+Full-text: https://ui.adsabs.harvard.edu/abs/2019arXiv191209585C/abstract
 
 
 ----------------------------------------------------------------
