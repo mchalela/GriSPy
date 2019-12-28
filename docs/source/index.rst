@@ -50,6 +50,32 @@ Repository and Issues
 
 https://github.com/mchalela/GriSPy
 
+
+Citation
+--------
+
+If you use *GriSPy* in a scientific publication, we would appreciate
+citations to the following paper:
+
+  Chalela, M., Sillero, E., Pereyra, L., García, M. A., Cabral, J. B., Lares, M., & Merchán, M. (2019). 
+  GriSPy: A Python package for Fixed-Radius Nearest Neighbors Search. arXiv preprint arXiv:1912.09585.
+
+**Bibtex**
+
+.. code-block:: bibtex
+
+   @article{
+     chalela2019grispy,
+     title={GriSPy: A Python package for Fixed-Radius Nearest Neighbors Search},
+     author={
+       Chalela, Martin and Sillero, Emanuel and Pereyra, 
+       Luis and Garc{\'\i}a, Mario Alejandro and Cabral, 
+       Juan B and Lares, Marcelo and Merch{\'a}n, Manuel},
+     journal={arXiv preprint arXiv:1912.09585},
+     year={2019}
+   }
+
+
 ----------------------------------------------------------------
 
 .. toctree::
