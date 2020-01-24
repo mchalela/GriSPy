@@ -9,6 +9,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/mchalela/GriSPy/badge.svg?branch=master)](https://coveralls.io/github/mchalela/GriSPy?branch=master) 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.6+](https://img.shields.io/badge/python-3.6+-blue.svg)](https://www.python.org/downloads/release/python-370/)
+<a href="http://ascl.net/1912.013"><img src="https://img.shields.io/badge/ascl-1912.013-blue.svg?colorB=262255" alt="ascl:1912.013" /></a>
 
 
 **GriSPy** is a regular grid search algorithm for quick nearest-neighbor lookup.
