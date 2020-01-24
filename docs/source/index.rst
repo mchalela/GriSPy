@@ -34,6 +34,9 @@ GriSPy documentation
    :target: https://www.python.org/downloads/release/python-370/
    :alt: Python 3.6+
 
+.. image:: https://img.shields.io/badge/ascl-1912.013-blue.png?colorB=262255
+   :target: http://ascl.net/1912.013
+   :alt: ascl:1912.013
 
 
 **GriSPy** (Grid Search in Python) is a regular grid search algorithm for quick nearest-neighbor lookup.
