@@ -41,9 +41,9 @@ with open(PATH / "README.md") as fp:
     LONG_DESCRIPTION = fp.read()
 
 with open(PATH / "grispy" / "__init__.py") as fp:
-    for l in fp.readlines():
-        if l.startswith("__version__ = "):
-            VERSION = l.split("=", 1)[-1].replace('"', '').strip()
+    for line in fp.readlines():
+        if line.startswith("__version__ = "):
+            VERSION = line.split("=", 1)[-1].replace('"', '').strip()
             break
 
 
