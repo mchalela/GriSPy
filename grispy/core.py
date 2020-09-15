@@ -422,22 +422,24 @@ class GriSPy(object):
         """Retrieve neighbor distances whithin the given cells."""
         neighbors_indices = []
         neighbors_distances = []
-        for i in range(len(centres)):
-            if len(neighbor_cells[i]) == 0:  # no hay celdas vecinas
-                neighbors_indices += [EMPTY_ARRAY.copy()]
-                neighbors_distances += [EMPTY_ARRAY.copy()]
+        for centre, neighbors in zip(centres, neighbor_cells):
+
+            if len(neighbors) == 0:  # no hay celdas vecinas
+                neighbors_indices.append(EMPTY_ARRAY.copy())
+                neighbors_distances.append(EMPTY_ARRAY.copy())
                 continue
 
             # Genera una lista con los vecinos de cada celda
-            # print neighbor_cells[i]
-            ind_tmp = [
-                self.grid_.get(tuple(neighbor_cells[i][j]), [])
-                for j in range(len(neighbor_cells[i]))]
+            # print neighbors
+            ind_tmp = [self.grid_.get(nt, []) for nt in map(tuple, neighbors)]
 
             # Une en una sola lista todos sus vecinos
-            neighbors_indices += [np.concatenate(ind_tmp).astype(int)]
-            neighbors_distances += [
-                self._distance(centres[i], self.data[neighbors_indices[i], :])]
+            inds = np.concatenate(ind_tmp).astype(int)
+            neighbors_indices.append(inds)
+
+            neighbors_distances.append(
+                self._distance(centre, self.data[inds, :]))
+
         return neighbors_distances, neighbors_indices
 
     # Neighbor-cells methods
