@@ -84,4 +84,4 @@ html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
 
 # -- Options for nbsphinx output -------------------------------------------------
-nbsphinx_prompt_width = 0
+nbsphinx_prompt_width = "0pt"
