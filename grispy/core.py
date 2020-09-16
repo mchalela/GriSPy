@@ -21,6 +21,8 @@
 import time
 import datetime
 
+import joblib
+
 import numpy as np
 
 import attr
@@ -129,7 +131,18 @@ class GriSPy(object):
     metric: str, optional
         Metric definition to compute distances. Options: 'euclid', 'haversine'
         'vincenty' or a custom callable.
-
+    n_jobs: int, default: None
+        The maximum number of concurrently running jobs, such as the number
+        of Python worker processes when backend is "multiprocessing"
+        or the size of the thread-pool when backend is "threading".
+        If -1 all CPUs are used. If 1 is given, no parallel computing code
+        is used at all, which is useful for debugging. For n_jobs below -1,
+        (n_cpus + 1 + n_jobs) are used. Thus for n_jobs = -2, all
+        CPUs but one are used.
+        None is a marker for 'unset' that will be interpreted as n_jobs=1
+        (sequential execution) unless the call is performed under a
+        parallel_backend context manager that sets another value for
+        n_jobs. Please see https://joblib.readthedocs.io/
 
     Attributes
     ----------
@@ -157,6 +170,7 @@ class GriSPy(object):
     N_cells = attr.ib(default=20)
     periodic = attr.ib(factory=dict)
     metric = attr.ib(default="euclid")
+    n_jobs = attr.ib(default=None)
     copy_data = attr.ib(
         default=False, validator=attr.validators.instance_of(bool))
 
@@ -418,15 +432,18 @@ class GriSPy(object):
             self.metric if callable(self.metric) else METRICS[self.metric])
         return metric_func(centre_0, centres, self.dim_)
 
-    def _get_neighbor_distance(self, centres, neighbor_cells):
-        """Retrieve neighbor distances whithin the given cells."""
-        neighbors_indices = []
-        neighbors_distances = []
-        for centre, neighbors in zip(centres, neighbor_cells):
+    def _get_neighbor_distance_worker(self, part):
+        """Real heart of the _get_neighbor_distance method.
+
+        It's needed to use with joblib.
+
+        """
+        n_idxs, n_dis = [], []
+        for centre, neighbors in part:
 
             if len(neighbors) == 0:  # no hay celdas vecinas
-                neighbors_indices.append(EMPTY_ARRAY.copy())
-                neighbors_distances.append(EMPTY_ARRAY.copy())
+                n_idxs.append(EMPTY_ARRAY.copy())
+                n_dis.append(EMPTY_ARRAY.copy())
                 continue
 
             # Genera una lista con los vecinos de cada celda
@@ -435,10 +452,33 @@ class GriSPy(object):
 
             # Une en una sola lista todos sus vecinos
             inds = np.concatenate(ind_tmp).astype(int)
-            neighbors_indices.append(inds)
+            n_idxs.append(inds)
 
-            neighbors_distances.append(
-                self._distance(centre, self.data[inds, :]))
+            dis = self._distance(centre, self.data[inds, :])
+            n_dis.append(dis)
+
+        return n_idxs, n_dis
+
+    def _get_neighbor_distance(self, centres, neighbor_cells):
+        """Retrieve neighbor distances whithin the given cells."""
+        # combine the centres with the neighbors
+        centres_ngb_list = list(zip(centres, neighbor_cells))
+
+        # determine the number of parts and split the centres
+        split_n = joblib.effective_n_jobs(self.n_jobs)
+        centres_nbg_splitted = np.array_split(centres_ngb_list, split_n)
+
+        # real parallel work
+        with joblib.Parallel(n_jobs=self.n_jobs) as P:
+            worker = joblib.delayed(self._get_neighbor_distance_worker)
+            results = P(worker(part) for part in centres_nbg_splitted)
+
+        # recombine the results
+        neighbors_indices = []
+        neighbors_distances = []
+        for n_idxs, n_dis in results:
+            neighbors_indices.extend(n_idxs)
+            neighbors_distances.extend(n_dis)
 
         return neighbors_distances, neighbors_indices
 
