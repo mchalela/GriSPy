@@ -440,7 +440,10 @@ class GriSPy(object):
             inds = np.fromiter(itertools.chain(*ind_tmp), dtype=np.int)
             n_idxs.append(inds)
 
-            dis = self._distance(centre, self.data[inds])
+            if self.dim_ == 1:
+                dis = self._distance(centre, self.data[inds])
+            else:
+                dis = self._distance(centre, self.data.take(inds, axis=0))
             n_dis.append(dis)
 
         return n_dis, n_idxs
