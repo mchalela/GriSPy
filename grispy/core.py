@@ -21,6 +21,8 @@
 import time
 import datetime
 
+import itertools
+
 import numpy as np
 
 import attr
@@ -420,25 +422,28 @@ class GriSPy(object):
 
     def _get_neighbor_distance(self, centres, neighbor_cells):
         """Retrieve neighbor distances whithin the given cells."""
-        neighbors_indices = []
-        neighbors_distances = []
-        for i in range(len(centres)):
-            if len(neighbor_cells[i]) == 0:  # no hay celdas vecinas
-                neighbors_indices += [EMPTY_ARRAY.copy()]
-                neighbors_distances += [EMPTY_ARRAY.copy()]
+        # combine the centres with the neighbors
+        centres_ngb = zip(centres, neighbor_cells)
+
+        n_idxs, n_dis = [], []
+        for centre, neighbors in centres_ngb:
+
+            if len(neighbors) == 0:  # no hay celdas vecinas
+                n_idxs.append(EMPTY_ARRAY.copy())
+                n_dis.append(EMPTY_ARRAY.copy())
                 continue
 
             # Genera una lista con los vecinos de cada celda
-            # print neighbor_cells[i]
-            ind_tmp = [
-                self.grid_.get(tuple(neighbor_cells[i][j]), [])
-                for j in range(len(neighbor_cells[i]))]
+            ind_tmp = [self.grid_.get(nt, []) for nt in map(tuple, neighbors)]
 
             # Une en una sola lista todos sus vecinos
-            neighbors_indices += [np.concatenate(ind_tmp).astype(int)]
-            neighbors_distances += [
-                self._distance(centres[i], self.data[neighbors_indices[i], :])]
-        return neighbors_distances, neighbors_indices
+            inds = np.fromiter(itertools.chain(*ind_tmp), dtype=np.int)
+            n_idxs.append(inds)
+
+            dis = self._distance(centre, self.data[inds])
+            n_dis.append(dis)
+
+        return n_dis, n_idxs
 
     # Neighbor-cells methods
     def _get_neighbor_cells(
@@ -484,7 +489,7 @@ class GriSPy(object):
         cell_radii = 0.5 * np.sum(cell_size ** 2) ** 0.5
 
         neighbor_cells = []
-        for i in range(len(centres)):
+        for i, centre in enumerate(centres):
             # Para cada centro i, agrego un arreglo con shape (:,k)
             k_grids = [
                 np.arange(k_cell_min[i, k], k_cell_max[i, k] + 1)
@@ -503,13 +508,13 @@ class GriSPy(object):
             cells_physical = np.array(cells_physical).T
             mask_cells = (
                 self._distance(
-                    centres[i], cells_physical
+                    centre, cells_physical
                 ) < distance_upper_bound[i] + cell_radii)
 
             if shell_flag:
                 mask_cells *= (
                     self._distance(
-                        centres[i], cells_physical
+                        centre, cells_physical
                     ) > distance_lower_bound[i] - cell_radii)
 
             if np.any(mask_cells):
