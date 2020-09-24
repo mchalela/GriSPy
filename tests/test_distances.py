@@ -20,7 +20,6 @@ import textdistance
 
 from grispy import distances, GriSPy
 
-import pytest
 
 # =============================================================================
 # TESTS
@@ -151,7 +150,7 @@ def test_vincenty_not_nan():
     dist = distances.vincenty(centre_0, data, 2)
     assert not np.isnan(dist).any()
 
-@pytest.mark.PROBLEM
+
 def test_custom_distance_lev():
 
     def levenshtein(c0, centres, dim):
@@ -173,7 +172,7 @@ def test_custom_distance_lev():
     data = random.uniform(0, Lbox, size=(Npoints, dim))
     centres = random.uniform(0, Lbox, size=(Ncentres, dim))
 
-    gsp = GriSPy(data, metric=levenshtein)
+    gsp = GriSPy(data, N_cells=20, metric=levenshtein)
 
     upper_radii = 10.0
     lev_dist, lev_ind = gsp.bubble_neighbors(
@@ -197,7 +196,7 @@ def test_custom_distance_lev():
             859, 70, 544, 189, 340, 691, 453, 570, 126, 140, 67, 284, 662,
             590, 527])
 
-@pytest.mark.PROBLEM
+
 def test_custom_distance_hamming():
 
     def hamming(c0, centres, dim):
@@ -215,7 +214,7 @@ def test_custom_distance_hamming():
     data = random.uniform(0, Lbox, size=(Npoints, dim))
     centres = random.uniform(0, Lbox, size=(Ncentres, dim))
 
-    gsp = GriSPy(data, metric=hamming)
+    gsp = GriSPy(data, N_cells=20, metric=hamming)
 
     upper_radii = 10.0
     ham_dist, ham_ind = gsp.bubble_neighbors(
