@@ -115,7 +115,7 @@ class GriSPy(object):
         The data can be copied if the grid is built with copy_data=True.
     N_cells: positive int, optional
         The number of cells of each dimension to build the grid. The final
-        grid will have N_cells**k number of cells. Default: 20
+        grid will have N_cells**k number of cells. Default: 64
     copy_data: bool, optional
         Flag to indicate if the data should be copied in memory.
         Default: False
@@ -156,7 +156,7 @@ class GriSPy(object):
 
     # User input params
     data = attr.ib(default=None, kw_only=False, repr=False)
-    N_cells = attr.ib(default=20)
+    N_cells = attr.ib(default=64)
     periodic = attr.ib(factory=dict)
     metric = attr.ib(default="euclid")
     copy_data = attr.ib(
