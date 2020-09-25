@@ -121,7 +121,6 @@ class Test_data_consistency:
         assert_equal(len(b), len(self.centres))
         assert_equal(len(ind), len(self.centres))
 
-    @pytest.mark.PROBLEM
     def test_nearest_neighbors_multiple_query(self, gsp):
 
         b, ind = gsp.nearest_neighbors(self.centres, n=self.n_nearest)
