@@ -172,7 +172,7 @@ def test_custom_distance_lev():
     data = random.uniform(0, Lbox, size=(Npoints, dim))
     centres = random.uniform(0, Lbox, size=(Ncentres, dim))
 
-    gsp = GriSPy(data, metric=levenshtein)
+    gsp = GriSPy(data, N_cells=20, metric=levenshtein)
 
     upper_radii = 10.0
     lev_dist, lev_ind = gsp.bubble_neighbors(
@@ -214,7 +214,7 @@ def test_custom_distance_hamming():
     data = random.uniform(0, Lbox, size=(Npoints, dim))
     centres = random.uniform(0, Lbox, size=(Ncentres, dim))
 
-    gsp = GriSPy(data, metric=hamming)
+    gsp = GriSPy(data, N_cells=20, metric=hamming)
 
     upper_radii = 10.0
     ham_dist, ham_ind = gsp.bubble_neighbors(

@@ -115,7 +115,7 @@ class GriSPy(object):
         The data can be copied if the grid is built with copy_data=True.
     N_cells: positive int, optional
         The number of cells of each dimension to build the grid. The final
-        grid will have N_cells**k number of cells. Default: 20
+        grid will have N_cells**k number of cells. Default: 64
     copy_data: bool, optional
         Flag to indicate if the data should be copied in memory.
         Default: False
@@ -156,7 +156,7 @@ class GriSPy(object):
 
     # User input params
     data = attr.ib(default=None, kw_only=False, repr=False)
-    N_cells = attr.ib(default=20)
+    N_cells = attr.ib(default=64)
     periodic = attr.ib(factory=dict)
     metric = attr.ib(default="euclid")
     copy_data = attr.ib(
@@ -260,11 +260,6 @@ class GriSPy(object):
                 raise TypeError(
                     "Periodicity: Keys must be integers. "
                     "Got instead type {}".format(type(k)))
-            # Check if positive. No raise because negative values may work
-            if k < 0:
-                print(
-                    "WARNING: I got a negative periodic axis. "
-                    "Yo better know what you are doing.")
 
             # Check if tuple or None
             if not (isinstance(v, tuple) or v is None):
@@ -301,10 +296,6 @@ class GriSPy(object):
     # =========================================================================
     # INTERNAL IMPLEMENTATION
     # =========================================================================
-
-    def __getitem__(self, key):
-        """Get item."""
-        return getattr(self, key)
 
     def _build_periodicity(self, periodic, dim):
         """Cleanup the periodicity configuration.
@@ -883,8 +874,6 @@ class GriSPy(object):
                 distance_upper_bound=upper_distance_tmp[~n_found])
 
             for i_tmp, i in enumerate(centres_lookup_ind[~n_found]):
-                if n_found[i]:
-                    continue
                 if n <= len(nidx_tmp[i_tmp]) + len(
                     neighbors_indices[i]
                 ):
@@ -892,10 +881,8 @@ class GriSPy(object):
                     n_found[i] = True
                 else:
                     n_more = len(nidx_tmp[i_tmp])
-                    lower_distance_tmp[i_tmp] = upper_distance_tmp[
-                        i_tmp
-                    ].copy()
-                    upper_distance_tmp[i_tmp] += cell_size.min()
+                    lower_distance_tmp[i] = upper_distance_tmp[i].copy()
+                    upper_distance_tmp[i] += cell_size.min()
 
                 sorted_ind = np.argsort(ndis_tmp[i_tmp], kind=kind)[:n_more]
                 neighbors_distances[i] = np.hstack((
