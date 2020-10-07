@@ -28,12 +28,12 @@ from grispy import distances, GriSPy
 def test_euclid_simetric():
     # Distancia a-->b = b-->a (metric='euclid')
     dist1 = distances.euclid(
-        centre=np.array([1, 1]),
-        targets=np.array([[2, 2]]),
+        c0=np.array([1, 1]),
+        centres=np.array([[2, 2]]),
         dim=2)
     dist2 = distances.euclid(
-        centre=np.array([2, 2]),
-        targets=np.array([[1, 1]]),
+        c0=np.array([2, 2]),
+        centres=np.array([[1, 1]]),
         dim=2)
     np.testing.assert_almost_equal(dist1, dist2, decimal=16)
 
@@ -41,12 +41,12 @@ def test_euclid_simetric():
 def test_haversine_simetric():
     # Distancia a-->b = b-->a (metric='haversine')
     dist1 = distances.haversine(
-        centre=np.array([1, 1]),
-        targets=np.array([[2, 2]]),
+        c0=np.array([1, 1]),
+        centres=np.array([[2, 2]]),
         dim=2)
     dist2 = distances.haversine(
-        centre=np.array([2, 2]),
-        targets=np.array([[1, 1]]),
+        c0=np.array([2, 2]),
+        centres=np.array([[1, 1]]),
         dim=2)
     np.testing.assert_almost_equal(dist1, dist2, decimal=10)
 
@@ -54,12 +54,12 @@ def test_haversine_simetric():
 def test_vincenty_simetric():
     # Distancia a-->b = b-->a (metric='vincenty')
     dist1 = distances.vincenty(
-        centre=np.array([1, 1]),
-        targets=np.array([[2, 2]]),
+        c0=np.array([1, 1]),
+        centres=np.array([[2, 2]]),
         dim=2)
     dist2 = distances.vincenty(
-        centre=np.array([2, 2]),
-        targets=np.array([[1, 1]]),
+        c0=np.array([2, 2]),
+        centres=np.array([[1, 1]]),
         dim=2)
     np.testing.assert_almost_equal(dist1, dist2, decimal=10)
 
@@ -153,12 +153,12 @@ def test_vincenty_not_nan():
 
 def test_custom_distance_lev():
 
-    def levenshtein(centre, targets, dim):
-        centre = tuple(centre)
-        distances = np.empty(len(targets))
-        for idx, c1 in enumerate(targets):
+    def levenshtein(c0, centres, dim):
+        c0 = tuple(c0)
+        distances = np.empty(len(centres))
+        for idx, c1 in enumerate(centres):
             c1 = tuple(c1)
-            dis = textdistance.levenshtein(centre, c1)
+            dis = textdistance.levenshtein(c0, c1)
             distances[idx] = dis
         return distances
 
@@ -199,9 +199,9 @@ def test_custom_distance_lev():
 
 def test_custom_distance_hamming():
 
-    def hamming(centre, targets, dim):
-        centre = centre.reshape((-1, dim))
-        d = cdist(centre, targets, metric="hamming").reshape((-1,))
+    def hamming(c0, centres, dim):
+        c0 = c0.reshape((-1, dim))
+        d = cdist(c0, centres, metric="hamming").reshape((-1,))
         return d
 
     random = np.random.RandomState(42)
