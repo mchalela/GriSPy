@@ -27,7 +27,7 @@ from scipy.spatial.distance import cdist
 # FUNCTIONS
 # =============================================================================
 
-def euclid(c0, centres, dim):
+def euclid(centre, targets, dim):
     """Classic Euclidean distance.
 
     In mathematics, the Euclidean distance or Euclidean metric is the
@@ -39,12 +39,12 @@ def euclid(c0, centres, dim):
     https://en.wikipedia.org/wiki/Euclidean_distance
 
     """
-    c0 = c0.reshape((-1, dim))
-    d = cdist(c0, centres).reshape((-1,))
+    centre = centre.reshape((-1, dim))
+    d = cdist(centre, targets).reshape((-1,))
     return d
 
 
-def haversine(c0, centres, dim):
+def haversine(centre, targets, dim):
     """Distance using the Haversine formulae.
 
     The haversine formula determines the great-circle distance between two
@@ -55,10 +55,10 @@ def haversine(c0, centres, dim):
     https://en.wikipedia.org/wiki/Haversine_formula
 
     """
-    lon1 = np.deg2rad(c0[0])
-    lat1 = np.deg2rad(c0[1])
-    lon2 = np.deg2rad(centres[:, 0])
-    lat2 = np.deg2rad(centres[:, 1])
+    lon1 = np.deg2rad(centre[0])
+    lat1 = np.deg2rad(centre[1])
+    lon2 = np.deg2rad(targets[:, 0])
+    lat2 = np.deg2rad(targets[:, 1])
 
     sdlon = np.sin((lon2 - lon1) / 2.)
     sdlat = np.sin((lat2 - lat1) / 2.)
@@ -70,7 +70,7 @@ def haversine(c0, centres, dim):
     return np.rad2deg(sep)
 
 
-def vincenty(c0, centres, dim):
+def vincenty(centre, targets, dim):
     """Calculate distance  on the surface of a spheroid with Vincenty Formulae.
 
     Vincenty's formulae are two related iterative methods used in geodesy to
@@ -81,10 +81,10 @@ def vincenty(c0, centres, dim):
     distance. More info: https://en.wikipedia.org/wiki/Vincenty%27s_formulae
 
     """
-    lon1 = np.deg2rad(c0[0])
-    lat1 = np.deg2rad(c0[1])
-    lon2 = np.deg2rad(centres[:, 0])
-    lat2 = np.deg2rad(centres[:, 1])
+    lon1 = np.deg2rad(centre[0])
+    lat1 = np.deg2rad(centre[1])
+    lon2 = np.deg2rad(targets[:, 0])
+    lat2 = np.deg2rad(targets[:, 1])
 
     sdlon = np.sin(lon2 - lon1)
     cdlon = np.cos(lon2 - lon1)

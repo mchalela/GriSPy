@@ -130,7 +130,8 @@ class GriSPy(object):
         Example, periodic = { 0: (0, 360), 1: None}.
     metric: str, optional
         Metric definition to compute distances. Options: 'euclid', 'haversine'
-        'vincenty' or a custom callable.
+        'vincenty' or a custom callable. In the case of 'haversine' and
+        'vincenty', the input units must be degrees.
 
 
     Attributes
@@ -397,19 +398,13 @@ class GriSPy(object):
                     grid[cell_point].append(i)
         return grid, k_bins
 
-    def _distance(self, centre_0, centres):
-        """Compute distance between points.
-
-        metric options: 'euclid', 'sphere'
-
-        Notes: In the case of 'sphere' metric, the input units must be degrees.
-
-        """
-        if len(centres) == 0:
+    def _distance(self, centre, targets):
+        """Compute distance between points."""
+        if len(targets) == 0:
             return EMPTY_ARRAY.copy()
         metric_func = (
             self.metric if callable(self.metric) else METRICS[self.metric])
-        return metric_func(centre_0, centres, self.dim_)
+        return metric_func(centre, targets, self.dim_)
 
     def _get_neighbor_distance(self, centres, neighbor_cells):
         """Retrieve neighbor distances whithin the given cells."""
