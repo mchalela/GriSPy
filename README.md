@@ -48,31 +48,34 @@ Clone this repo and then inside the local directory execute
         
 ## Citation
 
-If you use *GriSPy* in a scientific publication, we would appreciate
-citations to the following paper:
+If you use *GriSPy* in a scientific publication, we would appreciate citations to the following paper:
 
-> Chalela, M., Sillero, E., Pereyra, L., García, M. A., Cabral, J. B., Lares, M., & Merchán, M. (2019). 
-> GriSPy: A Python package for Fixed-Radius Nearest Neighbors Search. arXiv preprint arXiv:1912.09585.
+> Chalela, M., Sillero, E., Pereyra, L., García, M. A., Cabral, J. B., Lares, M., & Merchán, M. (2020). 
+> GriSPy: A Python package for fixed-radius nearest neighbors search. 10.1016/j.ascom.2020.100443.
 
 ### Bibtex
 
 ```bibtex
-@article{
-  chalela2019grispy,
-  title={GriSPy: A Python package for Fixed-Radius Nearest Neighbors Search},
-  author={
-    Chalela, Martin and Sillero, Emanuel and Pereyra, 
-    Luis and Garc{\'\i}a, Mario Alejandro and Cabral, 
-    Juan B and Lares, Marcelo and Merch{\'a}n, Manuel},
-  journal={arXiv preprint arXiv:1912.09585},
-  year={2019}
+@ARTICLE{Chalela2021,
+       author = {{Chalela}, M. and {Sillero}, E. and {Pereyra}, L. and {Garcia}, M.~A. and {Cabral}, J.~B. and {Lares}, M. and {Merch{\'a}n}, M.},
+        title = "{GriSPy: A Python package for fixed-radius nearest neighbors search}",
+      journal = {Astronomy and Computing},
+     keywords = {Data mining, Nearest-neighbor search, Methods, Data analysis, Astroinformatics, Python package},
+         year = 2021,
+        month = jan,
+       volume = {34},
+          eid = {100443},
+        pages = {100443},
+          doi = {10.1016/j.ascom.2020.100443},
+       adsurl = {https://ui.adsabs.harvard.edu/abs/2021A&C....3400443C},
+      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
 }
 ```
 
-Full-text: https://ui.adsabs.harvard.edu/abs/2019arXiv191209585C/abstract
+Full-text: https://arxiv.org/abs/1912.09585
 
 
 ## Authors
 
-Martin Chalela (E-mail: tinchochalela@gmail.com),
-Emanuel Sillero, Luis Pereyra and Alejandro Garcia
+Martin Chalela (E-mail: mchalela@unc.edu.ar),
+Emanuel Sillero, Luis Pereyra, Alejandro Garcia, Juan B. Cabral, Marcelo Lares, Manuel Merchán
