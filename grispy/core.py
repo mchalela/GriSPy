@@ -349,8 +349,8 @@ class GriSPy(object):
 
     def _digitize(self, data, bins):
         """Return data bin index."""
-        N = len(bins) - 1
-        d = (N * (data - bins[0]) / (bins[-1] - bins[0])).astype(np.int)
+        # allowed indeces with int16: (-32768 to 32767)
+        d = ((data - bins[0]) / (bins[1] - bins[0])).astype(np.int16)
         return d
 
     def _build_grid(self, data, N_cells, dim, epsilon=1.0e-6):
@@ -428,7 +428,7 @@ class GriSPy(object):
             ind_tmp = [self.grid_.get(nt, []) for nt in map(tuple, neighbors)]
 
             # Une en una sola lista todos sus vecinos
-            inds = np.fromiter(itertools.chain(*ind_tmp), dtype=np.int)
+            inds = np.fromiter(itertools.chain(*ind_tmp), dtype=np.int32)
             n_idxs.append(inds)
 
             if self.dim_ == 1:
