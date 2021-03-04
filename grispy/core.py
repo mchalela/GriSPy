@@ -353,8 +353,18 @@ class GriSPy(object):
         d = ((data - bins[0]) / (bins[1] - bins[0])).astype(np.int16)
         return d
 
-    def _build_grid(self, data, N_cells, dim, epsilon=1.0e-6):
+    def _build_grid(self, data, N_cells, dim):
         """Build the grid."""
+        # Check the resolution of the input data and increase it
+        # one order of magnitude. This works for float{32,64,128}
+        # Fix issue #7
+        dtype = data.dtype
+        if np.issubdtype(dtype, np.integer):
+            epsilon = 1e-1
+        else:
+            # assume floating
+            epsilon = np.finfo(dtype).resolution * 10
+
         data_ind = np.arange(len(data))
         k_bins = np.zeros((N_cells + 1, dim))
         k_digit = np.zeros(data.shape, dtype=int)
@@ -370,7 +380,7 @@ class GriSPy(object):
         grid = {}
         if N_cells ** dim < len(data):
             compact_ind = np.ravel_multi_index(
-                k_digit.T, (N_cells,) * dim, order="F")
+                k_digit.T, (N_cells,) * dim, order="F", mode='clip')
 
             compact_ind_sort = np.argsort(compact_ind)
             compact_ind = compact_ind[compact_ind_sort]
