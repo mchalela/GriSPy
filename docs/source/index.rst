@@ -18,8 +18,8 @@ GriSPy documentation
     :target: https://badge.fury.io/py/grispy
     :alt: PyPi Version
 
-.. image:: https://travis-ci.org/mchalela/grispy.svg?branch=master
-    :target: https://travis-ci.org/mchalela/GriSPy
+.. image:: https://github.com/mchalela/GriSPy/actions/workflows/grispy_ci.yml/badge.svg?branch=master
+    :target: https://github.com/mchalela/GriSPy/actions/workflows/grispy_ci.yml
     :alt: Build Status
 
 .. image:: https://img.shields.io/badge/docs-passing-brightgreen.svg

@@ -4,7 +4,7 @@
 
 
 [![PyPi Version](https://badge.fury.io/py/grispy.svg)](https://badge.fury.io/py/grispy)
-[![Build Status](https://travis-ci.org/mchalela/GriSPy.svg?branch=master)](https://travis-ci.org/mchalela/GriSPy)
+[![Build Status](https://github.com/mchalela/GriSPy/actions/workflows/grispy_ci.yml/badge.svg?branch=master)](https://github.com/mchalela/GriSPy/actions/workflows/grispy_ci.yml)
 [![Documentation Status](https://readthedocs.org/projects/grispy/badge/?version=latest)](https://grispy.readthedocs.io/en/latest/?badge=latest)
 [![Coverage Status](https://coveralls.io/repos/github/mchalela/GriSPy/badge.svg?branch=master)](https://coveralls.io/github/mchalela/GriSPy?branch=master) 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
