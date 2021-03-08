@@ -78,4 +78,4 @@ Full-text: https://arxiv.org/abs/1912.09585
 ## Authors
 
 Martin Chalela (E-mail: mchalela@unc.edu.ar),
-Emanuel Sillero, Luis Pereyra, Alejandro Garcia, Juan B. Cabral, Marcelo Lares, Manuel Merchán
+Emanuel Sillero, Luis Pereyra, Alejandro Garcia, Juan B. Cabral, Marcelo Lares, Manuel Merchán.
