@@ -25,11 +25,12 @@ jobs:
       - name: Install pandoc
         run: sudo apt-get install pandoc
       - name: Install tox
-        run: pip install tox tox-gh-actions coveralls
+        run: pip install tox tox-gh-actions
       - name: Test with tox
         run: tox -r
-      - name: Test Coverage          
-        if: ${{ matrix.python-version == '3.8' && env.TOXENV == 'coverage'}}
+      - name: Test Coverage
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}        
-        run: coveralls --service=github             
+        run: |
+          pip install coveralls
+          coveralls --service=github             
