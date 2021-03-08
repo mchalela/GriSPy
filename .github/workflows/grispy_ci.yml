@@ -28,3 +28,7 @@ jobs:
         run: pip install tox tox-gh-actions
       - name: Test with tox
         run: tox -r
+      - name: Upload coverage data to coveralls.io
+        run: coveralls
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
