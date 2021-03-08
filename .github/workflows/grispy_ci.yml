@@ -28,7 +28,8 @@ jobs:
         run: pip install tox tox-gh-actions coveralls
       - name: Test with tox
         run: tox -r
-      - name: Test Coverage                               
+      - name: Test Coverage          
+        if: ${{ matrix.python-version == '3.8' && env.TOXENV == 'coverage'}}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}        
-        run: coveralls --service=github                               
+        run: coveralls --service=github             
