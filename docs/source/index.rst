@@ -42,8 +42,8 @@ GriSPy documentation
    :target: http://ascl.net/1912.013
    :alt: ascl:1912.013
 
-.. image:: https://img.shields.io/badge/arXiv-1234.56789-b31b1b.svg
-   :target: https://arxiv.org/abs/1234.56789
+.. image:: https://img.shields.io/badge/arXiv-1912.09585-b31b1b.svg
+   :target: https://arxiv.org/abs/1912.09585
    :alt: arxiv/1912.09585
 
 .. image:: https://img.shields.io/badge/DiSoftCompCi-FAMAF-ffda00
