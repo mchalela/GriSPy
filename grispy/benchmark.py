@@ -16,6 +16,8 @@ import pandas as pd
 
 import timeit
 
+import attr
+
 from grispy import GriSPy
 
 
@@ -40,7 +42,18 @@ periodic = {}
 # TIME BENCHMARK
 # =============================================================================
 
+@attr.s(frozen=True)
+class TimeReport:
+
+    df = attr.ib(repr=False)
+
+    def plot(self):
+
+        return
+
+
 def generate_points(n_data, n_centres, dim, seed=None):
+    """Generate uniform random distributions."""
     
     low, high = DOMAIN
 
@@ -51,12 +64,14 @@ def generate_points(n_data, n_centres, dim, seed=None):
     return data, centres
 
 @timer
-def build_gsp(**build_kwargs):
-    return gsp
+def build_call(build_kwargs):
+    """Initialize GriSPy."""
+    return GriSPy(**build_kwargs)
 
 @timer
-def query_gsp(gsp, **query_kwargs):
-    return out
+def query_call(gsp, query_kwargs):
+    """Query for neighbohrs."""
+    return gsp.bubble_neighbors(**query_kwargs)
 
 def time_benchmark(
     n_data=NDATA,
@@ -69,17 +84,25 @@ def time_benchmark(
 ):
     """Create time benchmark statistics."""
 
+    # Empty report
+    report = []
+
+    # Compute the parameter space
     ndata, ncent, ncell = np.meshgrid(n_data, n_centres, n_cells)
-    
+
     for ndt, nct, ncl in zip(ndata.flat, ncent.flat, ncell.flat):
         data, centres = generate_points(npt, nct, dim, seed)
         
         build_kwargs = {"data": data, "N_cells": ncl}
         query_kwargs = {"centres": centres, "distance_upper_bound": upper_radii}
 
-        bt, gsp = build_gsp(**build_kwargs)
-        qt, out = query_gsp(gsp, **query_kwargs)
+        bt, gsp = build_call(build_kwargs)
+        qt, out = query_call(gsp, query_kwargs)
 
+        report.append([ndt, nct, ncl, bt, qt])
 
+    # Prepare report data frame
+    col_names = ['n_data', 'n_centres', 'n_cells', 'BT', 'QT']
+    df = pd.DataFrame(report, columns=col_names)
 
-    return None # should return pd.DataFrame
+    return TimeReport(df)
