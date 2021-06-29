@@ -16,7 +16,7 @@ import pandas as pd
 
 import time
 
-import timeit
+from timeit import Timer
 
 import attr
 
@@ -28,16 +28,16 @@ from grispy import GriSPy
 # =============================================================================
 
 # Default variable params
-NDATA = [1_000,  10_000, 100_000]
-NCENTRES = [10, 100]
-NCELLS = [2, 4, 8, 16, 32]
+NDATA = [10_000, 100_000, 1_000_000]
+NCENTRES = [10, 100, 1_000]
+NCELLS = [4, 8, 16, 32, 64]
 
 # Constant params
 DOMAIN = (0, 100)
-UPPER_RADII = 5.
-LOWER_RADII = 2.
+UPPER_RADII = 5.0
+LOWER_RADII = 2.0
 N_NEAREST = 100
-PERIODICITY = {} 
+PERIODICITY = {}
 
 # Timer statements
 NS2S = 1e-9
@@ -49,14 +49,16 @@ QUERY_STATEMENT = "gsp.bubble_neighbors(**query_kwargs)"
 # HELPER FUNCTIONS
 # =============================================================================
 
+
 def stats(values):
-    """Basic stats for list of values."""
+    """Return basic stats for list of values."""
     mean, std = np.mean(values), np.std(values)
     return np.array([mean, std])
 
 
 def parameter_grid(parameters):
     """Full parameter space combinations from a dict with iterables.
+
     parameters = {'A': [34, 56, 567], 'C': [12, 0], 'G': [1245]}
     This format is similar to sklearn ParameterGrid
     """
@@ -84,11 +86,14 @@ def generate_points(n_data, n_centres, dim, seed=None):
 # TIME BENCHMARK
 # =============================================================================
 
+
 @attr.s(frozen=True)
 class TimeReport:
-    """Construct a time report for the time benchmark"""
+    """Construct a time report for the time benchmark."""
 
-    report = attr.ib(validator=attr.validators.instance_of(pd.DataFrame), repr=True)
+    report = attr.ib(
+        validator=attr.validators.instance_of(pd.DataFrame), repr=True
+    )
     metadata = attr.ib(factory=dict)
 
     def __getitem__(self, item):
@@ -118,36 +123,46 @@ def time_benchmark(
     report = []
 
     # Compute the parameter space
-    pdict = {'n_data': n_data, 'n_centres': n_centres, 'n_cells': n_cells}
+    pdict = {"n_data": n_data, "n_centres": n_centres, "n_cells": n_cells}
     grid = parameter_grid(pdict)
 
     for p in grid:
-        ndt, nct, ncl = p['n_data'], p['n_centres'], p['n_cells']
+        ndt, nct, ncl = p["n_data"], p["n_centres"], p["n_cells"]
 
         # Prepare grispy inputs
         data, centres = generate_points(ndt, nct, dim, seed)
         build_kwargs = {"data": data, "N_cells": int(ncl)}
-        query_kwargs = {"centres": centres, "distance_upper_bound": UPPER_RADII}
+        query_kwargs = {
+            "centres": centres,
+            "distance_upper_bound": UPPER_RADII,
+        }
 
         # Initialize Timers
         build_globals = {"GriSPy": GriSPy, "build_kwargs": build_kwargs}
-        build_timer = timeit.Timer(stmt=BUILD_STATEMENT, globals=build_globals, timer=timer_ns)
-        
+        build_timer = Timer(
+            stmt=BUILD_STATEMENT, globals=build_globals, timer=timer_ns
+        )
+
         gsp = GriSPy(**build_kwargs)
         query_globals = {"gsp": gsp, "query_kwargs": query_kwargs}
-        query_timer = timeit.Timer(stmt=QUERY_STATEMENT, globals=query_globals, timer=timer_ns)
+        query_timer = Timer(
+            stmt=QUERY_STATEMENT, globals=query_globals, timer=timer_ns
+        )
 
         # Compute times
         build_time = build_timer.repeat(repeat=repeats, number=1)
         query_time = query_timer.repeat(repeat=repeats, number=1)
-        
+
         # Save time values. Convert nanoseconds to seconds.
         bt_mean, bt_std = stats(build_time) * NS2S
         qt_mean, qt_std = stats(query_time) * NS2S
         report.append([ndt, nct, ncl, bt_mean, qt_mean, bt_std, qt_std])
 
     # Prepare report data frame
-    col_names = ['n_data', 'n_centres', 'n_cells', 'BTmean', 'QTmean', 'BTstd', 'QTstd']
+    col_names = [
+        "n_data", "n_centres", "n_cells",
+        "BT_mean", "QT_mean", "BT_std", "QT_std",
+    ]
     df = pd.DataFrame(report, columns=col_names)
 
     return TimeReport(report=df, metadata=metadata)
