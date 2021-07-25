@@ -18,6 +18,8 @@ import time
 
 from timeit import Timer
 
+import matplotlib.pyplot as plt
+
 import attr
 
 from grispy import GriSPy
@@ -27,7 +29,7 @@ from grispy import GriSPy
 # GRISPY PARAMS
 # =============================================================================
 
-# Default variable params
+# Default parameter space
 NDATA = [10_000, 100_000, 1_000_000]
 NCENTRES = [10, 100, 1_000]
 NCELLS = [4, 8, 16, 32, 64]
@@ -40,9 +42,11 @@ N_NEAREST = 100
 PERIODICITY = {}
 
 # Timer statements
-NS2S = 1e-9
 BUILD_STATEMENT = "GriSPy(**build_kwargs)"
 QUERY_STATEMENT = "gsp.bubble_neighbors(**query_kwargs)"
+
+# Others
+NS2S = 1e-9  # Nanoseconds to seconds factor
 
 
 # =============================================================================
@@ -75,7 +79,7 @@ def parameter_grid(parameters):
 def generate_points(n_data, n_centres, dim, seed=None):
     """Generate uniform random distributions."""
     low, high = DOMAIN
-    # set random
+    # random generator
     rng = np.random.default_rng(seed=seed)
     data = rng.uniform(low, high, size=(n_data, dim))
     centres = rng.uniform(low, high, size=(n_centres, dim))
@@ -91,9 +95,8 @@ def generate_points(n_data, n_centres, dim, seed=None):
 class TimeReport:
     """Construct a time report for the time benchmark."""
 
-    report = attr.ib(
-        validator=attr.validators.instance_of(pd.DataFrame), repr=True
-    )
+    report = attr.ib(validator=attr.validators.instance_of(pd.DataFrame))
+    axes = attr.ib(factory=dict)
     metadata = attr.ib(factory=dict)
 
     def __getitem__(self, item):
@@ -103,6 +106,45 @@ class TimeReport:
     def __getattr__(self, a):
         """getattr(x, y) <==> x.__getattr__(y)."""
         return getattr(self.report, a)
+
+    def _plot_row(self, gby, axes):
+        """Single row plot for BT, QT, TT."""
+        ax_bt, ax_qt, ax_tt = axes
+        for ngr in gby:
+            name, gr = ngr
+            ncells, bt, qt = gr["n_cells"], gr["BT_mean"], gr["QT_mean"]
+
+            ax_bt.plot(ncells, bt, "-", label=name)
+            ax_qt.plot(ncells, qt, "-", label=name)
+            ax_tt.plot(ncells, bt + qt, "-", label=name)
+        [ax.semilogy() for ax in axes]
+        return
+
+    def plot(self, ax=None):
+        """Time benchmark plot."""
+
+        if ax is None:
+            _, ax = plt.subplots(2, 3, sharex=True, figsize=(10, 14))
+
+        # First row: fixed n_centres at higher value.
+        fix_n_centres = self.report["n_centres"].max()
+        gby = (
+            self.report.groupby("n_centres")
+            .get_group(fix_n_centres)
+            .groupby("n_data")
+        )
+        self._plot_row(gby, axes=ax[0])
+
+        # Second row: fixed n_data at higher value.
+        fix_n_data = self.report["n_data"].max()
+        gby = (
+            self.report.groupby("n_data")
+            .get_group(fix_n_data)
+            .groupby("n_centres")
+        )
+        self._plot_row(gby, axes=ax[1])
+
+        return ax
 
 
 def time_benchmark(
@@ -119,6 +161,7 @@ def time_benchmark(
     timer_ns = time.perf_counter_ns
 
     # Empty report and metadata
+    axes = {"n_data": n_data, "n_centres": n_centres, "n_cells": n_cells}
     metadata = {"dim": dim, "repeats": repeats, "n_jobs": n_jobs, "seed": seed}
     report = []
 
@@ -160,9 +203,14 @@ def time_benchmark(
 
     # Prepare report data frame
     col_names = [
-        "n_data", "n_centres", "n_cells",
-        "BT_mean", "QT_mean", "BT_std", "QT_std",
+        "n_data",
+        "n_centres",
+        "n_cells",
+        "BT_mean",
+        "QT_mean",
+        "BT_std",
+        "QT_std",
     ]
     df = pd.DataFrame(report, columns=col_names)
 
-    return TimeReport(report=df, metadata=metadata)
+    return TimeReport(report=df, axes=axes, metadata=metadata)
