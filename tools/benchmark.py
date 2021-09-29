@@ -10,6 +10,8 @@
 
 """Functions to benchmark GriSPy methods."""
 
+import pickle
+
 import numpy as np
 
 import pandas as pd
@@ -90,41 +92,58 @@ def generate_points(n_data, n_centres, dim, seed=None):
 # TIME BENCHMARK
 # =============================================================================
 
-
 @attr.s(frozen=True)
 class TimeReport:
     """Construct a time report for the time benchmark."""
 
-    report = attr.ib(validator=attr.validators.instance_of(pd.DataFrame))
+    report = attr.ib(
+        validator=attr.validators.instance_of(pd.DataFrame),
+        repr=False,
+    )
     axes = attr.ib(factory=dict)
     metadata = attr.ib(factory=dict)
 
-    def __getitem__(self, item):
-        """x[y] <==> x.__getitem__(y)."""
-        return self.report.__getitem__(item)
+    # =====================================================
+    # PLOTTING METHODS
+    # =====================================================
 
-    def __getattr__(self, a):
-        """getattr(x, y) <==> x.__getattr__(y)."""
-        return getattr(self.report, a)
-
-    def _plot_row(self, gby, axes):
+    def _plot_row(self, gby, axes, logy):
         """Single row plot for BT, QT, TT."""
         ax_bt, ax_qt, ax_tt = axes
         for ngr in gby:
             name, gr = ngr
             ncells, bt, qt = gr["n_cells"], gr["BT_mean"], gr["QT_mean"]
+            bt_std, qt_std = gr["BT_std"], gr["QT_std"]
+            
+            tt = bt + qt
+            tt_std = (bt_std**2 + qt_std**2)**0.5
 
-            ax_bt.plot(ncells, bt, "-", label=name)
-            ax_qt.plot(ncells, qt, "-", label=name)
-            ax_tt.plot(ncells, bt + qt, "-", label=name)
-        [ax.semilogy() for ax in axes]
+            l = ax_bt.plot(ncells, bt, "-", label=name)
+            color = l[0].get_color()
+            ax_bt.errorbar(ncells, bt, yerr=bt_std, fmt="None", ecolor=color)
+
+            l = ax_qt.plot(ncells, qt, "-", label=name)
+            color = l[0].get_color()
+            ax_qt.errorbar(ncells, qt, yerr=qt_std, fmt="None", ecolor=color)
+
+            l = ax_tt.plot(ncells, tt, "-", label=name)
+            color = l[0].get_color()
+            ax_tt.errorbar(ncells, tt, yerr=tt_std, fmt="None", ecolor=color)
+
+        for ax in axes:
+            ax.legend()
+            ax.set_xlabel("n_cells")
+            if logy:
+                ax.semilogy()
+            else:
+                ax.axhline(0, c='gray', linestyle='--', zorder=0)
         return
 
-    def plot(self, ax=None):
+    def plot(self, ax=None, logy=True):
         """Time benchmark plot."""
 
         if ax is None:
-            _, ax = plt.subplots(2, 3, sharex=True, figsize=(10, 14))
+            _, ax = plt.subplots(2, 3, figsize=(10, 14))
 
         # First row: fixed n_centres at higher value.
         fix_n_centres = self.report["n_centres"].max()
@@ -133,7 +152,7 @@ class TimeReport:
             .get_group(fix_n_centres)
             .groupby("n_data")
         )
-        self._plot_row(gby, axes=ax[0])
+        self._plot_row(gby, axes=ax[0], logy=logy)
 
         # Second row: fixed n_data at higher value.
         fix_n_data = self.report["n_data"].max()
@@ -142,9 +161,49 @@ class TimeReport:
             .get_group(fix_n_data)
             .groupby("n_centres")
         )
-        self._plot_row(gby, axes=ax[1])
-
+        self._plot_row(gby, axes=ax[1], logy=logy)
         return ax
+
+    # =====================================================
+    # PICKLE REPORT
+    # =====================================================
+
+    def save_report(self, filename, pickle_protocol=4):
+        """Write this instance to a file using pickle."""
+
+        with open(filename, mode="wb") as fp:
+            pickle.dump(self, fp, protocol=pickle_protocol)
+
+
+def load_report(filename):
+    """Load a pickled TimeReport instance."""    
+
+    with open(filename, mode="rb") as fp:
+        report = pickle.load(fp)
+    return report
+
+def diff_report(a, b):
+    """Difference of times between two TimeReport instances, diff = a - b.
+    
+    Note: Both reports must have the same axes atribute.
+    """
+    if a.axes != b.axes:
+        raise ValueError("Reports axes must be equal for a time comparison.")
+    
+    # Time difference = a - b
+    new_report = a.report.copy()
+    for col in ["BT_mean", "QT_mean"]:
+        new_report[col] = a.report[col] - b.report[col]
+
+    # Standard error propagation
+    for col in ["BT_std", "QT_std"]:
+        new_report[col] = (a.report[col]**2 + b.report[col]**2) ** 0.5
+
+    # Combine both metadata dicts
+    new_metadata = {f"{k}_a": v for k, v in a.metadata.items()}
+    new_metadata.update({f"{k}_b": v for k, v in b.metadata.items()})
+
+    return TimeReport(report=new_report, axes=a.axes, metadata=new_metadata)
 
 
 def time_benchmark(
@@ -154,7 +213,7 @@ def time_benchmark(
     dim=3,
     repeats=10,
     n_jobs=-1,
-    seed=None,
+    seed=42,
 ):
     """Create time benchmark statistics."""
     # Set timer in units of nanoseconds
