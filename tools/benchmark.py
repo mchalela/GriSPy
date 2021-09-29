@@ -97,65 +97,85 @@ class TimeReport:
     axes = attr.ib(factory=dict)
     metadata = attr.ib(factory=dict)
 
+    def fix_and_group(self, fixed_col):
+        varied_col = "n_centres" if fixed_col == "n_data" else "n_data"
+
+        fixed_value = self.report[fixed_col].max()
+        gby = (
+            self.report.groupby(fixed_col)
+            .get_group(fixed_value)
+            .groupby(varied_col)
+        )
+        return gby, fixed_value
+
     # =====================================================
     # PLOTTING METHODS
     # =====================================================
 
-    def _plot_row(self, gby, axes, logy):
+    def _plot_row(self, gby, axes, label, legend_title, logy):
         """Single row plot for BT, QT, TT."""
         ax_bt, ax_qt, ax_tt = axes
-        for ngr in gby:
-            name, gr = ngr
+        for name, gr in gby:
             ncells, bt, qt = gr["n_cells"], gr["BT_mean"], gr["QT_mean"]
             bt_std, qt_std = gr["BT_std"], gr["QT_std"]
 
             tt = bt + qt
             tt_std = (bt_std ** 2 + qt_std ** 2) ** 0.5
 
-            line = ax_bt.plot(ncells, bt, "-", label=name)
+            label_name = f"{label} = {name}"
+            line = ax_bt.plot(ncells, bt, "-", label=label_name)
             color = line[0].get_color()
             ax_bt.errorbar(ncells, bt, yerr=bt_std, fmt="None", ecolor=color)
 
-            line = ax_qt.plot(ncells, qt, "-", label=name)
+            line = ax_qt.plot(ncells, qt, "-", label=label_name)
             color = line[0].get_color()
             ax_qt.errorbar(ncells, qt, yerr=qt_std, fmt="None", ecolor=color)
 
-            line = ax_tt.plot(ncells, tt, "-", label=name)
+            line = ax_tt.plot(ncells, tt, "-", label=label_name)
             color = line[0].get_color()
             ax_tt.errorbar(ncells, tt, yerr=tt_std, fmt="None", ecolor=color)
 
-        for ax in axes:
-            ax.legend()
+        titles = ["BT", "QT", "TT"]
+        for i, ax in enumerate(axes):
+            ax.set_title(titles[i])
+            ax.legend(title=legend_title)
             ax.set_xlabel("n_cells")
             if logy:
                 ax.semilogy()
             else:
                 ax.axhline(0, c="gray", linestyle="--", zorder=0)
+        axes[0].set_ylabel("Time [sec]")
         return
 
     def plot(self, ax=None, logy=True):
         """Time benchmark plot."""
 
         if ax is None:
-            _, ax = plt.subplots(2, 3, figsize=(10, 14))
+            fig, ax = plt.subplots(2, 3, figsize=(10, 14))
 
         # First row: fixed n_centres at higher value.
-        fix_n_centres = self.report["n_centres"].max()
-        gby = (
-            self.report.groupby("n_centres")
-            .get_group(fix_n_centres)
-            .groupby("n_data")
+        gby, fixed_value = self.fix_and_group(fixed_col="n_centres")
+        legend_title = f"Fixed: n_centres={fixed_value}"
+        self._plot_row(
+            gby,
+            axes=ax[0],
+            label="n_data",
+            legend_title=legend_title,
+            logy=logy,
         )
-        self._plot_row(gby, axes=ax[0], logy=logy)
 
         # Second row: fixed n_data at higher value.
-        fix_n_data = self.report["n_data"].max()
-        gby = (
-            self.report.groupby("n_data")
-            .get_group(fix_n_data)
-            .groupby("n_centres")
+        gby, fixed_value = self.fix_and_group(fixed_col="n_data")
+        legend_title = f"Fixed: n_data={fixed_value}"
+        self._plot_row(
+            gby,
+            axes=ax[1],
+            label="n_centres",
+            legend_title=legend_title,
+            logy=logy,
         )
-        self._plot_row(gby, axes=ax[1], logy=logy)
+
+        fig.suptitle(f"GriSPy v{grispy_version} time report")
         return ax
 
     # =====================================================
