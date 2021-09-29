@@ -10,4 +10,4 @@
 
 """Functions to benchmark GriSPy methods."""
 
-from .benchmark import *
+from .benchmark import *    # noqa

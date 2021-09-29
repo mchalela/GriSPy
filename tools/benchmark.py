@@ -10,22 +10,18 @@
 
 """Functions to benchmark GriSPy methods."""
 
+import os
 import pickle
-
-import numpy as np
-
-import pandas as pd
-
 import time
-
 from timeit import Timer
 
-import matplotlib.pyplot as plt
-
 import attr
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 
 from grispy import GriSPy
-
+from grispy import __version__ as grispy_version
 
 # =============================================================================
 # GRISPY PARAMS
@@ -97,10 +93,7 @@ def generate_points(n_data, n_centres, dim, seed=None):
 class TimeReport:
     """Construct a time report for the time benchmark."""
 
-    report = attr.ib(
-        validator=attr.validators.instance_of(pd.DataFrame),
-        repr=False,
-    )
+    report = attr.ib(validator=attr.validators.instance_of(pd.DataFrame))
     axes = attr.ib(factory=dict)
     metadata = attr.ib(factory=dict)
 
@@ -119,16 +112,16 @@ class TimeReport:
             tt = bt + qt
             tt_std = (bt_std ** 2 + qt_std ** 2) ** 0.5
 
-            l = ax_bt.plot(ncells, bt, "-", label=name)
-            color = l[0].get_color()
+            line = ax_bt.plot(ncells, bt, "-", label=name)
+            color = line[0].get_color()
             ax_bt.errorbar(ncells, bt, yerr=bt_std, fmt="None", ecolor=color)
 
-            l = ax_qt.plot(ncells, qt, "-", label=name)
-            color = l[0].get_color()
+            line = ax_qt.plot(ncells, qt, "-", label=name)
+            color = line[0].get_color()
             ax_qt.errorbar(ncells, qt, yerr=qt_std, fmt="None", ecolor=color)
 
-            l = ax_tt.plot(ncells, tt, "-", label=name)
-            color = l[0].get_color()
+            line = ax_tt.plot(ncells, tt, "-", label=name)
+            color = line[0].get_color()
             ax_tt.errorbar(ncells, tt, yerr=tt_std, fmt="None", ecolor=color)
 
         for ax in axes:
@@ -149,13 +142,19 @@ class TimeReport:
         # First row: fixed n_centres at higher value.
         fix_n_centres = self.report["n_centres"].max()
         gby = (
-            self.report.groupby("n_centres").get_group(fix_n_centres).groupby("n_data")
+            self.report.groupby("n_centres")
+            .get_group(fix_n_centres)
+            .groupby("n_data")
         )
         self._plot_row(gby, axes=ax[0], logy=logy)
 
         # Second row: fixed n_data at higher value.
         fix_n_data = self.report["n_data"].max()
-        gby = self.report.groupby("n_data").get_group(fix_n_data).groupby("n_centres")
+        gby = (
+            self.report.groupby("n_data")
+            .get_group(fix_n_data)
+            .groupby("n_centres")
+        )
         self._plot_row(gby, axes=ax[1], logy=logy)
         return ax
 
@@ -163,15 +162,30 @@ class TimeReport:
     # PICKLE REPORT
     # =====================================================
 
-    def save_report(self, filename, pickle_protocol=4):
+    def save_report(self, filename=None, overwrite=False):
         """Write this instance to a file using pickle."""
 
+        if filename is None:
+            filename = f"benchmark_v{grispy_version}.pickle"
+
+        if os.path.isfile(filename):
+            if overwrite:
+                os.remove(filename)
+            else:
+                raise FileExistsError(
+                    f"File `{filename}` already exist. "
+                    "You may want to use `overwrite=True`."
+                )
+
         with open(filename, mode="wb") as fp:
-            pickle.dump(self, fp, protocol=pickle_protocol)
+            pickle.dump(self, fp)
 
 
 def load_report(filename):
     """Load a pickled TimeReport instance."""
+
+    if not os.path.isfile(filename):
+        raise FileNotFoundError(f"File `{filename}` not found.")
 
     with open(filename, mode="rb") as fp:
         report = pickle.load(fp)
@@ -237,11 +251,15 @@ def time_benchmark(
 
         # Initialize Timers
         build_globals = {"GriSPy": GriSPy, "build_kwargs": build_kwargs}
-        build_timer = Timer(stmt=BUILD_STATEMENT, globals=build_globals, timer=timer_ns)
+        build_timer = Timer(
+            stmt=BUILD_STATEMENT, globals=build_globals, timer=timer_ns
+        )
 
         gsp = GriSPy(**build_kwargs)
         query_globals = {"gsp": gsp, "query_kwargs": query_kwargs}
-        query_timer = Timer(stmt=QUERY_STATEMENT, globals=query_globals, timer=timer_ns)
+        query_timer = Timer(
+            stmt=QUERY_STATEMENT, globals=query_globals, timer=timer_ns
+        )
 
         # Compute times
         build_time = build_timer.repeat(repeat=repeats, number=1)
