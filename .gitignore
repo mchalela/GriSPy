@@ -1,6 +1,6 @@
 # My ignored files
-# issue 8 data
 issue8/
+*.pickle
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
