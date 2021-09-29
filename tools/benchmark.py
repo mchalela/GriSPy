@@ -92,6 +92,7 @@ def generate_points(n_data, n_centres, dim, seed=None):
 # TIME BENCHMARK
 # =============================================================================
 
+
 @attr.s(frozen=True)
 class TimeReport:
     """Construct a time report for the time benchmark."""
@@ -114,9 +115,9 @@ class TimeReport:
             name, gr = ngr
             ncells, bt, qt = gr["n_cells"], gr["BT_mean"], gr["QT_mean"]
             bt_std, qt_std = gr["BT_std"], gr["QT_std"]
-            
+
             tt = bt + qt
-            tt_std = (bt_std**2 + qt_std**2)**0.5
+            tt_std = (bt_std ** 2 + qt_std ** 2) ** 0.5
 
             l = ax_bt.plot(ncells, bt, "-", label=name)
             color = l[0].get_color()
@@ -136,7 +137,7 @@ class TimeReport:
             if logy:
                 ax.semilogy()
             else:
-                ax.axhline(0, c='gray', linestyle='--', zorder=0)
+                ax.axhline(0, c="gray", linestyle="--", zorder=0)
         return
 
     def plot(self, ax=None, logy=True):
@@ -148,19 +149,13 @@ class TimeReport:
         # First row: fixed n_centres at higher value.
         fix_n_centres = self.report["n_centres"].max()
         gby = (
-            self.report.groupby("n_centres")
-            .get_group(fix_n_centres)
-            .groupby("n_data")
+            self.report.groupby("n_centres").get_group(fix_n_centres).groupby("n_data")
         )
         self._plot_row(gby, axes=ax[0], logy=logy)
 
         # Second row: fixed n_data at higher value.
         fix_n_data = self.report["n_data"].max()
-        gby = (
-            self.report.groupby("n_data")
-            .get_group(fix_n_data)
-            .groupby("n_centres")
-        )
+        gby = self.report.groupby("n_data").get_group(fix_n_data).groupby("n_centres")
         self._plot_row(gby, axes=ax[1], logy=logy)
         return ax
 
@@ -176,20 +171,21 @@ class TimeReport:
 
 
 def load_report(filename):
-    """Load a pickled TimeReport instance."""    
+    """Load a pickled TimeReport instance."""
 
     with open(filename, mode="rb") as fp:
         report = pickle.load(fp)
     return report
 
+
 def diff_report(a, b):
     """Difference of times between two TimeReport instances, diff = a - b.
-    
+
     Note: Both reports must have the same axes atribute.
     """
     if a.axes != b.axes:
         raise ValueError("Reports axes must be equal for a time comparison.")
-    
+
     # Time difference = a - b
     new_report = a.report.copy()
     for col in ["BT_mean", "QT_mean"]:
@@ -197,7 +193,7 @@ def diff_report(a, b):
 
     # Standard error propagation
     for col in ["BT_std", "QT_std"]:
-        new_report[col] = (a.report[col]**2 + b.report[col]**2) ** 0.5
+        new_report[col] = (a.report[col] ** 2 + b.report[col] ** 2) ** 0.5
 
     # Combine both metadata dicts
     new_metadata = {f"{k}_a": v for k, v in a.metadata.items()}
@@ -241,15 +237,11 @@ def time_benchmark(
 
         # Initialize Timers
         build_globals = {"GriSPy": GriSPy, "build_kwargs": build_kwargs}
-        build_timer = Timer(
-            stmt=BUILD_STATEMENT, globals=build_globals, timer=timer_ns
-        )
+        build_timer = Timer(stmt=BUILD_STATEMENT, globals=build_globals, timer=timer_ns)
 
         gsp = GriSPy(**build_kwargs)
         query_globals = {"gsp": gsp, "query_kwargs": query_kwargs}
-        query_timer = Timer(
-            stmt=QUERY_STATEMENT, globals=query_globals, timer=timer_ns
-        )
+        query_timer = Timer(stmt=QUERY_STATEMENT, globals=query_globals, timer=timer_ns)
 
         # Compute times
         build_time = build_timer.repeat(repeat=repeats, number=1)
