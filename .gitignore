@@ -1,5 +1,7 @@
-# issue 8 data
+# My ignored files
 issue8/
+*.pickle
+*mutmut-cache
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
