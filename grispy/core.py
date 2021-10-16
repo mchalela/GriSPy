@@ -82,7 +82,205 @@ class PeriodicityConf:
 # =============================================================================
 
 @attr.s
-class GriSPy(object):
+class Grid:
+    """Grid indexing.
+
+    Grid is a regular grid indexing algorithm. This class indexes a set of
+    k-dimensional points in a regular grid.
+
+    To be implemented:
+    - cell_id: Return grid indices for a given point.
+    - cell_center: Return cell center coordinates for a given cell id.
+    - cell_count: Return number of points within a given cell id.
+    - cell_points: Return indices of points within a given cell id.
+
+    Parameters
+    ----------
+    data: ndarray, shape(n,k)
+        The n data points of dimension k to be indexed. This array is not
+        copied, and so modifying this data may result in erroneous results.
+        The data can be copied if the grid is built with copy_data=True.
+    N_cells: positive int, optional
+        The number of cells of each dimension to build the grid. The final
+        grid will have N_cells**k number of cells. Default: 64
+    copy_data: bool, optional
+        Flag to indicate if the data should be copied in memory.
+        Default: False
+
+    Attributes
+    ----------
+    dim_: int
+        The dimension of a single data-point.
+    grid_: dict
+        This dictionary contains the data indexed in a grid. The key is a
+        tuple with the k-dimensional index of each grid cell. Empty cells
+        do not have a key. The value is a list of data points indices which
+        are located within the given cell.
+    k_bins_: ndarray, shape (N_cells+1,k)
+        The limits of the grid cells in each dimension.
+    time_: grispy.core.BuildStats
+        Object containing the building time and the date of build.
+
+    """
+
+    # User input params
+    data = attr.ib(default=None, kw_only=False, repr=False)
+    N_cells = attr.ib(default=64)
+    copy_data = attr.ib(
+        default=False, validator=attr.validators.instance_of(bool))
+
+    # =========================================================================
+    # ATTRS INITIALIZATION
+    # =========================================================================
+
+    def __attrs_post_init__(self):
+        """Init more params and build the grid."""
+        if self.copy_data:
+            self.data = self.data.copy()
+
+        t0 = time.time()
+        self.grid_, self.k_bins_ = self._build_grid(
+            data=self.data,
+            N_cells=self.N_cells,
+            dim=self.dim_)
+
+        # Record date and build time
+        now = datetime.datetime.now()
+        self.time_ = BuildStats(
+            buildtime=time.time() - t0,
+            periodicity_set_at=now, datetime=now)
+
+    @data.validator
+    def _validate_data(self, attribute, value):
+        """Validate init params: data."""
+        # Chek if numpy array
+        if not isinstance(value, np.ndarray):
+            raise TypeError(
+                "Data: Argument must be a numpy array."
+                "Got instead type {}".format(type(value)))
+        # Check if data has the expected dimension
+        if value.ndim != 2:
+            raise ValueError(
+                "Data: Array has the wrong shape. Expected shape of (n, k), "
+                "got instead {}".format(value.shape))
+        # Check if data has the expected dimension
+        if len(value.flatten()) == 0:
+            raise ValueError("Data: Array must have at least 1 point")
+
+        # Check if every data point is valid
+        if not np.isfinite(value).all():
+            raise ValueError("Data: Array must have real numbers")
+
+    @N_cells.validator
+    def _validate_N_cells(self, attr, value):
+        """Validate init params: N_cells."""
+        # Chek if int
+        if not isinstance(value, int):
+            raise TypeError(
+                "N_cells: Argument must be an integer. "
+                "Got instead type {}".format(type(value)))
+        # Check if N_cells is valid, i.e. higher than 1
+        if value < 1:
+            raise ValueError(
+                "N_cells: Argument must be higher than 1. "
+                "Got instead {}".format(value))
+
+    # =========================================================================
+    # PROPERTIES
+    # =========================================================================
+
+    @property
+    def dim_(self):
+        """Dimension of a single data-point."""
+        return self.data.shape[1]
+
+    # =========================================================================
+    # INTERNAL IMPLEMENTATION
+    # =========================================================================
+
+    def _digitize(self, data, bins):
+        """Return data bin index."""
+        # allowed indeces with int16: (-32768 to 32767)
+        d = ((data - bins[0]) / (bins[1] - bins[0])).astype(np.int16)
+        return d
+
+    def _build_grid(self, data, N_cells, dim):
+        """Build the grid."""
+        # Check the resolution of the input data and increase it
+        # one order of magnitude. This works for float{32,64,128}
+        # Fix issue #7
+        dtype = data.dtype
+        if np.issubdtype(dtype, np.integer):
+            epsilon = 1e-1
+        else:
+            # assume floating
+            epsilon = np.finfo(dtype).resolution * 10
+
+        data_ind = np.arange(len(data))
+        k_bins = np.zeros((N_cells + 1, dim))
+        k_digit = np.zeros(data.shape, dtype=int)
+        for k in range(dim):
+            k_data = data[:, k]
+            k_bins[:, k] = np.linspace(
+                k_data.min() - epsilon,
+                k_data.max() + epsilon,
+                N_cells + 1)
+            k_digit[:, k] = self._digitize(k_data, bins=k_bins[:, k])
+
+        # Check that there is at least one point per cell
+        grid = {}
+        if N_cells ** dim < len(data):
+            compact_ind = np.ravel_multi_index(
+                k_digit.T, (N_cells,) * dim, order="F", mode='clip')
+
+            compact_ind_sort = np.argsort(compact_ind)
+            compact_ind = compact_ind[compact_ind_sort]
+            k_digit = k_digit[compact_ind_sort]
+
+            split_ind = np.searchsorted(
+                compact_ind, np.arange(N_cells ** dim))
+            deleted_cells = np.diff(np.append(-1, split_ind)).astype(bool)
+            split_ind = split_ind[deleted_cells]
+            if split_ind[-1] > data_ind[-1]:
+                split_ind = split_ind[:-1]
+
+            list_ind = np.split(data_ind[compact_ind_sort], split_ind[1:])
+            k_digit = k_digit[split_ind]
+
+            for i, j in enumerate(k_digit):
+                grid[tuple(j)] = tuple(list_ind[i])
+        else:
+            for i in range(len(data)):
+                cell_point = tuple(k_digit[i, :])
+                if cell_point not in grid:
+                    grid[cell_point] = [i]
+                else:
+                    grid[cell_point].append(i)
+        return grid, k_bins
+
+    # =========================================================================
+    # GRID API
+    # =========================================================================
+
+    def cell_id(self, points):
+        """Return grid indices for a given point."""
+        raise NotImplementedError("Method not implemented.")
+
+    def cell_center(self, ids):
+        """Return cell center coordinates for a given cell id."""
+        raise NotImplementedError("Method not implemented.")
+
+    def cell_count(self, ids):
+        """Return number of points within a given cell id."""
+        raise NotImplementedError("Method not implemented.")
+
+    def cell_points(self, ids):
+        """Return indices of points within a given cell id."""
+        raise NotImplementedError("Method not implemented.")
+
+
+@attr.s
+class GriSPy(Grid):
     """Grid Search in Python.
 
     GriSPy is a regular grid search algorithm for quick nearest-neighbor
@@ -135,7 +333,7 @@ class GriSPy(object):
 
     Attributes
     ----------
-    dim: int
+    dim_: int
         The dimension of a single data-point.
     grid_: dict
         This dictionary contains the data indexed in a grid. The key is a
@@ -144,30 +342,19 @@ class GriSPy(object):
         are located within the given cell.
     k_bins_: ndarray, shape (N_cells+1,k)
         The limits of the grid cells in each dimension.
+    time_: grispy.core.BuildStats
+        Object containing the building time and the date of build.
     periodic_flag_: bool
         If any dimension has periodicity.
     periodic_conf_: grispy.core.PeriodicityConf
         Statistics and intermediate results to make easy and fast the searchs
         with periodicity.
-    time_: grispy.core.BuildStats
-        Object containing the building time and the date of build.
 
     """
 
     # User input params
-    data = attr.ib(default=None, kw_only=False, repr=False)
-    N_cells = attr.ib(default=64)
     periodic = attr.ib(factory=dict)
     metric = attr.ib(default="euclid")
-    copy_data = attr.ib(
-        default=False, validator=attr.validators.instance_of(bool))
-
-    # params
-    dim_ = attr.ib(init=False, repr=False)
-    grid_ = attr.ib(init=False, repr=False)
-    k_bins_ = attr.ib(init=False, repr=False)
-    periodic_conf_ = attr.ib(init=False, repr=False)
-    time_ = attr.ib(init=False, repr=False)
 
     # =========================================================================
     # ATTRS INITIALIZATION
@@ -175,60 +362,10 @@ class GriSPy(object):
 
     def __attrs_post_init__(self):
         """Init more params and build the grid."""
-        t0 = time.time()
-
-        if self.copy_data:
-            self.data = self.data.copy()
-        self.dim_ = self.data.shape[1]
+        super().__attrs_post_init__()
 
         self.periodic, self.periodic_conf_ = self._build_periodicity(
             periodic=self.periodic, dim=self.dim_)
-
-        self.grid_, self.k_bins_ = self._build_grid(
-            data=self.data,
-            N_cells=self.N_cells,
-            dim=self.dim_)
-
-        # Record date and build time
-        now = datetime.datetime.now()
-        self.time_ = BuildStats(
-            buildtime=time.time() - t0,
-            periodicity_set_at=now, datetime=now)
-
-    @data.validator
-    def _validate_data(self, attribute, value):
-        """Validate init params: data."""
-        # Chek if numpy array
-        if not isinstance(value, np.ndarray):
-            raise TypeError(
-                "Data: Argument must be a numpy array."
-                "Got instead type {}".format(type(value)))
-        # Check if data has the expected dimension
-        if value.ndim != 2:
-            raise ValueError(
-                "Data: Array has the wrong shape. Expected shape of (n, k), "
-                "got instead {}".format(value.shape))
-        # Check if data has the expected dimension
-        if len(value.flatten()) == 0:
-            raise ValueError("Data: Array must have at least 1 point")
-
-        # Check if every data point is valid
-        if not np.isfinite(value).all():
-            raise ValueError("Data: Array must have real numbers")
-
-    @N_cells.validator
-    def _validate_N_cells(self, attr, value):
-        """Validate init params: N_cells."""
-        # Chek if int
-        if not isinstance(value, int):
-            raise TypeError(
-                "N_cells: Argument must be an integer. "
-                "Got instead type {}".format(type(value)))
-        # Check if N_cells is valid, i.e. higher than 1
-        if value < 1:
-            raise ValueError(
-                "N_cells: Argument must be higher than 1. "
-                "Got instead {}".format(value))
 
     @metric.validator
     def _validate_metric(self, attr, value):
@@ -346,66 +483,6 @@ class GriSPy(object):
             periodic_flag=periodic_flag,
             pd_hi=pd_hi, pd_low=pd_low,
             periodic_edges=periodic_edges, periodic_direc=periodic_direc)
-
-    def _digitize(self, data, bins):
-        """Return data bin index."""
-        # allowed indeces with int16: (-32768 to 32767)
-        d = ((data - bins[0]) / (bins[1] - bins[0])).astype(np.int16)
-        return d
-
-    def _build_grid(self, data, N_cells, dim):
-        """Build the grid."""
-        # Check the resolution of the input data and increase it
-        # one order of magnitude. This works for float{32,64,128}
-        # Fix issue #7
-        dtype = data.dtype
-        if np.issubdtype(dtype, np.integer):
-            epsilon = 1e-1
-        else:
-            # assume floating
-            epsilon = np.finfo(dtype).resolution * 10
-
-        data_ind = np.arange(len(data))
-        k_bins = np.zeros((N_cells + 1, dim))
-        k_digit = np.zeros(data.shape, dtype=int)
-        for k in range(dim):
-            k_data = data[:, k]
-            k_bins[:, k] = np.linspace(
-                k_data.min() - epsilon,
-                k_data.max() + epsilon,
-                N_cells + 1)
-            k_digit[:, k] = self._digitize(k_data, bins=k_bins[:, k])
-
-        # Check that there is at least one point per cell
-        grid = {}
-        if N_cells ** dim < len(data):
-            compact_ind = np.ravel_multi_index(
-                k_digit.T, (N_cells,) * dim, order="F", mode='clip')
-
-            compact_ind_sort = np.argsort(compact_ind)
-            compact_ind = compact_ind[compact_ind_sort]
-            k_digit = k_digit[compact_ind_sort]
-
-            split_ind = np.searchsorted(
-                compact_ind, np.arange(N_cells ** dim))
-            deleted_cells = np.diff(np.append(-1, split_ind)).astype(bool)
-            split_ind = split_ind[deleted_cells]
-            if split_ind[-1] > data_ind[-1]:
-                split_ind = split_ind[:-1]
-
-            list_ind = np.split(data_ind[compact_ind_sort], split_ind[1:])
-            k_digit = k_digit[split_ind]
-
-            for i, j in enumerate(k_digit):
-                grid[tuple(j)] = tuple(list_ind[i])
-        else:
-            for i in range(len(data)):
-                cell_point = tuple(k_digit[i, :])
-                if cell_point not in grid:
-                    grid[cell_point] = [i]
-                else:
-                    grid[cell_point].append(i)
-        return grid, k_bins
 
     def _distance(self, centre_0, centres):
         """Compute distance between points.
