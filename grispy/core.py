@@ -194,6 +194,19 @@ class Grid:
         """Dimension of a single data-point."""
         return self.data.shape[1]
 
+    @property
+    def epsilon(self):
+        """Epsilon used to expand the grid."""
+        # Check the resolution of the input data and increase it
+        # one order of magnitude. This works for float{32,64,128}
+        # Fix issue #7
+        dtype = self.data.dtype
+
+        if np.issubdtype(dtype, np.integer):
+            return 1e-1
+        # assume floating
+        return np.finfo(dtype).resolution * 10
+
     # =========================================================================
     # INTERNAL IMPLEMENTATION
     # =========================================================================
@@ -206,16 +219,9 @@ class Grid:
 
     def _build_grid(self, data, N_cells, dim):
         """Build the grid."""
-        # Check the resolution of the input data and increase it
-        # one order of magnitude. This works for float{32,64,128}
-        # Fix issue #7
-        dtype = data.dtype
-        if np.issubdtype(dtype, np.integer):
-            epsilon = 1e-1
-        else:
-            # assume floating
-            epsilon = np.finfo(dtype).resolution * 10
+        epsilon = self.epsilon
 
+        # Digitize data points
         data_ind = np.arange(len(data))
         k_bins = np.zeros((N_cells + 1, dim))
         k_digit = np.zeros(data.shape, dtype=int)
@@ -227,43 +233,40 @@ class Grid:
                 N_cells + 1)
             k_digit[:, k] = self._digitize(k_data, bins=k_bins[:, k])
 
-        # Check that there is at least one point per cell
+        # Store in grid all cell neighbors
         grid = {}
-        if N_cells ** dim < len(data):
-            compact_ind = np.ravel_multi_index(
-                k_digit.T, (N_cells,) * dim, order="F", mode='clip')
+        compact_ind = np.ravel_multi_index(
+            k_digit.T, (N_cells,) * dim, order="F", mode='clip')
 
-            compact_ind_sort = np.argsort(compact_ind)
-            compact_ind = compact_ind[compact_ind_sort]
-            k_digit = k_digit[compact_ind_sort]
+        compact_ind_sort = np.argsort(compact_ind)
+        compact_ind = compact_ind[compact_ind_sort]
+        k_digit = k_digit[compact_ind_sort]
 
-            split_ind = np.searchsorted(
-                compact_ind, np.arange(N_cells ** dim))
-            deleted_cells = np.diff(np.append(-1, split_ind)).astype(bool)
-            split_ind = split_ind[deleted_cells]
-            if split_ind[-1] > data_ind[-1]:
-                split_ind = split_ind[:-1]
+        split_ind = np.searchsorted(
+            compact_ind, np.arange(N_cells ** dim))
+        deleted_cells = np.diff(np.append(-1, split_ind)).astype(bool)
+        split_ind = split_ind[deleted_cells]
+        if split_ind[-1] > data_ind[-1]:
+            split_ind = split_ind[:-1]
 
-            list_ind = np.split(data_ind[compact_ind_sort], split_ind[1:])
-            k_digit = k_digit[split_ind]
+        list_ind = np.split(data_ind[compact_ind_sort], split_ind[1:])
+        k_digit = k_digit[split_ind]
 
-            for i, j in enumerate(k_digit):
-                grid[tuple(j)] = tuple(list_ind[i])
-        else:
-            for i in range(len(data)):
-                cell_point = tuple(k_digit[i, :])
-                if cell_point not in grid:
-                    grid[cell_point] = [i]
-                else:
-                    grid[cell_point].append(i)
+        for i, j in enumerate(k_digit):
+            grid[tuple(j)] = tuple(list_ind[i])
+
         return grid, k_bins
 
     # =========================================================================
     # GRID API
     # =========================================================================
 
+    def cell_digits(self, points):
+        """Return grid cell indices for a given point."""
+        raise NotImplementedError("Method not implemented.")
+
     def cell_id(self, points):
-        """Return grid indices for a given point."""
+        """Return grid cell unique id for a given point."""
         raise NotImplementedError("Method not implemented.")
 
     def cell_center(self, ids):
