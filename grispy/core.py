@@ -139,10 +139,8 @@ class Grid:
             self.data = self.data.copy()
 
         t0 = time.time()
-        self.grid_, self.k_bins_ = self._build_grid(
-            data=self.data,
-            N_cells=self.N_cells,
-            dim=self.dim_)
+        self.k_bins_ = self._make_bins()
+        self.grid_ = self._build_grid()
 
         # Record date and build time
         now = datetime.datetime.now()
@@ -190,6 +188,11 @@ class Grid:
     # =========================================================================
 
     @property
+    def ndata(self):
+        """Total number of a data-points."""
+        return len(self.data)
+
+    @property
     def dim_(self):
         """Dimension of a single data-point."""
         return self.data.shape[1]
@@ -211,29 +214,31 @@ class Grid:
     # INTERNAL IMPLEMENTATION
     # =========================================================================
 
+    def _make_bins(self):
+        """Return bins values."""
+        dmin = self.data.min(axis=0) - self.epsilon
+        dmax = self.data.max(axis=0) + self.epsilon
+        return np.linspace(dmin, dmax, self.N_cells + 1)
+
     def _digitize(self, data, bins):
         """Return data bin index."""
+        if bins.ndim == 1:
+            d = ((data - bins[0]) / (bins[1] - bins[0]))
+        else:
+            d = ((data - bins[0, :]) / (bins[1, :] - bins[0, :]))
         # allowed indeces with int16: (-32768 to 32767)
-        d = ((data - bins[0]) / (bins[1] - bins[0])).astype(np.int16)
-        return d
+        return d.astype(np.int16)
 
-    def _build_grid(self, data, N_cells, dim):
+    def _build_grid(self):
         """Build the grid."""
-        epsilon = self.epsilon
+        N_cells = self.N_cells
+        dim = self.dim_
 
         # Digitize data points
-        data_ind = np.arange(len(data))
-        k_bins = np.zeros((N_cells + 1, dim))
-        k_digit = np.zeros(data.shape, dtype=int)
-        for k in range(dim):
-            k_data = data[:, k]
-            k_bins[:, k] = np.linspace(
-                k_data.min() - epsilon,
-                k_data.max() + epsilon,
-                N_cells + 1)
-            k_digit[:, k] = self._digitize(k_data, bins=k_bins[:, k])
+        k_digit = self._digitize(self.data, self.k_bins_)
 
         # Store in grid all cell neighbors
+        data_ind = np.arange(self.ndata)
         grid = {}
         compact_ind = np.ravel_multi_index(
             k_digit.T, (N_cells,) * dim, order="F", mode='clip')
@@ -255,15 +260,28 @@ class Grid:
         for i, j in enumerate(k_digit):
             grid[tuple(j)] = tuple(list_ind[i])
 
-        return grid, k_bins
+        return grid
 
     # =========================================================================
     # GRID API
     # =========================================================================
 
     def cell_digits(self, points):
-        """Return grid cell indices for a given point."""
-        raise NotImplementedError("Method not implemented.")
+        """Return grid cell indices for a given point.
+
+        Parameters
+        ----------
+        points: ndarray, shape (m,k)
+            The point or points to calculate the cell indices.
+
+        Returns
+        -------
+        indices: ndarray, shape (m,k)
+            Array of cell indices with same shape as `points`.
+        """
+        # Validate inputs
+        vlds.validate_centres(points, self.data)
+        return self._digitize(points, bins=self.k_bins_)
 
     def cell_id(self, points):
         """Return grid cell unique id for a given point."""
