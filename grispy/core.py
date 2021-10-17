@@ -37,7 +37,8 @@ from . import distances, validators as vlds
 METRICS = {
     "euclid": distances.euclid,
     "haversine": distances.haversine,
-    "vincenty": distances.vincenty}
+    "vincenty": distances.vincenty,
+}
 
 
 EMPTY_ARRAY = np.array([], dtype=int)
@@ -46,6 +47,7 @@ EMPTY_ARRAY = np.array([], dtype=int)
 # =============================================================================
 #  TIME CLASS
 # =============================================================================
+
 
 @attr.s(frozen=True)
 class BuildStats:
@@ -80,6 +82,7 @@ class PeriodicityConf:
 # =============================================================================
 # MAIN CLASS
 # =============================================================================
+
 
 @attr.s
 class Grid:
@@ -127,7 +130,8 @@ class Grid:
     data = attr.ib(default=None, kw_only=False, repr=False)
     N_cells = attr.ib(default=64)
     copy_data = attr.ib(
-        default=False, validator=attr.validators.instance_of(bool))
+        default=False, validator=attr.validators.instance_of(bool)
+    )
 
     # =========================================================================
     # ATTRS INITIALIZATION
@@ -145,8 +149,8 @@ class Grid:
         # Record date and build time
         now = datetime.datetime.now()
         self.time_ = BuildStats(
-            buildtime=time.time() - t0,
-            periodicity_set_at=now, datetime=now)
+            buildtime=time.time() - t0, periodicity_set_at=now, datetime=now
+        )
 
     @data.validator
     def _validate_data(self, attribute, value):
@@ -155,12 +159,14 @@ class Grid:
         if not isinstance(value, np.ndarray):
             raise TypeError(
                 "Data: Argument must be a numpy array."
-                "Got instead type {}".format(type(value)))
+                "Got instead type {}".format(type(value))
+            )
         # Check if data has the expected dimension
         if value.ndim != 2:
             raise ValueError(
                 "Data: Array has the wrong shape. Expected shape of (n, k), "
-                "got instead {}".format(value.shape))
+                "got instead {}".format(value.shape)
+            )
         # Check if data has the expected dimension
         if len(value.flatten()) == 0:
             raise ValueError("Data: Array must have at least 1 point")
@@ -176,12 +182,14 @@ class Grid:
         if not isinstance(value, int):
             raise TypeError(
                 "N_cells: Argument must be an integer. "
-                "Got instead type {}".format(type(value)))
+                "Got instead type {}".format(type(value))
+            )
         # Check if N_cells is valid, i.e. higher than 1
         if value < 1:
             raise ValueError(
                 "N_cells: Argument must be higher than 1. "
-                "Got instead {}".format(value))
+                "Got instead {}".format(value)
+            )
 
     # =========================================================================
     # PROPERTIES
@@ -193,22 +201,37 @@ class Grid:
         return len(self.data)
 
     @property
-    def dim_(self):
-        """Dimension of a single data-point."""
+    def dim(self):
+        """Grid dimension."""
         return self.data.shape[1]
+
+    @property
+    def shape(self):
+        """Grid shape, i.e. number of cells per dimension."""
+        return (self.N_cells,) * self.dim
+
+    @property
+    def size(self):
+        """Grid size, i.e. total number of cells."""
+        return self.N_cells ** self.dim
 
     @property
     def epsilon(self):
         """Epsilon used to expand the grid."""
         # Check the resolution of the input data and increase it
-        # one order of magnitude. This works for float{32,64,128}
+        # two orders of magnitude. This works for float{32,64}
         # Fix issue #7
         dtype = self.data.dtype
 
         if np.issubdtype(dtype, np.integer):
             return 1e-1
         # assume floating
-        return np.finfo(dtype).resolution * 10
+        return np.finfo(dtype).resolution * 1e2
+
+    @property
+    def edges(self):
+        """Edges of the grid in each dimension."""
+        return self.k_bins_[[0, -1], :].copy()
 
     # =========================================================================
     # INTERNAL IMPLEMENTATION
@@ -223,34 +246,32 @@ class Grid:
     def _digitize(self, data, bins):
         """Return data bin index."""
         if bins.ndim == 1:
-            d = ((data - bins[0]) / (bins[1] - bins[0]))
+            d = (data - bins[0]) / (bins[1] - bins[0])
         else:
-            d = ((data - bins[0, :]) / (bins[1, :] - bins[0, :]))
+            d = (data - bins[0, :]) / (bins[1, :] - bins[0, :])
         # allowed indeces with int16: (-32768 to 32767)
         return d.astype(np.int16)
 
     def _build_grid(self):
         """Build the grid."""
-        N_cells = self.N_cells
-        dim = self.dim_
-
         # Digitize data points
         k_digit = self._digitize(self.data, self.k_bins_)
 
         # Store in grid all cell neighbors
-        data_ind = np.arange(self.ndata)
         grid = {}
         compact_ind = np.ravel_multi_index(
-            k_digit.T, (N_cells,) * dim, order="F", mode='clip')
+            k_digit.T, self.shape, order="F", mode="clip"
+        )
 
         compact_ind_sort = np.argsort(compact_ind)
         compact_ind = compact_ind[compact_ind_sort]
         k_digit = k_digit[compact_ind_sort]
 
-        split_ind = np.searchsorted(
-            compact_ind, np.arange(N_cells ** dim))
+        split_ind = np.searchsorted(compact_ind, np.arange(self.size))
         deleted_cells = np.diff(np.append(-1, split_ind)).astype(bool)
         split_ind = split_ind[deleted_cells]
+
+        data_ind = np.arange(self.ndata)
         if split_ind[-1] > data_ind[-1]:
             split_ind = split_ind[:-1]
 
@@ -266,6 +287,26 @@ class Grid:
     # GRID API
     # =========================================================================
 
+    def contains(self, points):
+        """Check if points are contained within the grid.
+
+        Parameters
+        ----------
+        points: ndarray, shape (m,k)
+            The point or points to check against the grid domain.
+
+        Returns
+        -------
+        bool: ndarray, shape (m,)
+            Boolean array indicating if a point is contained within the grid.
+        """
+        # Validate inputs
+        vlds.validate_centres(points, self.data)
+
+        lower = self.edges[0, :] < points
+        upper = self.edges[-1, :] > points
+        return (lower & upper).prod(axis=1, dtype=bool)
+
     def cell_digits(self, points):
         """Return grid cell indices for a given point.
 
@@ -276,16 +317,87 @@ class Grid:
 
         Returns
         -------
-        indices: ndarray, shape (m,k)
-            Array of cell indices with same shape as `points`.
+        digits: ndarray, shape (m,k)
+            Array of cell indices with same shape as `points`. If a point is
+            outside of the grid edges `-1` is returned.
         """
         # Validate inputs
         vlds.validate_centres(points, self.data)
-        return self._digitize(points, bins=self.k_bins_)
+
+        digits = self._digitize(points, bins=self.k_bins_)
+
+        # Check if outside the grid
+        outside = ~self.contains(points)
+        if outside.any():
+            digits[outside] = -1
+        return digits
 
     def cell_id(self, points):
-        """Return grid cell unique id for a given point."""
-        raise NotImplementedError("Method not implemented.")
+        """Return grid cell unique id for a given point.
+
+        Parameters
+        ----------
+        points: ndarray, shape (m,k)
+            The point or points to calculate the cell unique id.
+
+        Returns
+        -------
+        ids: ndarray, shape (m,)
+            Array of cell unique ids for each point. If a point is
+            outside of the grid edges `-1` is returned.
+        """
+        # Validate points
+        vlds.validate_centres(points, self.data)
+
+        digits = self._digitize(points, bins=self.k_bins_)
+        ids = np.ravel_multi_index(
+            digits.T, self.shape, order="F", mode="clip"
+        )
+
+        # Check if outside the grid
+        outside = ~self.contains(points)
+        if outside.any():
+            ids[outside] = -1
+        return ids
+
+    def cell_digits2id(self, digits):
+        """Return unique id of cells given their digits.
+
+        Parameters
+        ----------
+        digits: ndarray, shape (m,k)
+            Array of cell indices.
+
+        Returns
+        -------
+        ids: ndarray, shape (m,)
+            Array of cell unique ids for each point.
+        """
+        # Validate digits
+        vlds.validate_digits(digits, self.N_cells)
+
+        return np.ravel_multi_index(
+            digits.T, self.shape, order="F", mode="clip"
+        )
+
+    def cell_id2digits(self, ids):
+        """Return cell digits given their unique id.
+
+        Parameters
+        ----------
+        ids: ndarray, shape (m,)
+            Array of cell unique ids for each point.
+
+        Returns
+        -------
+        digits: ndarray, shape (m,k)
+            Array of cell indices.
+        """
+        # Validate ids
+        vlds.validate_ids(ids, self.size)
+
+        digits = np.unravel_index(ids, self.shape, order="F")
+        return np.vstack(digits).T
 
     def cell_center(self, ids):
         """Return cell center coordinates for a given cell id."""
@@ -386,7 +498,8 @@ class GriSPy(Grid):
         super().__attrs_post_init__()
 
         self.periodic, self.periodic_conf_ = self._build_periodicity(
-            periodic=self.periodic, dim=self.dim_)
+            periodic=self.periodic, dim=self.dim
+        )
 
     @metric.validator
     def _validate_metric(self, attr, value):
@@ -396,7 +509,8 @@ class GriSPy(Grid):
             metric_names = ", ".join(METRICS)
             raise ValueError(
                 "Metric: Got an invalid name: '{}'. "
-                "Options are: {} or a callable".format(value, metric_names))
+                "Options are: {} or a callable".format(value, metric_names)
+            )
 
     @periodic.validator
     def _validate_periodic(self, attr, value):
@@ -405,7 +519,8 @@ class GriSPy(Grid):
         if not isinstance(value, dict):
             raise TypeError(
                 "Periodicity: Argument must be a dictionary. "
-                "Got instead type {}".format(type(value)))
+                "Got instead type {}".format(type(value))
+            )
 
         # If dict is empty means no perioity, stop validation.
         if len(value) == 0:
@@ -417,30 +532,37 @@ class GriSPy(Grid):
             if not isinstance(k, int):
                 raise TypeError(
                     "Periodicity: Keys must be integers. "
-                    "Got instead type {}".format(type(k)))
+                    "Got instead type {}".format(type(k))
+                )
 
             # Check if tuple or None
             if not (isinstance(v, tuple) or v is None):
                 raise TypeError(
                     "Periodicity: Values must be tuples. "
-                    "Got instead type {}".format(type(v)))
+                    "Got instead type {}".format(type(v))
+                )
             if v is None:
                 continue
 
             # Check if edges are valid numbers
-            has_valid_number = all([
-                isinstance(v[0], (int, float)),
-                isinstance(v[1], (int, float))])
+            has_valid_number = all(
+                [
+                    isinstance(v[0], (int, float)),
+                    isinstance(v[1], (int, float)),
+                ]
+            )
             if not has_valid_number:
                 raise TypeError(
                     "Periodicity: Argument must be a tuple of "
-                    "2 real numbers as edge descriptors. ")
+                    "2 real numbers as edge descriptors. "
+                )
 
             # Check that first number is lower than second
             if not v[0] < v[1]:
                 raise ValueError(
                     "Periodicity: First argument in tuple must be "
-                    "lower than second argument.")
+                    "lower than second argument."
+                )
 
     # =========================================================================
     # PROPERTIES
@@ -469,7 +591,8 @@ class GriSPy(Grid):
             periodic_edges, periodic_direc = None, None
         else:
             periodic_flag = any(
-                [x is not None for x in list(periodic.values())])
+                [x is not None for x in list(periodic.values())]
+            )
 
             if periodic_flag:
 
@@ -482,16 +605,19 @@ class GriSPy(Grid):
                     if aux:
                         pd_low[0, k] = aux[0]
                         pd_hi[0, k] = aux[1]
-                        aux = np.insert(aux, 1, 0.)
+                        aux = np.insert(aux, 1, 0.0)
                     else:
                         aux = np.zeros((1, 3))
-                    periodic_edges = np.hstack([
-                        periodic_edges,
-                        np.tile(aux, (3**(dim - 1 - k), 3**k)).T.ravel()
-                    ])
+                    periodic_edges = np.hstack(
+                        [
+                            periodic_edges,
+                            np.tile(
+                                aux, (3 ** (dim - 1 - k), 3 ** k)
+                            ).T.ravel(),
+                        ]
+                    )
 
-                periodic_edges = periodic_edges.reshape(
-                    dim, 3**dim).T
+                periodic_edges = periodic_edges.reshape(dim, 3 ** dim).T
                 periodic_edges -= periodic_edges[::-1]
                 periodic_edges = np.unique(periodic_edges, axis=0)
 
@@ -502,8 +628,11 @@ class GriSPy(Grid):
 
         return cleaned_periodic, PeriodicityConf(
             periodic_flag=periodic_flag,
-            pd_hi=pd_hi, pd_low=pd_low,
-            periodic_edges=periodic_edges, periodic_direc=periodic_direc)
+            pd_hi=pd_hi,
+            pd_low=pd_low,
+            periodic_edges=periodic_edges,
+            periodic_direc=periodic_direc,
+        )
 
     def _distance(self, centre_0, centres):
         """Compute distance between points.
@@ -516,8 +645,9 @@ class GriSPy(Grid):
         if len(centres) == 0:
             return EMPTY_ARRAY.copy()
         metric_func = (
-            self.metric if callable(self.metric) else METRICS[self.metric])
-        return metric_func(centre_0, centres, self.dim_)
+            self.metric if callable(self.metric) else METRICS[self.metric]
+        )
+        return metric_func(centre_0, centres, self.dim)
 
     def _get_neighbor_distance(self, centres, neighbor_cells):
         """Retrieve neighbor distances whithin the given cells."""
@@ -539,7 +669,7 @@ class GriSPy(Grid):
             inds = np.fromiter(itertools.chain(*ind_tmp), dtype=np.int32)
             n_idxs.append(inds)
 
-            if self.dim_ == 1:
+            if self.dim == 1:
                 dis = self._distance(centre, self.data[inds])
             else:
                 dis = self._distance(centre, self.data.take(inds, axis=0))
@@ -556,11 +686,11 @@ class GriSPy(Grid):
         shell_flag=False,
     ):
         """Retrieve cells touched by the search radius."""
-        cell_point = np.zeros((len(centres), self.dim_), dtype=int)
+        cell_point = np.zeros((len(centres), self.dim), dtype=int)
         out_of_field = np.zeros(len(cell_point), dtype=bool)
-        for k in range(self.dim_):
-            cell_point[:, k] = (
-                self._digitize(centres[:, k], bins=self.k_bins_[:, k])
+        for k in range(self.dim):
+            cell_point[:, k] = self._digitize(
+                centres[:, k], bins=self.k_bins_[:, k]
             )
             out_of_field[
                 (centres[:, k] - distance_upper_bound > self.k_bins_[-1, k])
@@ -574,13 +704,15 @@ class GriSPy(Grid):
             return [EMPTY_ARRAY.copy() for _ in centres]
 
         # Armo la caja con celdas a explorar
-        k_cell_min = np.zeros((len(centres), self.dim_), dtype=int)
-        k_cell_max = np.zeros((len(centres), self.dim_), dtype=int)
-        for k in range(self.dim_):
+        k_cell_min = np.zeros((len(centres), self.dim), dtype=int)
+        k_cell_max = np.zeros((len(centres), self.dim), dtype=int)
+        for k in range(self.dim):
             k_cell_min[:, k] = self._digitize(
-                centres[:, k] - distance_upper_bound, bins=self.k_bins_[:, k])
+                centres[:, k] - distance_upper_bound, bins=self.k_bins_[:, k]
+            )
             k_cell_max[:, k] = self._digitize(
-                centres[:, k] + distance_upper_bound, bins=self.k_bins_[:, k])
+                centres[:, k] + distance_upper_bound, bins=self.k_bins_[:, k]
+            )
 
             k_cell_min[k_cell_min[:, k] < 0, k] = 0
             k_cell_max[k_cell_max[:, k] < 0, k] = 0
@@ -595,29 +727,32 @@ class GriSPy(Grid):
             # Para cada centro i, agrego un arreglo con shape (:,k)
             k_grids = [
                 np.arange(k_cell_min[i, k], k_cell_max[i, k] + 1)
-                for k in range(self.dim_)]
+                for k in range(self.dim)
+            ]
             k_grids = np.meshgrid(*k_grids)
             neighbor_cells += [
-                np.array(list(map(np.ndarray.flatten, k_grids))).T]
+                np.array(list(map(np.ndarray.flatten, k_grids))).T
+            ]
 
             # Calculo la distancia de cada centro i a sus celdas vecinas,
             # luego descarto las celdas que no toca el circulo definido por
             # la distancia
             cells_physical = [
                 self.k_bins_[neighbor_cells[i][:, k], k] + 0.5 * cell_size[k]
-                for k in range(self.dim_)]
+                for k in range(self.dim)
+            ]
 
             cells_physical = np.array(cells_physical).T
             mask_cells = (
-                self._distance(
-                    centre, cells_physical
-                ) < distance_upper_bound[i] + cell_radii)
+                self._distance(centre, cells_physical)
+                < distance_upper_bound[i] + cell_radii
+            )
 
             if shell_flag:
                 mask_cells *= (
-                    self._distance(
-                        centre, cells_physical
-                    ) > distance_lower_bound[i] - cell_radii)
+                    self._distance(centre, cells_physical)
+                    > distance_lower_bound[i] - cell_radii
+                )
 
             if np.any(mask_cells):
                 neighbor_cells[i] = neighbor_cells[i][mask_cells]
@@ -626,21 +761,25 @@ class GriSPy(Grid):
         return neighbor_cells
 
     def _near_boundary(self, centres, distance_upper_bound):
-        mask = np.zeros((len(centres), self.dim_), dtype=bool)
-        for k in range(self.dim_):
+        mask = np.zeros((len(centres), self.dim), dtype=bool)
+        for k in range(self.dim):
             if self.periodic[k] is None:
                 continue
-            mask[:, k] = abs(
-                centres[:, k] - self.periodic[k][0]) < distance_upper_bound
-            mask[:, k] += abs(
-                centres[:, k] - self.periodic[k][1]) < distance_upper_bound
+            mask[:, k] = (
+                abs(centres[:, k] - self.periodic[k][0]) < distance_upper_bound
+            )
+            mask[:, k] += (
+                abs(centres[:, k] - self.periodic[k][1]) < distance_upper_bound
+            )
         return mask.sum(axis=1, dtype=bool)
 
     def _mirror(self, centre, distance_upper_bound):
         pd_hi, pd_low, periodic_edges, periodic_direc = (
-            self.periodic_conf_.pd_hi, self.periodic_conf_.pd_low,
+            self.periodic_conf_.pd_hi,
+            self.periodic_conf_.pd_low,
             self.periodic_conf_.periodic_edges,
-            self.periodic_conf_.periodic_direc)
+            self.periodic_conf_.periodic_direc,
+        )
 
         mirror_centre = centre - periodic_edges
 
@@ -652,7 +791,7 @@ class GriSPy(Grid):
 
     def _mirror_universe(self, centres, distance_upper_bound):
         """Generate Terran centres in the Mirror Universe."""
-        terran_centres = np.array([[]] * self.dim_).T
+        terran_centres = np.array([[]] * self.dim).T
         terran_indices = np.array([], dtype=int)
         near_boundary = self._near_boundary(centres, distance_upper_bound)
         if not np.any(near_boundary):
@@ -664,9 +803,11 @@ class GriSPy(Grid):
             mirror_centre = self._mirror(centre, distance_upper_bound[i])
             if len(mirror_centre) > 0:
                 terran_centres = np.concatenate(
-                    (terran_centres, mirror_centre), axis=0)
+                    (terran_centres, mirror_centre), axis=0
+                )
                 terran_indices = np.concatenate(
-                    (terran_indices, np.repeat(i, len(mirror_centre))))
+                    (terran_indices, np.repeat(i, len(mirror_centre)))
+                )
         return terran_centres, terran_indices
 
     # =========================================================================
@@ -703,17 +844,22 @@ class GriSPy(Grid):
             periodic_attr = attr.fields(GriSPy).periodic
             periodic_attr.validator(self, periodic_attr, periodic)
             self.periodic, self.periodic_conf_ = self._build_periodicity(
-                periodic=periodic, dim=self.dim_)
+                periodic=periodic, dim=self.dim
+            )
 
             self.time_ = BuildStats(
                 buildtime=self.time_.buildtime,
                 datetime=self.time_.datetime,
-                periodicity_set_at=datetime.datetime.now())
+                periodicity_set_at=datetime.datetime.now(),
+            )
         else:
             return GriSPy(
-                data=self.data, N_cells=self.N_cells,
-                metric=self.metric, copy_data=self.copy_data,
-                periodic=periodic)
+                data=self.data,
+                N_cells=self.N_cells,
+                metric=self.metric,
+                copy_data=self.copy_data,
+                periodic=periodic,
+            )
 
     # =========================================================================
     # SEARCH API
@@ -770,33 +916,42 @@ class GriSPy(Grid):
 
         # Get neighbors
         neighbor_cells = self._get_neighbor_cells(
-            centres, distance_upper_bound)
+            centres, distance_upper_bound
+        )
 
         neighbors_distances, neighbors_indices = self._get_neighbor_distance(
-            centres, neighbor_cells)
+            centres, neighbor_cells
+        )
 
         # We need to generate mirror centres for periodic boundaries...
         if self.periodic_flag_:
             terran_centres, terran_indices = self._mirror_universe(
-                centres, distance_upper_bound)
+                centres, distance_upper_bound
+            )
 
             # terran_centres are the centres in the mirror universe for those
             # near the boundary.
             terran_neighbor_cells = self._get_neighbor_cells(
-                terran_centres, distance_upper_bound[terran_indices])
+                terran_centres, distance_upper_bound[terran_indices]
+            )
 
-            terran_neighbors_distances, \
-                terran_neighbors_indices = self._get_neighbor_distance(
-                    terran_centres, terran_neighbor_cells)
+            (
+                terran_neighbors_distances,
+                terran_neighbors_indices,
+            ) = self._get_neighbor_distance(
+                terran_centres, terran_neighbor_cells
+            )
 
             for i, t in zip(terran_indices, np.arange(len(terran_centres))):
                 # i runs over normal indices that have a terran counterpart
                 # t runs over terran indices, 0 to len(terran_centres)
                 neighbors_distances[i] = np.concatenate(
-                    (neighbors_distances[i], terran_neighbors_distances[t]))
+                    (neighbors_distances[i], terran_neighbors_distances[t])
+                )
 
                 neighbors_indices[i] = np.concatenate(
-                    (neighbors_indices[i], terran_neighbors_indices[t]))
+                    (neighbors_indices[i], terran_neighbors_indices[t])
+                )
 
         for i in range(len(centres)):
             mask_distances = neighbors_distances[i] <= distance_upper_bound[i]
@@ -857,7 +1012,8 @@ class GriSPy(Grid):
         vlds.validate_bool(sorted)
         vlds.validate_sortkind(kind)
         vlds.validate_shell_distances(
-            distance_lower_bound, distance_upper_bound, self.periodic)
+            distance_lower_bound, distance_upper_bound, self.periodic
+        )
 
         # Match distance bounds shapes with centres shape
         if np.isscalar(distance_lower_bound):
@@ -874,41 +1030,52 @@ class GriSPy(Grid):
             centres,
             distance_upper_bound=distance_upper_bound,
             distance_lower_bound=distance_lower_bound,
-            shell_flag=True)
+            shell_flag=True,
+        )
 
         neighbors_distances, neighbors_indices = self._get_neighbor_distance(
-            centres, neighbor_cells)
+            centres, neighbor_cells
+        )
 
         # We need to generate mirror centres for periodic boundaries...
         if self.periodic_flag_:
             terran_centres, terran_indices = self._mirror_universe(
-                centres, distance_upper_bound)
+                centres, distance_upper_bound
+            )
 
             # terran_centres are the centres in the mirror universe for those
             # near the boundary.
             terran_neighbor_cells = self._get_neighbor_cells(
-                terran_centres, distance_upper_bound[terran_indices])
+                terran_centres, distance_upper_bound[terran_indices]
+            )
 
-            terran_neighbors_distances,\
-                terran_neighbors_indices = self._get_neighbor_distance(
-                    terran_centres, terran_neighbor_cells)
+            (
+                terran_neighbors_distances,
+                terran_neighbors_indices,
+            ) = self._get_neighbor_distance(
+                terran_centres, terran_neighbor_cells
+            )
 
             for i, t in zip(terran_indices, np.arange(len(terran_centres))):
                 # i runs over normal indices that have a terran counterpart
                 # t runs over terran indices, 0 to len(terran_centres)
                 neighbors_distances[i] = np.concatenate(
-                    (neighbors_distances[i], terran_neighbors_distances[t]))
+                    (neighbors_distances[i], terran_neighbors_distances[t])
+                )
 
                 neighbors_indices[i] = np.concatenate(
-                    (neighbors_indices[i], terran_neighbors_indices[t]))
+                    (neighbors_indices[i], terran_neighbors_indices[t])
+                )
 
         for i in range(len(centres)):
             mask_distances_upper = (
-                neighbors_distances[i] <= distance_upper_bound[i])
+                neighbors_distances[i] <= distance_upper_bound[i]
+            )
 
             mask_distances_lower = neighbors_distances[i][mask_distances_upper]
             mask_distances_lower = (
-                mask_distances_lower > distance_lower_bound[i])
+                mask_distances_lower > distance_lower_bound[i]
+            )
 
             aux = neighbors_distances[i]
             aux = aux[mask_distances_upper]
@@ -979,12 +1146,11 @@ class GriSPy(Grid):
             ndis_tmp, nidx_tmp = self.shell_neighbors(
                 centres[~n_found],
                 distance_lower_bound=lower_distance_tmp[~n_found],
-                distance_upper_bound=upper_distance_tmp[~n_found])
+                distance_upper_bound=upper_distance_tmp[~n_found],
+            )
 
             for i_tmp, i in enumerate(centres_lookup_ind[~n_found]):
-                if n <= len(nidx_tmp[i_tmp]) + len(
-                    neighbors_indices[i]
-                ):
+                if n <= len(nidx_tmp[i_tmp]) + len(neighbors_indices[i]):
                     n_more = n - len(neighbors_indices[i])
                     n_found[i] = True
                 else:
@@ -993,10 +1159,12 @@ class GriSPy(Grid):
                     upper_distance_tmp[i] += cell_size.min()
 
                 sorted_ind = np.argsort(ndis_tmp[i_tmp], kind=kind)[:n_more]
-                neighbors_distances[i] = np.hstack((
-                    neighbors_distances[i], ndis_tmp[i_tmp][sorted_ind]))
+                neighbors_distances[i] = np.hstack(
+                    (neighbors_distances[i], ndis_tmp[i_tmp][sorted_ind])
+                )
 
-                neighbors_indices[i] = np.hstack((
-                    neighbors_indices[i], nidx_tmp[i_tmp][sorted_ind]))
+                neighbors_indices[i] = np.hstack(
+                    (neighbors_indices[i], nidx_tmp[i_tmp][sorted_ind])
+                )
 
         return neighbors_distances, neighbors_indices

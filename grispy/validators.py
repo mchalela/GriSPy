@@ -19,6 +19,20 @@ import numpy as np
 # --------------------------------
 
 
+def validate_digits(digits, N_cells):
+    """Validate method params: digits."""
+    # Check if inside the grid
+    if np.any(digits < 0) or np.any(digits >= N_cells):
+        raise ValueError(f"Digits: values must be in the range 0-{N_cells}.")
+
+
+def validate_ids(ids, size):
+    """Validate method params: ids."""
+    # Check if inside the grid
+    if np.any(ids < 0) or np.any(ids >= size):
+        raise ValueError(f"Ids: values must be in the range 0-{size}.")
+
+
 def validate_centres(centres, data):
     """Validate method params: centres."""
     # Chek if numpy array
@@ -130,7 +144,7 @@ def validate_n_nearest(n, data, periodic):
     # within 1 periodic range
     Np = len(data)
     valid_axis = len([v for v in periodic.values() if v is not None])
-    Nvalid = Np * 3**valid_axis
+    Nvalid = Np * 3 ** valid_axis
     if n > Nvalid:
         raise ValueError(
             "Nth-nearest: Argument must be lower than the number of "
