@@ -29,13 +29,16 @@ from numpy.testing import assert_equal, assert_
 
 
 class Test_GriSPy_data_consistency:
+    """Test that input and output params types.
+
+    - Check that input params are stored in their corresponding attributes
+    and have the expected type.
+    - Check that output params have the expected types.
+    """
+
     @pytest.fixture
     def gsp(self):
-
-        np.random.seed(1234)
-        self.centres = np.random.rand(3, 5).T
-
-        self.data = np.array(
+        data = np.array(
             [
                 [0, 0, 0],
                 [0, 0, 1],
@@ -47,12 +50,18 @@ class Test_GriSPy_data_consistency:
                 [1, 1, 1],
             ]
         )
+        return GriSPy(data)
 
-        self.upper_radii = [0.7]
-        self.lower_radii = [0.5]
-        self.n_nearest = 5
-
-        return GriSPy(self.data)
+    @pytest.fixture
+    def valid_input(self):
+        rng = np.random.default_rng(1234)
+        d = dict()
+        # Define valid input data
+        d["centres"] = rng.random((5, 3))
+        d["upper_radii"] = 0.7
+        d["lower_radii"] = 0.5
+        d["n_nearest"] = 5
+        return d
 
     def test_grispy_arguments(self, gsp):
         assert_(isinstance(gsp.data, np.ndarray))
@@ -68,10 +77,11 @@ class Test_GriSPy_data_consistency:
         assert_(isinstance(gsp.periodic_conf_, PeriodicityConf))
         assert_(isinstance(gsp.time_, BuildStats))
 
-    def test_bubble_single_query(self, gsp):
+    def test_bubble_single_query(self, gsp, valid_input):
 
         b, ind = gsp.bubble_neighbors(
-            np.array([[0, 0, 0]]), distance_upper_bound=self.upper_radii[0]
+            np.array([[0, 0, 0]]),
+            distance_upper_bound=valid_input["upper_radii"],
         )
         assert_(isinstance(b, list))
         assert_(isinstance(ind, list))
@@ -79,12 +89,12 @@ class Test_GriSPy_data_consistency:
         assert_equal(len(b), 1)
         assert_equal(len(ind), 1)
 
-    def test_shell_single_query(self, gsp):
+    def test_shell_single_query(self, gsp, valid_input):
 
         b, ind = gsp.shell_neighbors(
             np.array([[0, 0, 0]]),
-            distance_lower_bound=self.lower_radii[0],
-            distance_upper_bound=self.upper_radii[0],
+            distance_lower_bound=valid_input["lower_radii"],
+            distance_upper_bound=valid_input["upper_radii"],
         )
         assert_(isinstance(b, list))
         assert_(isinstance(ind, list))
@@ -92,63 +102,71 @@ class Test_GriSPy_data_consistency:
         assert_equal(len(b), 1)
         assert_equal(len(ind), 1)
 
-    def test_nearest_neighbors_single_query(self, gsp):
+    def test_nearest_neighbors_single_query(self, gsp, valid_input):
 
-        b, ind = gsp.nearest_neighbors(np.array([[0, 0, 0]]), n=self.n_nearest)
+        b, ind = gsp.nearest_neighbors(
+            np.array([[0, 0, 0]]), n=valid_input["n_nearest"]
+        )
 
         assert_(isinstance(b, list))
         assert_(isinstance(ind, list))
         assert_equal(len(b), len(ind))
         assert_equal(len(b), 1)
         assert_equal(len(ind), 1)
-        assert_equal(np.shape(b[0]), (self.n_nearest,))
-        assert_equal(np.shape(ind[0]), (self.n_nearest,))
+        assert_equal(np.shape(b[0]), (valid_input["n_nearest"],))
+        assert_equal(np.shape(ind[0]), (valid_input["n_nearest"],))
 
-    def test_bubble_multiple_query(self, gsp):
+    def test_bubble_multiple_query(self, gsp, valid_input):
 
         b, ind = gsp.bubble_neighbors(
-            self.centres, distance_upper_bound=self.upper_radii[0]
+            valid_input["centres"],
+            distance_upper_bound=valid_input["upper_radii"],
         )
         assert_(isinstance(b, list))
         assert_(isinstance(ind, list))
         assert_equal(len(b), len(ind))
-        assert_equal(len(b), len(self.centres))
-        assert_equal(len(ind), len(self.centres))
+        assert_equal(len(b), len(valid_input["centres"]))
+        assert_equal(len(ind), len(valid_input["centres"]))
 
-    def test_shell_multiple_query(self, gsp):
+    def test_shell_multiple_query(self, gsp, valid_input):
 
         b, ind = gsp.shell_neighbors(
-            self.centres,
-            distance_lower_bound=self.lower_radii[0],
-            distance_upper_bound=self.upper_radii[0],
+            valid_input["centres"],
+            distance_lower_bound=valid_input["lower_radii"],
+            distance_upper_bound=valid_input["upper_radii"],
         )
         assert_(isinstance(b, list))
         assert_(isinstance(ind, list))
         assert_equal(len(b), len(ind))
-        assert_equal(len(b), len(self.centres))
-        assert_equal(len(ind), len(self.centres))
+        assert_equal(len(b), len(valid_input["centres"]))
+        assert_equal(len(ind), len(valid_input["centres"]))
 
-    def test_nearest_neighbors_multiple_query(self, gsp):
+    def test_nearest_neighbors_multiple_query(self, gsp, valid_input):
 
-        b, ind = gsp.nearest_neighbors(self.centres, n=self.n_nearest)
+        b, ind = gsp.nearest_neighbors(
+            valid_input["centres"], n=valid_input["n_nearest"]
+        )
         assert_(isinstance(b, list))
         assert_(isinstance(ind, list))
         assert_equal(len(b), len(ind))
-        assert_equal(len(b), len(self.centres))
-        assert_equal(len(ind), len(self.centres))
+        assert_equal(len(b), len(valid_input["centres"]))
+        assert_equal(len(ind), len(valid_input["centres"]))
         for i in range(len(b)):
-            assert_equal(np.shape(b[i]), (self.n_nearest,))
-            assert_equal(np.shape(ind[i]), (self.n_nearest,))
+            assert_equal(np.shape(b[i]), (valid_input["n_nearest"],))
+            assert_equal(np.shape(ind[i]), (valid_input["n_nearest"],))
 
 
 class Test_GriSPy_data_consistency_periodic:
+    """Test that input and output params types.
+
+    - Check that input params are stored in their corresponding attributes
+    and have the expected type.
+    - Check that output params have the expected types.
+    """
+
     @pytest.fixture
     def gsp(self):
-
-        np.random.seed(1234)
-        self.centres = np.random.rand(3, 5).T
-
-        self.data = np.array(
+        data = np.array(
             [
                 [0, 0, 0],
                 [0, 0, 1],
@@ -160,19 +178,26 @@ class Test_GriSPy_data_consistency_periodic:
                 [1, 1, 1],
             ]
         )
+        periodic = {0: (0.0, 1.0)}
+        return GriSPy(data, periodic=periodic)
 
-        self.upper_radii = [0.7]
-        self.lower_radii = [0.5]
-        self.n_nearest = 5
+    @pytest.fixture
+    def valid_input(self):
+        rng = np.random.default_rng(1234)
+        d = dict()
+        # Define valid input data
+        d["centres"] = rng.random((5, 3))
+        d["upper_radii"] = 0.7
+        d["lower_radii"] = 0.5
+        d["n_nearest"] = 5
+        return d
 
-        self.periodic = {0: (0.0, 1.0)}
-
-        return GriSPy(self.data, periodic=self.periodic)
-
-    def test_mirror_universe(self, gsp):
+    def test_mirror_universe(self, gsp, valid_input):
+        # Private methods should not be tested, but the idea is to make
+        # some mirror method public.. so they can stay for now
         r_cen = np.array([[0, 0, 0]])
         t_cen, t_ind = gsp._mirror_universe(
-            r_cen, distance_upper_bound=self.upper_radii
+            r_cen, distance_upper_bound=[valid_input["upper_radii"]]
         )
         assert_(isinstance(t_cen, np.ndarray))
         assert_(isinstance(t_ind, np.ndarray))
@@ -180,15 +205,21 @@ class Test_GriSPy_data_consistency_periodic:
         assert_equal(t_cen.ndim, t_cen.ndim)
         assert_equal(t_cen.shape[1], r_cen.shape[1])
 
-    def test_mirror(self, gsp):
+    def test_mirror(self, gsp, valid_input):
+        # Private methods should not be tested, but the idea is to make
+        # some mirror method public.. so they can stay for now
         t_cen = gsp._mirror(
-            np.array([[0, 0, 0]]), distance_upper_bound=self.upper_radii
+            np.array([[0, 0, 0]]),
+            distance_upper_bound=[valid_input["upper_radii"]],
         )
         assert_(isinstance(t_cen, np.ndarray))
 
-    def test_near_boundary(self, gsp):
+    def test_near_boundary(self, gsp, valid_input):
+        # Private methods should not be tested, but the idea is to make
+        # some mirror method public.. so they can stay for now
         mask = gsp._near_boundary(
-            np.array([[0, 0, 0]]), distance_upper_bound=self.upper_radii
+            np.array([[0, 0, 0]]),
+            distance_upper_bound=[valid_input["upper_radii"]],
         )
         assert_(isinstance(mask, np.ndarray))
         assert_equal(mask.ndim, 1)
@@ -197,199 +228,177 @@ class Test_GriSPy_data_consistency_periodic:
 class Test_GriSPy_valid_query_input:
     @pytest.fixture
     def gsp(self):
-
-        # Define valid input data
-        self.centres = np.random.uniform(-1, 1, size=(10, 3))
-        self.upper_radii = 0.8
-        self.lower_radii = 0.4
-        self.kind = "quicksort"
-        self.sorted = True
-        self.n = 5
-
-        data = np.random.uniform(-1, 1, size=(100, 3))
+        rng = np.random.default_rng(678)
+        data = rng.uniform(-1, 1, size=(100, 3))
         periodic = {0: (-1, 1)}
         return GriSPy(data, periodic=periodic)
 
-    def test_invalid_centres(self, gsp):
+    @pytest.fixture
+    def valid_input(self):
+        rng = np.random.default_rng(1234)
+        d = dict()
+        # Define valid input data
+        d["centres"] = rng.uniform(-1, 1, size=(10, 3))
+        d["upper_radii"] = 0.8
+        d["lower_radii"] = 0.4
+        d["n_nearest"] = 5
+        d["kind"] = "quicksort"
+        d["sorted"] = True
+        return d
+
+    def test_invalid_centres_type(self, gsp, valid_input):
         # Invalid type
         bad_centres = [[1, 1, 1], [2, 2, 2]]
         with pytest.raises(TypeError):
             gsp.bubble_neighbors(
-                bad_centres,
-                distance_upper_bound=self.upper_radii,
-                sorted=self.sorted,
-                kind=self.kind,
+                bad_centres, distance_upper_bound=valid_input["upper_radii"]
             )
 
-        bad_centres = np.random.uniform(-1, 1, size=(10, 3))
+    def test_invalid_centres_single_value_type(self, gsp, valid_input):
+        rng = np.random.default_rng(987)
+        bad_centres = rng.uniform(-1, 1, size=(10, 3))
         bad_centres[4, 1] = np.inf  # add one invalid value
         with pytest.raises(ValueError):
             gsp.bubble_neighbors(
                 bad_centres,
-                distance_upper_bound=self.upper_radii,
-                sorted=self.sorted,
-                kind=self.kind,
+                distance_upper_bound=valid_input["upper_radii"],
             )
 
+    def test_invalid_centres_shape(self, gsp, valid_input):
+        rng = np.random.default_rng(987)
         # Invalid shape
-        bad_centres = np.random.uniform(-1, 1, size=(10, 2))
+        bad_centres = rng.uniform(-1, 1, size=(10, 2))
         with pytest.raises(ValueError):
             gsp.bubble_neighbors(
                 bad_centres,
-                distance_upper_bound=self.upper_radii,
-                sorted=self.sorted,
-                kind=self.kind,
+                distance_upper_bound=valid_input["upper_radii"],
             )
 
+    def test_invalid_centres_empty(self, gsp, valid_input):
         # Invalid shape
         bad_centres = np.array([[], [], []]).reshape((0, 3))
         with pytest.raises(ValueError):
             gsp.bubble_neighbors(
                 bad_centres,
-                distance_upper_bound=self.upper_radii,
-                sorted=self.sorted,
-                kind=self.kind,
+                distance_upper_bound=valid_input["upper_radii"],
             )
 
-    def test_invalid_bounds_bubble(self, gsp):
-
+    def test_invalid_bounds_type_bubble(self, gsp, valid_input):
+        rng = np.random.default_rng(987)
         # Invalid type
-        bad_upper_radii = list(np.random.uniform(0.6, 1, size=10))
+        bad_upper_radii = list(rng.uniform(0.6, 1, size=10))
         with pytest.raises(TypeError):
             gsp.bubble_neighbors(
-                self.centres,
+                valid_input["centres"],
                 distance_upper_bound=bad_upper_radii,
-                sorted=self.sorted,
-                kind=self.kind,
             )
 
+    def test_invalid_bounds_value_bubble(self, gsp, valid_input):
+        rng = np.random.default_rng(987)
         # Invalid value
-        bad_upper_radii = np.random.uniform(0.6, 1, size=10)
+        bad_upper_radii = rng.uniform(0.6, 1, size=10)
         bad_upper_radii[5] = -1.0
         with pytest.raises(ValueError):
             gsp.bubble_neighbors(
-                self.centres,
+                valid_input["centres"],
                 distance_upper_bound=bad_upper_radii,
-                sorted=self.sorted,
-                kind=self.kind,
             )
 
+    def test_invalid_bounds_size_bubble(self, gsp, valid_input):
+        rng = np.random.default_rng(987)
         # Different lenght than centres
-        bad_upper_radii = np.random.uniform(0.6, 1, size=11)
+        bad_upper_radii = rng.uniform(0.6, 1, size=11)
         with pytest.raises(ValueError):
             gsp.bubble_neighbors(
-                self.centres,
+                valid_input["centres"],
                 distance_upper_bound=bad_upper_radii,
-                sorted=self.sorted,
-                kind=self.kind,
             )
 
+    def test_invalid_bounds_larger_than_periodic_bubble(
+        self, gsp, valid_input
+    ):
         # Invalid value
         bad_upper_radii = 10.0  # larger than periodic range
         with pytest.raises(ValueError):
             gsp.bubble_neighbors(
-                self.centres,
+                valid_input["centres"],
                 distance_upper_bound=bad_upper_radii,
-                sorted=self.sorted,
-                kind=self.kind,
             )
 
-    def test_invalid_bounds_shell(self, gsp):
-
+    def test_invalid_bounds_lenghts_shell(self, gsp, valid_input):
+        rng = np.random.default_rng(987)
         # Different lenght than centres
-        lower_radii = np.random.uniform(0.1, 0.5, size=10)
-        bad_upper_radii = np.random.uniform(0.6, 1, size=11)
+        lower_radii = rng.uniform(0.1, 0.5, size=10)
+        bad_upper_radii = rng.uniform(0.6, 1, size=11)
         with pytest.raises(ValueError):
             gsp.shell_neighbors(
-                self.centres,
+                valid_input["centres"],
                 distance_upper_bound=bad_upper_radii,
                 distance_lower_bound=lower_radii,
-                sorted=self.sorted,
-                kind=self.kind,
             )
 
+    def test_invalid_bounds_values_shell(self, gsp, valid_input):
+        rng = np.random.default_rng(354)
         # Upper bound is lower than lower bound
-        lower_radii = np.random.uniform(0.1, 0.5, size=10)
-        bad_upper_radii = np.random.uniform(0.6, 1, size=10)
+        lower_radii = rng.uniform(0.1, 0.5, size=10)
+        bad_upper_radii = rng.uniform(0.6, 1, size=10)
         bad_upper_radii[4] = lower_radii[4] - 0.05
         with pytest.raises(ValueError):
             gsp.shell_neighbors(
-                self.centres,
+                valid_input["centres"],
                 distance_upper_bound=bad_upper_radii,
                 distance_lower_bound=lower_radii,
-                sorted=self.sorted,
-                kind=self.kind,
             )
 
-    def test_invalid_bool(self, gsp):
-
+    def test_invalid_sorted_type(self, gsp, valid_input):
         # Invalid type
         bad_sorted = "True"
         with pytest.raises(TypeError):
             gsp.bubble_neighbors(
-                self.centres,
-                distance_upper_bound=self.upper_radii,
+                valid_input["centres"],
+                distance_upper_bound=valid_input["upper_radii"],
                 sorted=bad_sorted,
-                kind=self.kind,
             )
 
-    def test_invalid_sortkind(self, gsp):
-
+    def test_invalid_sortkind_type(self, gsp, valid_input):
         # Invalid type
         bad_kind = ["quicksort"]  # string inside list
         with pytest.raises(TypeError):
             gsp.bubble_neighbors(
-                self.centres,
-                distance_upper_bound=self.upper_radii,
-                sorted=self.sorted,
+                valid_input["centres"],
+                distance_upper_bound=valid_input["upper_radii"],
                 kind=bad_kind,
             )
 
+    def test_invalid_sortkind_value(self, gsp, valid_input):
         # Invalid name
         bad_kind = "quick_sort"
         with pytest.raises(ValueError):
             gsp.bubble_neighbors(
-                self.centres,
-                distance_upper_bound=self.upper_radii,
-                sorted=self.sorted,
+                valid_input["centres"],
+                distance_upper_bound=valid_input["upper_radii"],
                 kind=bad_kind,
             )
 
-    def test_invalid_nnearest(self, gsp):
+    def test_invalid_nnearest_type(self, gsp, valid_input):
 
         # Invalid type
         bad_n = np.array([2])  # array instead of integer
         with pytest.raises(TypeError):
-            gsp.nearest_neighbors(
-                self.centres,
-                n=bad_n,
-                kind=self.kind,
-            )
+            gsp.nearest_neighbors(valid_input["centres"], n=bad_n)
 
+    def test_invalid_nnearest_value(self, gsp, valid_input):
         # Invalid value
         bad_n = -5
         with pytest.raises(ValueError):
-            gsp.nearest_neighbors(
-                self.centres,
-                n=bad_n,
-                kind=self.kind,
-            )
-
-        # Invalid value
-        bad_n = 10 ** 10  # too large
-        with pytest.raises(ValueError):
-            gsp.nearest_neighbors(
-                self.centres,
-                n=bad_n,
-                kind=self.kind,
-            )
+            gsp.nearest_neighbors(valid_input["centres"], n=bad_n)
 
 
 class Test_GriSPy_valid_init:
     @pytest.fixture
-    def valid_input(self, seed=42):
+    def valid_input(self):
         # Define valid input data
-        rng = np.random.default_rng(seed)
+        rng = np.random.default_rng(seed=42)
         d = dict()
         d["data"] = rng.uniform(-1, 1, size=(100, 3))
         d["periodic"] = {0: (-1, 1), 1: (-1, 1), 2: None}
@@ -489,8 +498,8 @@ class Test_GriSPy_valid_init:
 class Test_GriSPy_set_periodicity:
     @pytest.fixture
     def gsp(self):
-        random = np.random.RandomState(3596)
-        self.centres = random.rand(3, 5).T
+        rng = np.random.default_rng(3596)
+        self.centres = rng.random((5, 3))
         data = np.array(
             [
                 [0, 0, 0],
