@@ -25,42 +25,37 @@ from grispy import distances, GriSPy
 # TESTS
 # =============================================================================
 
+
 def test_euclid_simetric():
     # Distancia a-->b = b-->a (metric='euclid')
     dist1 = distances.euclid(
-        c0=np.array([1, 1]),
-        centres=np.array([[2, 2]]),
-        dim=2)
+        c0=np.array([1, 1]), centres=np.array([[2, 2]]), dim=2
+    )
     dist2 = distances.euclid(
-        c0=np.array([2, 2]),
-        centres=np.array([[1, 1]]),
-        dim=2)
+        c0=np.array([2, 2]), centres=np.array([[1, 1]]), dim=2
+    )
     np.testing.assert_almost_equal(dist1, dist2, decimal=16)
 
 
 def test_haversine_simetric():
     # Distancia a-->b = b-->a (metric='haversine')
     dist1 = distances.haversine(
-        c0=np.array([1, 1]),
-        centres=np.array([[2, 2]]),
-        dim=2)
+        c0=np.array([1, 1]), centres=np.array([[2, 2]]), dim=2
+    )
     dist2 = distances.haversine(
-        c0=np.array([2, 2]),
-        centres=np.array([[1, 1]]),
-        dim=2)
+        c0=np.array([2, 2]), centres=np.array([[1, 1]]), dim=2
+    )
     np.testing.assert_almost_equal(dist1, dist2, decimal=10)
 
 
 def test_vincenty_simetric():
     # Distancia a-->b = b-->a (metric='vincenty')
     dist1 = distances.vincenty(
-        c0=np.array([1, 1]),
-        centres=np.array([[2, 2]]),
-        dim=2)
+        c0=np.array([1, 1]), centres=np.array([[2, 2]]), dim=2
+    )
     dist2 = distances.vincenty(
-        c0=np.array([2, 2]),
-        centres=np.array([[1, 1]]),
-        dim=2)
+        c0=np.array([2, 2]), centres=np.array([[1, 1]]), dim=2
+    )
     np.testing.assert_almost_equal(dist1, dist2, decimal=10)
 
 
@@ -152,7 +147,6 @@ def test_vincenty_not_nan():
 
 
 def test_custom_distance_lev():
-
     def levenshtein(c0, centres, dim):
         c0 = tuple(c0)
         distances = np.empty(len(centres))
@@ -176,29 +170,125 @@ def test_custom_distance_lev():
 
     upper_radii = 10.0
     lev_dist, lev_ind = gsp.bubble_neighbors(
-        centres, distance_upper_bound=upper_radii)
+        centres, distance_upper_bound=upper_radii
+    )
 
     assert len(centres) == len(lev_dist) == len(lev_ind)
     assert np.all(lev_dist[0] == 2)
     assert np.all(lev_dist[1] == 2)
 
     assert np.all(
-        lev_ind[0] == [
-            648, 516, 705, 910, 533, 559, 61, 351, 954, 214, 90, 645, 846, 818,
-            39, 433, 7, 700, 2, 364, 547, 427, 660, 548, 333, 246, 193, 55, 83,
-            159, 684, 310, 777, 112, 535, 780, 334, 300, 467, 30, 613, 564,
-            134, 534, 435, 901, 296, 800, 391, 321, 763, 208, 42, 413, 97])
+        lev_ind[0]
+        == [
+            648,
+            516,
+            705,
+            910,
+            533,
+            559,
+            61,
+            351,
+            954,
+            214,
+            90,
+            645,
+            846,
+            818,
+            39,
+            433,
+            7,
+            700,
+            2,
+            364,
+            547,
+            427,
+            660,
+            548,
+            333,
+            246,
+            193,
+            55,
+            83,
+            159,
+            684,
+            310,
+            777,
+            112,
+            535,
+            780,
+            334,
+            300,
+            467,
+            30,
+            613,
+            564,
+            134,
+            534,
+            435,
+            901,
+            296,
+            800,
+            391,
+            321,
+            763,
+            208,
+            42,
+            413,
+            97,
+        ]
+    )
 
     assert np.all(
-        lev_ind[1] == [
-            580, 740, 498, 89, 610, 792, 259, 647, 58, 722, 360, 685, 552, 619,
-            6, 555, 935, 268, 615, 661, 680, 817, 75, 919, 922, 927, 52, 77,
-            859, 70, 544, 189, 340, 691, 453, 570, 126, 140, 67, 284, 662,
-            590, 527])
+        lev_ind[1]
+        == [
+            580,
+            740,
+            498,
+            89,
+            610,
+            792,
+            259,
+            647,
+            58,
+            722,
+            360,
+            685,
+            552,
+            619,
+            6,
+            555,
+            935,
+            268,
+            615,
+            661,
+            680,
+            817,
+            75,
+            919,
+            922,
+            927,
+            52,
+            77,
+            859,
+            70,
+            544,
+            189,
+            340,
+            691,
+            453,
+            570,
+            126,
+            140,
+            67,
+            284,
+            662,
+            590,
+            527,
+        ]
+    )
 
 
 def test_custom_distance_hamming():
-
     def hamming(c0, centres, dim):
         c0 = c0.reshape((-1, dim))
         d = cdist(c0, centres, metric="hamming").reshape((-1,))
@@ -218,22 +308,119 @@ def test_custom_distance_hamming():
 
     upper_radii = 10.0
     ham_dist, ham_ind = gsp.bubble_neighbors(
-        centres, distance_upper_bound=upper_radii)
+        centres, distance_upper_bound=upper_radii
+    )
 
     assert len(centres) == len(ham_dist) == len(ham_ind)
     assert np.all(ham_dist[0] == 1)
     assert np.all(ham_dist[1] == 1)
 
     assert np.all(
-        ham_ind[0] == [
-            648, 516, 705, 910, 533, 559, 61, 351, 954, 214, 90, 645, 846, 818,
-            39, 433, 7, 700, 2, 364, 547, 427, 660, 548, 333, 246, 193, 55, 83,
-            159, 684, 310, 777, 112, 535, 780, 334, 300, 467, 30, 613, 564,
-            134, 534, 435, 901, 296, 800, 391, 321, 763, 208, 42, 413, 97])
+        ham_ind[0]
+        == [
+            648,
+            516,
+            705,
+            910,
+            533,
+            559,
+            61,
+            351,
+            954,
+            214,
+            90,
+            645,
+            846,
+            818,
+            39,
+            433,
+            7,
+            700,
+            2,
+            364,
+            547,
+            427,
+            660,
+            548,
+            333,
+            246,
+            193,
+            55,
+            83,
+            159,
+            684,
+            310,
+            777,
+            112,
+            535,
+            780,
+            334,
+            300,
+            467,
+            30,
+            613,
+            564,
+            134,
+            534,
+            435,
+            901,
+            296,
+            800,
+            391,
+            321,
+            763,
+            208,
+            42,
+            413,
+            97,
+        ]
+    )
 
     assert np.all(
-        ham_ind[1] == [
-            580, 740, 498, 89, 610, 792, 259, 647, 58, 722, 360, 685, 552, 619,
-            6, 555, 935, 268, 615, 661, 680, 817, 75, 919, 922, 927, 52, 77,
-            859, 70, 544, 189, 340, 691, 453, 570, 126, 140, 67, 284, 662,
-            590, 527])
+        ham_ind[1]
+        == [
+            580,
+            740,
+            498,
+            89,
+            610,
+            792,
+            259,
+            647,
+            58,
+            722,
+            360,
+            685,
+            552,
+            619,
+            6,
+            555,
+            935,
+            268,
+            615,
+            661,
+            680,
+            817,
+            75,
+            919,
+            922,
+            927,
+            52,
+            77,
+            859,
+            70,
+            544,
+            189,
+            340,
+            691,
+            453,
+            570,
+            126,
+            140,
+            67,
+            284,
+            662,
+            590,
+            527,
+        ]
+    )

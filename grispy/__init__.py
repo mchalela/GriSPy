@@ -12,7 +12,7 @@
 GriSPy is a regular grid search algorithm for quick nearest-neighbor lookup.
 """
 
-__all__ = ["GriSPy"]
+__all__ = ["Grid", "GriSPy"]
 
 
 __version__ = "0.1.0"
@@ -22,4 +22,4 @@ __version__ = "0.1.0"
 # IMPORTS
 # =============================================================================
 
-from .core import GriSPy
+from .core import Grid, GriSPy

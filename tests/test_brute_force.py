@@ -47,13 +47,13 @@ class Test_auto:
 
 
 class Test_grispy:
-
     def setup_method(self, *args):
         self.random = np.random.RandomState(1234)
         self.lbox = 100.0
         self.centres = self.lbox * (0.5 - self.random.rand(1, 10).T)
         self.data = self.random.uniform(
-            -0.5 * self.lbox, 0.5 * self.lbox, size=(10**3, 1))
+            -0.5 * self.lbox, 0.5 * self.lbox, size=(10 ** 3, 1)
+        )
         self.upper_radii = 0.25 * self.lbox
         self.lower_radii = 0.20 * self.lbox
         self.n_nearest = 32
@@ -76,7 +76,8 @@ class Test_grispy:
     def test_all_in_bubble(self):
         gsp = self.make_gsp({})
         b, ind = gsp.bubble_neighbors(
-            self.centres, distance_upper_bound=self.upper_radii)
+            self.centres, distance_upper_bound=self.upper_radii
+        )
 
         for i, l in enumerate(ind):
             for j in l:
@@ -85,7 +86,8 @@ class Test_grispy:
 
         gsp = self.make_gsp({0: (-self.lbox * 0.5, self.lbox * 0.5)})
         b, ind = gsp.bubble_neighbors(
-            self.centres, distance_upper_bound=self.upper_radii)
+            self.centres, distance_upper_bound=self.upper_radii
+        )
 
         for i, l in enumerate(ind):
             for j in l:
@@ -102,7 +104,8 @@ class Test_grispy:
         b, ind = gsp.shell_neighbors(
             self.centres,
             distance_lower_bound=self.lower_radii,
-            distance_upper_bound=self.upper_radii)
+            distance_upper_bound=self.upper_radii,
+        )
 
         for i, l in enumerate(ind):
             for j in l:
@@ -114,7 +117,8 @@ class Test_grispy:
         b, ind = gsp.shell_neighbors(
             self.centres,
             distance_lower_bound=self.lower_radii,
-            distance_upper_bound=self.upper_radii,)
+            distance_upper_bound=self.upper_radii,
+        )
 
         for i, l in enumerate(ind):
             for j in l:
@@ -130,7 +134,8 @@ class Test_grispy:
     def test_bubble_precision(self):
         gsp = self.make_gsp({})
         b, ind = gsp.bubble_neighbors(
-            self.centres, distance_upper_bound=self.upper_radii, sorted=True)
+            self.centres, distance_upper_bound=self.upper_radii, sorted=True
+        )
 
         for i, centre in enumerate(self.centres):
             d = np.fabs(self.data - centre)
@@ -141,7 +146,8 @@ class Test_grispy:
 
         gsp = self.make_gsp({0: (-self.lbox * 0.5, self.lbox * 0.5)})
         b, ind = gsp.bubble_neighbors(
-            self.centres, distance_upper_bound=self.upper_radii, sorted=True)
+            self.centres, distance_upper_bound=self.upper_radii, sorted=True
+        )
 
         for i, centre in enumerate(self.centres):
             d = self.data - centre
@@ -162,7 +168,8 @@ class Test_grispy:
             self.centres,
             distance_lower_bound=self.lower_radii,
             distance_upper_bound=self.upper_radii,
-            sorted=True)
+            sorted=True,
+        )
 
         for i, centre in enumerate(self.centres):
             d = np.fabs(self.data - centre)
@@ -176,7 +183,8 @@ class Test_grispy:
             self.centres,
             distance_lower_bound=self.lower_radii,
             distance_upper_bound=self.upper_radii,
-            sorted=True)
+            sorted=True,
+        )
 
         for i, centre in enumerate(self.centres):
             d = self.data - centre
@@ -215,7 +223,7 @@ class Test_grispy:
             assert_equal(len(b[i]), len(d))
             assert_almost_equal(b[i], d, decimal=16)
 
-    @pytest.mark.parametrize('floatX', [np.float32, np.float64])
+    @pytest.mark.parametrize("floatX", [np.float32, np.float64])
     def test_floatX_precision(self, floatX):
 
         rng = np.random.default_rng(1234)
@@ -233,19 +241,24 @@ class Test_grispy:
         for i, ind_list in enumerate(ind_floatX):
             for j, il in enumerate(ind_list):
                 delta = data_floatX[il] - centres_floatX[i]
-                dist = np.sqrt(np.sum(delta**2))
+                dist = np.sqrt(np.sum(delta ** 2))
                 assert_(dist <= upper_radii + eps)
                 gsp_dist = dist_floatX[i][j]
                 assert_(abs(dist - gsp_dist) <= eps)
 
 
 class Test_periodicity_grispy:
-
     def setup_method(self, *args):
         self.lbox = 10.0
         self.data = np.array(
-            [[2, 0, 0], [-2, 0, 0],
-                [0, 2, 0], [0, -2, 0], [0, 0, 2], [0, 0, -2]]
+            [
+                [2, 0, 0],
+                [-2, 0, 0],
+                [0, 2, 0],
+                [0, -2, 0],
+                [0, 0, 2],
+                [0, 0, -2],
+            ]
         )
         self.eps = 1e-6
 
@@ -276,15 +289,19 @@ class Test_periodicity_grispy:
                 assert_(dis[i] >= lower_radii - self.eps)
                 assert_(dis[i] <= upper_radii + self.eps)
 
-        gsp = self.make_gsp({
-            0: (-self.lbox * 0.5, self.lbox * 0.5),
-            1: (-self.lbox * 0.5, self.lbox * 0.5),
-            2: (-self.lbox * 0.5, self.lbox * 0.5)})
+        gsp = self.make_gsp(
+            {
+                0: (-self.lbox * 0.5, self.lbox * 0.5),
+                1: (-self.lbox * 0.5, self.lbox * 0.5),
+                2: (-self.lbox * 0.5, self.lbox * 0.5),
+            }
+        )
 
         dis, ind = gsp.shell_neighbors(
             centres,
             distance_lower_bound=lower_radii - self.eps,
-            distance_upper_bound=upper_radii + self.eps)
+            distance_upper_bound=upper_radii + self.eps,
+        )
         dis, ind = dis[0], ind[0]
 
         aux = np.argsort(ind)
@@ -306,8 +323,9 @@ class Test_periodicity_grispy:
 
             centre = centres[j].reshape(1, 3)
 
-            dis, ind = gsp.bubble_neighbors(centre,
-                                            distance_upper_bound=upper_radii)
+            dis, ind = gsp.bubble_neighbors(
+                centre, distance_upper_bound=upper_radii
+            )
             dis, ind = dis[0], ind[0]
 
             aux = np.argsort(ind)
