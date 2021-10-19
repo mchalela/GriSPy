@@ -196,24 +196,14 @@ class Grid:
     # =========================================================================
 
     @property
-    def ndata(self):
-        """Total number of a data-points."""
-        return len(self.data)
-
-    @property
     def dim(self):
         """Grid dimension."""
         return self.data.shape[1]
 
     @property
-    def shape(self):
-        """Grid shape, i.e. number of cells per dimension."""
-        return (self.N_cells,) * self.dim
-
-    @property
-    def size(self):
-        """Grid size, i.e. total number of cells."""
-        return self.N_cells ** self.dim
+    def edges(self):
+        """Edges of the grid in each dimension."""
+        return self.k_bins_[[0, -1], :].copy()
 
     @property
     def epsilon(self):
@@ -229,9 +219,19 @@ class Grid:
         return np.finfo(dtype).resolution * 1e2
 
     @property
-    def edges(self):
-        """Edges of the grid in each dimension."""
-        return self.k_bins_[[0, -1], :].copy()
+    def ndata(self):
+        """Total number of a data-points."""
+        return len(self.data)
+
+    @property
+    def shape(self):
+        """Grid shape, i.e. number of cells per dimension."""
+        return (self.N_cells,) * self.dim
+
+    @property
+    def size(self):
+        """Grid size, i.e. total number of cells."""
+        return self.N_cells ** self.dim
 
     # =========================================================================
     # INTERNAL IMPLEMENTATION
@@ -397,7 +397,9 @@ class Grid:
         vlds.validate_ids(ids, self.size)
 
         digits = np.unravel_index(ids, self.shape, order="F")
-        return np.vstack(digits).T
+        digits = np.vstack(digits).T
+        # Convert to int16 for consistency with _digitize
+        return digits.astype(np.int16)
 
     def cell_center(self, ids):
         """Return cell center coordinates for a given cell id."""

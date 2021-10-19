@@ -14,6 +14,14 @@ from grispy import GriSPy
 from numpy.testing import assert_equal, assert_, assert_almost_equal
 
 
+# def test_grid_properties_edges(self, grid):
+#     dmin = grid.data.min(axis=0) - grid.epsilon
+#     dmax = grid.data.max(axis=0) + grid.epsilon
+#     k_bins = np.linspace(dmin, dmax, grid.N_cells + 1)
+#     expected = k_bins[[0, -1], :]
+#     npt.assert_almost_equal(grid.edges, expected, 14)
+
+
 class Test_auto:
     def setup_method(self, *args):
         self.random = np.random.RandomState(8)
