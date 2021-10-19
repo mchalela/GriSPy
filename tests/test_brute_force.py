@@ -8,11 +8,11 @@
 #   Full Text: https://github.com/mchalela/GriSPy/blob/master/LICENSE
 
 
-import pytest
 import numpy as np
-from grispy import GriSPy
-from numpy.testing import assert_equal, assert_, assert_almost_equal
+import numpy.testing as npt
+import pytest
 
+from grispy import GriSPy
 
 # def test_grid_properties_edges(self, grid):
 #     dmin = grid.data.min(axis=0) - grid.epsilon
@@ -38,8 +38,8 @@ class Test_auto:
             self.centres, distance_upper_bound=1.5
         )
         for idx in range(len(self.centres)):
-            assert_(len(dist[idx]) == 1)
-            assert_(len(index[idx]) == 1)
+            npt.assert_(len(dist[idx]) == 1)
+            npt.assert_(len(index[idx]) == 1)
 
     def test_auto_peridic(self):
 
@@ -50,8 +50,8 @@ class Test_auto:
             self.centres, distance_upper_bound=1.5
         )
         for idx in range(len(self.centres)):
-            assert_(len(dist[idx]) == 1)
-            assert_(len(index[idx]) == 1)
+            npt.assert_(len(dist[idx]) == 1)
+            npt.assert_(len(index[idx]) == 1)
 
 
 class Test_grispy:
@@ -74,12 +74,12 @@ class Test_grispy:
         gsp = self.make_gsp({})
         b, ind = gsp.nearest_neighbors(self.centres, n=self.n_nearest)
         for i in range(len(b)):
-            assert_equal(sorted(b[i]), b[i])
+            npt.assert_equal(sorted(b[i]), b[i])
 
         gsp = self.make_gsp({0: (-self.lbox * 0.5, self.lbox * 0.5)})
         b, ind = gsp.nearest_neighbors(self.centres, n=self.n_nearest)
         for i in range(len(b)):
-            assert_equal(sorted(b[i]), b[i])
+            npt.assert_equal(sorted(b[i]), b[i])
 
     def test_all_in_bubble(self):
         gsp = self.make_gsp({})
@@ -90,7 +90,7 @@ class Test_grispy:
         for i, l in enumerate(ind):
             for j in l:
                 d = np.fabs(self.data[j] - self.centres[i])
-                assert_(d <= self.upper_radii + self.eps)
+                npt.assert_(d <= self.upper_radii + self.eps)
 
         gsp = self.make_gsp({0: (-self.lbox * 0.5, self.lbox * 0.5)})
         b, ind = gsp.bubble_neighbors(
@@ -105,7 +105,7 @@ class Test_grispy:
                 if d < -0.5 * self.lbox:
                     d = d + self.lbox
                 d = np.fabs(d)
-                assert_(d <= self.upper_radii + self.eps)
+                npt.assert_(d <= self.upper_radii + self.eps)
 
     def test_all_in_shell(self):
         gsp = self.make_gsp({})
@@ -118,8 +118,8 @@ class Test_grispy:
         for i, l in enumerate(ind):
             for j in l:
                 d = np.fabs(self.data[j] - self.centres[i])
-                assert_(d <= self.upper_radii + self.eps)
-                assert_(d >= self.lower_radii - self.eps)
+                npt.assert_(d <= self.upper_radii + self.eps)
+                npt.assert_(d >= self.lower_radii - self.eps)
 
         gsp = self.make_gsp({0: (-self.lbox * 0.5, self.lbox * 0.5)})
         b, ind = gsp.shell_neighbors(
@@ -136,8 +136,8 @@ class Test_grispy:
                 if d < -0.5 * self.lbox:
                     d = d + self.lbox
                 d = np.fabs(d)
-                assert_(d <= self.upper_radii + self.eps)
-                assert_(d >= self.lower_radii - self.eps)
+                npt.assert_(d <= self.upper_radii + self.eps)
+                npt.assert_(d >= self.lower_radii - self.eps)
 
     def test_bubble_precision(self):
         gsp = self.make_gsp({})
@@ -149,8 +149,8 @@ class Test_grispy:
             d = np.fabs(self.data - centre)
             mask = d < self.upper_radii
             d = d[mask]
-            assert_equal(len(b[i]), len(d))
-            assert_almost_equal(b[i], sorted(d), decimal=14)
+            npt.assert_equal(len(b[i]), len(d))
+            npt.assert_almost_equal(b[i], sorted(d), decimal=14)
 
         gsp = self.make_gsp({0: (-self.lbox * 0.5, self.lbox * 0.5)})
         b, ind = gsp.bubble_neighbors(
@@ -167,8 +167,8 @@ class Test_grispy:
 
             mask = d < self.upper_radii
             d = d[mask]
-            assert_equal(len(b[i]), len(d))
-            assert_almost_equal(b[i], sorted(d), decimal=14)
+            npt.assert_equal(len(b[i]), len(d))
+            npt.assert_almost_equal(b[i], sorted(d), decimal=14)
 
     def test_shell_precision(self):
         gsp = self.make_gsp({})
@@ -183,8 +183,8 @@ class Test_grispy:
             d = np.fabs(self.data - centre)
             mask = (d <= self.upper_radii) * (d >= self.lower_radii)
             d = d[mask]
-            assert_equal(len(b[i]), len(d))
-            assert_almost_equal(b[i], sorted(d), decimal=14)
+            npt.assert_equal(len(b[i]), len(d))
+            npt.assert_almost_equal(b[i], sorted(d), decimal=14)
 
         gsp = self.make_gsp({0: (-self.lbox * 0.5, self.lbox * 0.5)})
         b, ind = gsp.shell_neighbors(
@@ -204,8 +204,8 @@ class Test_grispy:
 
             mask = (d <= self.upper_radii) * (d >= self.lower_radii)
             d = d[mask]
-            assert_equal(len(b[i]), len(d))
-            assert_almost_equal(b[i], sorted(d), decimal=14)
+            npt.assert_equal(len(b[i]), len(d))
+            npt.assert_almost_equal(b[i], sorted(d), decimal=14)
 
     def test_nearest_neighbors_precision(self):
         gsp = self.make_gsp({})
@@ -214,8 +214,8 @@ class Test_grispy:
             d = np.fabs(self.data - centre)
             d = sorted(np.concatenate(d))
             d = d[: self.n_nearest]
-            assert_equal(len(b[i]), len(d))
-            assert_almost_equal(b[i], d, decimal=16)
+            npt.assert_equal(len(b[i]), len(d))
+            npt.assert_almost_equal(b[i], d, decimal=16)
 
         gsp = self.make_gsp({0: (-self.lbox * 0.5, self.lbox * 0.5)})
         b, ind = gsp.nearest_neighbors(self.centres, n=self.n_nearest)
@@ -228,8 +228,8 @@ class Test_grispy:
             d = np.fabs(d)
             d = sorted(np.concatenate(d))
             d = d[: self.n_nearest]
-            assert_equal(len(b[i]), len(d))
-            assert_almost_equal(b[i], d, decimal=16)
+            npt.assert_equal(len(b[i]), len(d))
+            npt.assert_almost_equal(b[i], d, decimal=16)
 
     @pytest.mark.parametrize("floatX", [np.float32, np.float64])
     def test_floatX_precision(self, floatX):
@@ -250,9 +250,9 @@ class Test_grispy:
             for j, il in enumerate(ind_list):
                 delta = data_floatX[il] - centres_floatX[i]
                 dist = np.sqrt(np.sum(delta ** 2))
-                assert_(dist <= upper_radii + eps)
+                npt.assert_(dist <= upper_radii + eps)
                 gsp_dist = dist_floatX[i][j]
-                assert_(abs(dist - gsp_dist) <= eps)
+                npt.assert_(abs(dist - gsp_dist) <= eps)
 
 
 class Test_periodicity_grispy:
@@ -293,9 +293,9 @@ class Test_periodicity_grispy:
             ind = ind[aux]
             dis = dis[aux]
             for i in range(2):
-                assert_equal(ind[i], i + (j * 2))
-                assert_(dis[i] >= lower_radii - self.eps)
-                assert_(dis[i] <= upper_radii + self.eps)
+                npt.assert_equal(ind[i], i + (j * 2))
+                npt.assert_(dis[i] >= lower_radii - self.eps)
+                npt.assert_(dis[i] <= upper_radii + self.eps)
 
         gsp = self.make_gsp(
             {
@@ -317,9 +317,9 @@ class Test_periodicity_grispy:
         dis = dis[aux]
 
         for i in range(6):
-            assert_equal(ind[i], i)
-            assert_(dis[i] >= lower_radii * (1.0 - self.eps))
-            assert_(dis[i] <= upper_radii * (1.0 + self.eps))
+            npt.assert_equal(ind[i], i)
+            npt.assert_(dis[i] >= lower_radii * (1.0 - self.eps))
+            npt.assert_(dis[i] <= upper_radii * (1.0 + self.eps))
 
     def test_periodicity_in_bubble(self):
 
@@ -341,9 +341,9 @@ class Test_periodicity_grispy:
             dis = dis[aux]
 
             for i in range(2):
-                assert_equal(ind[i], i + (j * 2))
-                assert_(dis[i] <= upper_radii * (1.0 + self.eps))
-                assert_(dis[i] >= upper_radii * (1.0 - self.eps))
+                npt.assert_equal(ind[i], i + (j * 2))
+                npt.assert_(dis[i] <= upper_radii * (1.0 + self.eps))
+                npt.assert_(dis[i] >= upper_radii * (1.0 - self.eps))
 
 
 class Test_hypersphere_grispy:
@@ -388,7 +388,7 @@ class Test_hypersphere_grispy:
         w = self.radius * w * tttt
 
         tttt = np.sqrt(x ** 2 + y ** 2 + z ** 2 + w ** 2)
-        assert_almost_equal(self.radius, tttt, decimal=12)
+        npt.assert_almost_equal(self.radius, tttt, decimal=12)
         self.data = np.array([x, y, z, w]).T
 
         ############################################
@@ -406,9 +406,9 @@ class Test_hypersphere_grispy:
         dis, ind = dis[0], ind[0]
 
         mask = self.radius <= self.upper_radii * (1.0 + self.eps)
-        assert_equal(len(dis), len(ind))
-        assert_equal(len(dis), len(self.radius[mask]))
-        assert_almost_equal(dis, sorted(self.radius[mask]), decimal=14)
+        npt.assert_equal(len(dis), len(ind))
+        npt.assert_equal(len(dis), len(self.radius[mask]))
+        npt.assert_almost_equal(dis, sorted(self.radius[mask]), decimal=14)
 
     def test_in_hipersheell(self, gsp):
 
@@ -425,9 +425,9 @@ class Test_hypersphere_grispy:
         mask = (self.radius <= self.upper_radii * (1.0 + self.eps)) * (
             self.radius >= self.lower_radii * (1.0 - self.eps)
         )
-        assert_equal(len(dis), len(ind))
-        assert_equal(len(dis), len(self.radius[mask]))
-        assert_almost_equal(dis, sorted(self.radius[mask]), decimal=14)
+        npt.assert_equal(len(dis), len(ind))
+        npt.assert_equal(len(dis), len(self.radius[mask]))
+        npt.assert_almost_equal(dis, sorted(self.radius[mask]), decimal=14)
 
     def test_hipernearest_neighbors(self, gsp):
 
@@ -437,6 +437,6 @@ class Test_hypersphere_grispy:
         dis, ind = dis[0], ind[0]
 
         tmp = sorted(self.radius)[: self.n_nearest]
-        assert_equal(len(dis), len(ind))
-        assert_equal(len(dis), len(tmp))
-        assert_almost_equal(dis, tmp, decimal=14)
+        npt.assert_equal(len(dis), len(ind))
+        npt.assert_equal(len(dis), len(tmp))
+        npt.assert_almost_equal(dis, tmp, decimal=14)

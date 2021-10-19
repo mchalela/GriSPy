@@ -8,9 +8,8 @@
 #   Full Text: https://github.com/mchalela/GriSPy/blob/master/LICENSE
 
 
-import pytest
-
 import numpy as np
+import pytest
 
 from grispy import Grid, GriSPy
 from grispy.core import BuildStats, PeriodicityConf

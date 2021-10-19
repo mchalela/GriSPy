@@ -12,7 +12,6 @@
 
 import numpy as np
 
-
 # ---------------------------------
 # Validators for method params
 # Meant to be called within each method

@@ -18,17 +18,15 @@
 # IMPORTS
 # =============================================================================
 
-import time
 import datetime
-
 import itertools
-
-import numpy as np
+import time
 
 import attr
+import numpy as np
 
-from . import distances, validators as vlds
-
+from . import distances
+from . import validators as vlds
 
 # =============================================================================
 # CONSTANTS

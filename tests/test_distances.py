@@ -13,13 +13,10 @@
 # =============================================================================
 
 import numpy as np
-
+import textdistance
 from scipy.spatial.distance import cdist
 
-import textdistance
-
-from grispy import distances, GriSPy
-
+from grispy import GriSPy, distances
 
 # =============================================================================
 # TESTS

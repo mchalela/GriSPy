@@ -8,10 +8,10 @@
 #   Full Text: https://github.com/mchalela/GriSPy/blob/master/LICENSE
 
 
-import numpy as np
 import matplotlib.pyplot as plt
-from grispy import GriSPy
+import numpy as np
 
+from grispy import GriSPy
 
 # Example 1. 2D Uniform Distribution ------------------------------------------
 # This example generates a 2D random uniform distribution.
