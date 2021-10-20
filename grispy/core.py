@@ -18,9 +18,7 @@
 # IMPORTS
 # =============================================================================
 
-import datetime
 import itertools
-import time
 
 import attr
 import numpy as np
@@ -43,27 +41,8 @@ EMPTY_ARRAY = np.array([], dtype=int)
 
 
 # =============================================================================
-#  TIME CLASS
+#  PERIODICITY CONF CLASS
 # =============================================================================
-
-
-@attr.s(frozen=True)
-class BuildStats:
-    """Statistics about the grid creation.
-
-    Attributes
-    ----------
-    buildtime: float
-        The number of seconds expended in build the grid.
-    periodicity_set_at: datetime.datetime
-        The date and time when the periodicity was setted.
-    datetime: datetime.datetime
-        The date and time of build.
-    """
-
-    buildtime = attr.ib()
-    periodicity_set_at = attr.ib()
-    datetime = attr.ib()
 
 
 @attr.s(frozen=True)
@@ -119,8 +98,6 @@ class Grid:
         are located within the given cell.
     k_bins_: ndarray, shape (N_cells+1,k)
         The limits of the grid cells in each dimension.
-    time_: grispy.core.BuildStats
-        Object containing the building time and the date of build.
 
     """
 
@@ -140,15 +117,8 @@ class Grid:
         if self.copy_data:
             self.data = self.data.copy()
 
-        t0 = time.time()
         self.k_bins_ = self._make_bins()
         self.grid_ = self._build_grid()
-
-        # Record date and build time
-        now = datetime.datetime.now()
-        self.time_ = BuildStats(
-            buildtime=time.time() - t0, periodicity_set_at=now, datetime=now
-        )
 
     @data.validator
     def _validate_data(self, attribute, value):
@@ -475,8 +445,6 @@ class GriSPy(Grid):
         are located within the given cell.
     k_bins_: ndarray, shape (N_cells+1,k)
         The limits of the grid cells in each dimension.
-    time_: grispy.core.BuildStats
-        Object containing the building time and the date of build.
     periodic_flag_: bool
         If any dimension has periodicity.
     periodic_conf_: grispy.core.PeriodicityConf
@@ -840,17 +808,10 @@ class GriSPy(Grid):
 
         """
         if inplace:
-
             periodic_attr = attr.fields(GriSPy).periodic
             periodic_attr.validator(self, periodic_attr, periodic)
             self.periodic, self.periodic_conf_ = self._build_periodicity(
                 periodic=periodic, dim=self.dim
-            )
-
-            self.time_ = BuildStats(
-                buildtime=self.time_.buildtime,
-                datetime=self.time_.datetime,
-                periodicity_set_at=datetime.datetime.now(),
             )
         else:
             return GriSPy(

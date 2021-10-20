@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 
 from grispy import Grid, GriSPy
-from grispy.core import BuildStats, PeriodicityConf
+from grispy.core import PeriodicityConf
 
 # =========================================================================
 # Test Grid class
@@ -70,7 +70,6 @@ class Test_Grid_data_consistency:
     def test_grid_attrs_post_init(self, grid):
         assert isinstance(grid.k_bins_, np.ndarray)
         assert isinstance(grid.grid_, dict)
-        assert isinstance(grid.time_, BuildStats)
 
     def test_grid_properties_dim(self, grid):
         assert isinstance(grid.dim, int)
@@ -334,7 +333,6 @@ class Test_GriSPy_data_consistency:
         assert isinstance(gsp.dim, int)
         assert isinstance(gsp.periodic_flag_, bool)
         assert isinstance(gsp.periodic_conf_, PeriodicityConf)
-        assert isinstance(gsp.time_, BuildStats)
 
     def test_bubble_single_query(self, gsp, valid_input):
 
