@@ -12,17 +12,167 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 
-from grispy import GriSPy
+from grispy import Grid, GriSPy
 
-# def test_grid_properties_edges(self, grid):
-#     dmin = grid.data.min(axis=0) - grid.epsilon
-#     dmax = grid.data.max(axis=0) + grid.epsilon
-#     k_bins = np.linspace(dmin, dmax, grid.N_cells + 1)
-#     expected = k_bins[[0, -1], :]
-#     npt.assert_almost_equal(grid.edges, expected, 14)
+# =========================================================================
+# Test Grid class
+# =========================================================================
+
+
+class Test_Grid:
+    @pytest.fixture
+    def grid(self):
+        data = np.array(
+            [
+                [0, 0, 0],
+                [0, 0, 1],
+                [0, 1, 0],
+                [0, 1, 1],
+                [1, 0, 0],
+                [1, 0, 1],
+                [1, 1, 0],
+                [1, 1, 1],
+            ]
+        )
+        return Grid(data, N_cells=3)
+
+    @pytest.fixture
+    def valid_input(self):
+        rng = np.random.default_rng(1234)
+        d = dict()
+        # Define valid input data
+        d["in_points"] = rng.random((5, 3))
+        d["out_points"] = rng.random((5, 3)) + 10
+        d["mix_points"] = np.vstack((d["in_points"], d["out_points"]))
+        return d
+
+    def test_grid_property_edges(self, grid):
+        dmin = grid.data.min(axis=0) - grid.epsilon
+        dmax = grid.data.max(axis=0) + grid.epsilon
+        k_bins = np.linspace(dmin, dmax, grid.N_cells + 1)
+        expected = k_bins[[0, -1], :]
+        npt.assert_almost_equal(grid.edges, expected, 14)
+
+    @pytest.mark.parametrize(
+        "pname", ["in_points", "out_points", "mix_points"]
+    )
+    def test_grid_contains_inside(self, grid, valid_input, pname):
+        points = valid_input[pname]
+        lower = 0 < points
+        upper = points < 1
+        expected = (lower & upper).prod(axis=1, dtype=bool)
+        result = grid.contains(points)
+        npt.assert_equal(expected, result)
+
+    def test_cell_digits(self, grid):
+        expected = np.array(
+            [
+                [0, 0, 0],
+                [0, 0, 2],
+                [0, 2, 0],
+                [0, 2, 2],
+                [2, 0, 0],
+                [2, 0, 2],
+                [2, 2, 0],
+                [2, 2, 2],
+            ]
+        )
+        result = grid.cell_digits(grid.data)
+        npt.assert_equal(expected, result)
+
+    def test_cell_digits_outside(self, grid):
+        data = np.array(
+            [
+                [0, 0, 0],
+                [-1, 0, 1],
+                [0, 1, 0],
+                [0, 1, 1],
+                [1, 0, 0],
+                [1, 0, -1],
+                [1, 1, 0],
+                [1, 1, 1],
+            ]
+        )
+        expected = np.array(
+            [
+                [0, 0, 0],
+                [-1, -1, -1],
+                [0, 2, 0],
+                [0, 2, 2],
+                [2, 0, 0],
+                [-1, -1, -1],
+                [2, 2, 0],
+                [2, 2, 2],
+            ]
+        )
+        result = grid.cell_digits(data)
+        npt.assert_equal(expected, result)
+
+    def test_cell_id(self, grid):
+        expected = np.array([0, 18, 6, 24, 2, 20, 8, 26])
+        result = grid.cell_id(grid.data)
+        npt.assert_equal(expected, result)
+
+    def test_cell_id_outside(self, grid):
+        data = np.array(
+            [
+                [0, 0, 0],
+                [-1, 0, 1],
+                [0, 1, 0],
+                [0, 1, 1],
+                [1, 0, 0],
+                [1, 0, -1],
+                [1, 1, 0],
+                [1, 1, 1],
+            ]
+        )
+        expected = np.array([0, -1, 6, 24, 2, -1, 8, 26])
+        result = grid.cell_id(data)
+        npt.assert_equal(expected, result)
+
+    def test_cell_digits2id(self, grid):
+        digits = np.array(
+            [
+                [0, 0, 0],
+                [0, 0, 2],
+                [0, 2, 0],
+                [0, 2, 2],
+                [2, 0, 0],
+                [2, 0, 2],
+                [2, 2, 0],
+                [2, 2, 2],
+            ]
+        )
+        expected = np.array([0, 18, 6, 24, 2, 20, 8, 26])
+        result = grid.cell_digits2id(digits)
+        npt.assert_equal(expected, result)
+
+    def test_id2digits(self, grid):
+        ids = np.array([0, 18, 6, 24, 2, 20, 8, 26])
+        expected = np.array(
+            [
+                [0, 0, 0],
+                [0, 0, 2],
+                [0, 2, 0],
+                [0, 2, 2],
+                [2, 0, 0],
+                [2, 0, 2],
+                [2, 2, 0],
+                [2, 2, 2],
+            ]
+        )
+        result = grid.cell_id2digits(ids)
+        npt.assert_equal(expected, result)
+
+
+# =========================================================================
+# Test GriSPy class
+# =========================================================================
 
 
 class Test_auto:
+    """Test using the same indexed data as centres."""
+
     def setup_method(self, *args):
         self.random = np.random.RandomState(8)
         self.lbox = 100.0
@@ -55,6 +205,8 @@ class Test_auto:
 
 
 class Test_grispy:
+    """Test GriSPy methods correct functionality."""
+
     def setup_method(self, *args):
         self.random = np.random.RandomState(1234)
         self.lbox = 100.0
@@ -256,6 +408,8 @@ class Test_grispy:
 
 
 class Test_periodicity_grispy:
+    """Test the periodicity condition"""
+
     def setup_method(self, *args):
         self.lbox = 10.0
         self.data = np.array(
@@ -347,16 +501,20 @@ class Test_periodicity_grispy:
 
 
 class Test_hypersphere_grispy:
+    """Test a 4 dimensional space"""
+
     @pytest.fixture
-    def gsp(self):
+    def valid_input(self):
+        d = dict()
+        d["lbox"] = 100.0
+        d["upper_radii"] = 0.25 * d["lbox"]
+        d["lower_radii"] = 0.20 * d["lbox"]
+        d["n_nearest"] = 32
+        d["eps"] = 1e-6
+        return d
 
-        np.random.seed(1234)
-        self.lbox = 100.0
-        self.upper_radii = 0.25 * self.lbox
-        self.lower_radii = 0.20 * self.lbox
-        self.n_nearest = 32
-        self.eps = 1e-6
-
+    @pytest.fixture
+    def gsp(self, valid_input):
         ############################################
         #
         # Follow
@@ -366,16 +524,17 @@ class Test_hypersphere_grispy:
         # Ann. Math. Stat. 43, 645-646, 1972.
         #
         ############################################
+        rng = np.random.default_rng(1234)
 
         npoints = 10 ** 5
-        x = np.random.uniform(-1.0, 1.0, size=(npoints, 1))
-        y = np.random.uniform(-1.0, 1.0, size=(npoints, 1))
-        z = np.random.uniform(-1.0, 1.0, size=(npoints, 1))
-        w = np.random.uniform(-1.0, 1.0, size=(npoints, 1))
+        x = rng.uniform(-1.0, 1.0, size=(npoints, 1))
+        y = rng.uniform(-1.0, 1.0, size=(npoints, 1))
+        z = rng.uniform(-1.0, 1.0, size=(npoints, 1))
+        w = rng.uniform(-1.0, 1.0, size=(npoints, 1))
 
         tttt = (x ** 2 + y ** 2 < 1.0) * (z ** 2 + w ** 2 < 1.0)
         npoints = np.sum(tttt)
-        self.radius = self.lbox * np.random.rand(npoints)
+        self.radius = valid_input["lbox"] * rng.random(npoints)
         x = x[tttt]
         y = y[tttt]
         z = z[tttt]
@@ -389,54 +548,59 @@ class Test_hypersphere_grispy:
 
         tttt = np.sqrt(x ** 2 + y ** 2 + z ** 2 + w ** 2)
         npt.assert_almost_equal(self.radius, tttt, decimal=12)
-        self.data = np.array([x, y, z, w]).T
+        data = np.array([x, y, z, w]).T
 
-        ############################################
-        ############################################
+        return GriSPy(data)
 
-        return GriSPy(self.data)
-
-    def test_in_hiperbubble(self, gsp):
+    def test_in_hiperbubble(self, gsp, valid_input):
 
         centre = np.array([[0.0, 0.0, 0.0, 0.0]])
 
         dis, ind = gsp.bubble_neighbors(
-            centre, distance_upper_bound=self.upper_radii, sorted=True
+            centre,
+            distance_upper_bound=valid_input["upper_radii"],
+            sorted=True,
         )
         dis, ind = dis[0], ind[0]
 
-        mask = self.radius <= self.upper_radii * (1.0 + self.eps)
+        mask = self.radius <= valid_input["upper_radii"] * (
+            1.0 + valid_input["eps"]
+        )
         npt.assert_equal(len(dis), len(ind))
         npt.assert_equal(len(dis), len(self.radius[mask]))
         npt.assert_almost_equal(dis, sorted(self.radius[mask]), decimal=14)
 
-    def test_in_hipersheell(self, gsp):
+    def test_in_hipersheell(self, gsp, valid_input):
 
         centre = np.array([[0.0, 0.0, 0.0, 0.0]])
 
         dis, ind = gsp.shell_neighbors(
             centre,
-            distance_lower_bound=self.lower_radii,
-            distance_upper_bound=self.upper_radii,
+            distance_lower_bound=valid_input["lower_radii"],
+            distance_upper_bound=valid_input["upper_radii"],
             sorted=True,
         )
         dis, ind = dis[0], ind[0]
 
-        mask = (self.radius <= self.upper_radii * (1.0 + self.eps)) * (
-            self.radius >= self.lower_radii * (1.0 - self.eps)
+        mask = (
+            self.radius
+            <= valid_input["upper_radii"] * (1.0 + valid_input["eps"])
+        ) * (
+            self.radius
+            >= valid_input["lower_radii"] * (1.0 - valid_input["eps"])
         )
         npt.assert_equal(len(dis), len(ind))
         npt.assert_equal(len(dis), len(self.radius[mask]))
         npt.assert_almost_equal(dis, sorted(self.radius[mask]), decimal=14)
 
-    def test_hipernearest_neighbors(self, gsp):
+    def test_hipernearest_neighbors(self, gsp, valid_input):
 
         centre = np.array([[0.0, 0.0, 0.0, 0.0]])
 
-        dis, ind = gsp.nearest_neighbors(centre, n=self.n_nearest)
+        dis, ind = gsp.nearest_neighbors(centre, n=valid_input["n_nearest"])
         dis, ind = dis[0], ind[0]
 
-        tmp = sorted(self.radius)[: self.n_nearest]
+        tmp = sorted(self.radius)[: valid_input["n_nearest"]]
         npt.assert_equal(len(dis), len(ind))
         npt.assert_equal(len(dis), len(tmp))
         npt.assert_almost_equal(dis, tmp, decimal=14)
