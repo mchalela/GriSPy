@@ -201,6 +201,12 @@ class Grid:
         """Grid size, i.e. total number of cells."""
         return self.N_cells ** self.dim
 
+    @property
+    def cell_size(self):
+        id0 = np.zeros((1, self.dim))
+        lower, upper = self.cell_walls(id0)
+        return upper - lower
+
     # =========================================================================
     # INTERNAL IMPLEMENTATION
     # =========================================================================
@@ -226,7 +232,6 @@ class Grid:
         k_digit = self._digitize(self.data, self.k_bins_)
 
         # Store in grid all cell neighbors
-        grid = {}
         compact_ind = np.ravel_multi_index(
             k_digit.T, self.shape, order="F", mode="clip"
         )
@@ -246,6 +251,7 @@ class Grid:
         list_ind = np.split(data_ind[compact_ind_sort], split_ind[1:])
         k_digit = k_digit[split_ind]
 
+        grid = dict()
         for i, j in enumerate(k_digit):
             grid[tuple(j)] = tuple(list_ind[i])
 
@@ -369,17 +375,29 @@ class Grid:
         # Convert to int16 for consistency with _digitize
         return digits.astype(np.int16)
 
-    def cell_center(self, ids):
+    def cell_walls(self, digits):
+        """Return cell wall coordinates for a given cell id."""
+        kb = self.k_bins_
+        # get bin values for the walls
+        lower = np.vstack([kb[digits[:, k], k] for k in range(self.dim)]).T
+        upper = np.vstack([kb[digits[:, k] + 1, k] for k in range(self.dim)]).T
+        return lower, upper
+
+    def cell_center(self, digits):
         """Return cell center coordinates for a given cell id."""
-        raise NotImplementedError("Method not implemented.")
+        lower, upper = self.cell_walls(digits)
+        center = (lower + upper) * 0.5
+        raise center
 
-    def cell_count(self, ids):
+    def cell_count(self, digits):
         """Return number of points within a given cell id."""
-        raise NotImplementedError("Method not implemented.")
+        counts = [len(self.grid_.get(tuple(dgt), ())) for dgt in digits]
+        return np.asarray(counts)
 
-    def cell_points(self, ids):
+    def cell_points(self, digits):
         """Return indices of points within a given cell id."""
-        raise NotImplementedError("Method not implemented.")
+        points = [self.grid_.get(tuple(dgt), ()) for dgt in digits]
+        return points
 
 
 @attr.s
