@@ -417,8 +417,8 @@ class Grid:
         vlds.validate_digits(digits, self.N_cells)
 
         lower, upper = self.cell_walls(digits)
-        center = (lower + upper) * 0.5
-        return center
+        centre = (lower + upper) * 0.5
+        return centre
 
     def cell_count(self, digits):
         """Return number of points within given cell digits.
@@ -436,7 +436,8 @@ class Grid:
         # Validate digits
         vlds.validate_digits(digits, self.N_cells)
 
-        counts = [len(self.grid_.get(tuple(dgt), ())) for dgt in digits]
+        get = self.grid_.get
+        counts = [len(get(tuple(dgt), ())) for dgt in digits]
         return np.asarray(counts)
 
     def cell_points(self, digits):
@@ -449,13 +450,15 @@ class Grid:
 
         Returns
         -------
-        points: list
-            Cell point indices within each cell.
+        points: list, length m
+            List of m arrays. Each array has the indices to the
+            neighbors of that cell.
         """
         # Validate digits
         vlds.validate_digits(digits, self.N_cells)
 
-        points = [self.grid_.get(tuple(dgt), ()) for dgt in digits]
+        get = self.grid_.get
+        points = [np.asarray(get(tuple(dgt), ())) for dgt in digits]
         return points
 
 

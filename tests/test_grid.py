@@ -311,7 +311,8 @@ def test_cell_points(grid, grid_input):
     assert isinstance(result, list)
     assert len(result) == len(digits)
     for points in result:
-        assert isinstance(points, tuple)
+        assert isinstance(points, np.ndarray)
+        assert points.dtype == int
 
 
 # =========================================================================
@@ -423,3 +424,48 @@ def test_cell_id2digits_result(grid):
     )
     result = grid.cell_id2digits(ids)
     npt.assert_equal(expected, result)
+
+
+def test_cell_walls_result(grid, grid_input):
+    digits = grid.cell_digits(grid_input["points"])
+
+    kb = grid.k_bins_
+    exp_lower = np.vstack([kb[digits[:, k], k] for k in range(grid.dim)]).T
+    exp_upper = np.vstack([kb[digits[:, k] + 1, k] for k in range(grid.dim)]).T
+
+    lower, upper = grid.cell_walls(digits)
+    npt.assert_almost_equal(lower, exp_lower, 14)
+    npt.assert_almost_equal(upper, exp_upper, 14)
+
+
+def test_cell_centre_result(grid, grid_input):
+    digits = grid.cell_digits(grid_input["points"])
+
+    lower, upper = grid.cell_walls(digits)
+    exp_centre = (lower + upper) * 0.5
+
+    centre = grid.cell_centre(digits)
+    npt.assert_almost_equal(centre, exp_centre, 14)
+
+
+def test_cell_counts_result(grid, grid_input):
+    digits = grid.cell_digits(grid_input["points"])
+
+    points = grid.cell_points(digits)
+    exp_counts = []
+    for p in points:
+        exp_counts.append(len(p))
+    exp_counts = np.asarray(exp_counts)
+
+    counts = grid.cell_count(digits)
+    npt.assert_equal(counts, exp_counts)
+
+
+def test_cell_points_result(grid, grid_input):
+    digits = grid.cell_digits(grid_input["points"])
+
+    points = grid.cell_points(digits)
+
+    get = grid.grid_.get
+    exp_points = [np.asarray(get(tuple(dgt), ())) for dgt in digits]
+    npt.assert_equal(points, exp_points)
