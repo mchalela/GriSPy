@@ -29,28 +29,18 @@ class Test_Grid_data_consistency:
 
     @pytest.fixture
     def grid(self):
-        data = np.array(
-            [
-                [0, 0, 0],
-                [0, 0, 1],
-                [0, 1, 0],
-                [0, 1, 1],
-                [1, 0, 0],
-                [1, 0, 1],
-                [1, 1, 0],
-                [1, 1, 1],
-            ]
-        )
-        return Grid(data)
+        rng = np.random.default_rng(4321)
+        data = rng.uniform(0, 1, size=(500, 3))
+        return Grid(data, 6)
 
     @pytest.fixture
     def valid_input(self):
         rng = np.random.default_rng(1234)
         d = dict()
         # Define valid input data
-        d["points"] = rng.random((5, 3))
-        d["inside_points"] = rng.random((5, 3))
-        d["outside_points"] = rng.random((5, 3)) + 10
+        d["points"] = rng.uniform(0.3, 0.7, size=(10, 3))
+        d["inside_points"] = rng.uniform(0.3, 0.7, size=(10, 3))
+        d["outside_points"] = rng.uniform(10, 11, size=(10, 3))
         return d
 
     def test_grid_copy_data(self):
@@ -70,6 +60,10 @@ class Test_Grid_data_consistency:
     def test_grid_attrs_post_init(self, grid):
         assert isinstance(grid.k_bins_, np.ndarray)
         assert isinstance(grid.grid_, dict)
+
+    # =========================================================
+    # PROPERTIES
+    # =========================================================
 
     def test_grid_properties_dim(self, grid):
         assert isinstance(grid.dim, int)
@@ -94,6 +88,15 @@ class Test_Grid_data_consistency:
     def test_grid_properties_size(self, grid):
         assert isinstance(grid.size, int)
         assert grid.size == np.prod(grid.shape)
+
+    def test_grid_properties_cell_width(self, grid):
+        assert isinstance(grid.cell_width, np.ndarray)
+        assert grid.cell_width.dtype == float
+        assert (grid.cell_width > 0).all()
+
+    # =========================================================
+    # METHODS
+    # =========================================================
 
     def test_contains(self, grid, valid_input):
         result = grid.contains(valid_input["points"])
@@ -133,6 +136,55 @@ class Test_Grid_data_consistency:
         assert len(result) == len(valid_input["points"])
         assert result.shape == valid_input["points"].shape
         assert result.dtype == np.int16
+
+    def test_cell_walls(self, grid, valid_input):
+        digits = grid.cell_digits(valid_input["points"])
+
+        result = grid.cell_walls(digits)
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+
+        lower, upper = result
+        assert isinstance(lower, np.ndarray)
+        assert isinstance(upper, np.ndarray)
+        assert lower.shape == (len(valid_input["points"]), grid.dim)
+        assert upper.shape == (len(valid_input["points"]), grid.dim)
+        assert lower.dtype == float
+        assert upper.dtype == float
+        assert (upper - lower > 0).all()
+
+    def test_cell_centre(self, grid, valid_input):
+        digits = grid.cell_digits(valid_input["points"])
+
+        result = grid.cell_centre(digits)
+        assert isinstance(result, np.ndarray)
+        assert result.shape == (len(valid_input["points"]), grid.dim)
+        assert result.dtype == float
+
+    def test_cell_centre_within_walls(self, grid, valid_input):
+        digits = grid.cell_digits(valid_input["points"])
+
+        centres = grid.cell_centre(digits)
+        lower, upper = grid.cell_walls(digits)
+        assert (upper - centres > 0).all()
+        assert (centres - lower > 0).all()
+
+    def test_cell_count(self, grid, valid_input):
+        digits = grid.cell_digits(valid_input["points"])
+
+        result = grid.cell_count(digits)
+        assert isinstance(result, np.ndarray)
+        assert result.dtype == int
+        assert (result > 0).all()
+
+    def test_cell_points(self, grid, valid_input):
+        digits = grid.cell_digits(valid_input["points"])
+
+        result = grid.cell_points(digits)
+        assert isinstance(result, list)
+        assert len(result) == len(digits)
+        for points in result:
+            assert isinstance(points, tuple)
 
 
 class Test_Grid_valid_init:
