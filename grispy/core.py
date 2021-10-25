@@ -202,8 +202,9 @@ class Grid:
         return self.N_cells ** self.dim
 
     @property
-    def cell_size(self):
-        id0 = np.zeros((1, self.dim))
+    def cell_width(self):
+        """Cell size in each dimension."""
+        id0 = np.zeros((1, self.dim), dtype=int)
         lower, upper = self.cell_walls(id0)
         return upper - lower
 
@@ -340,7 +341,7 @@ class Grid:
         Parameters
         ----------
         digits: ndarray, shape (m,k)
-            Array of cell indices.
+            Array of cell indices. Must be integers.
 
         Returns
         -------
@@ -376,26 +377,84 @@ class Grid:
         return digits.astype(np.int16)
 
     def cell_walls(self, digits):
-        """Return cell wall coordinates for a given cell id."""
+        """Return cell wall coordinates for given cell digits.
+
+        Parameters
+        ----------
+        digits: ndarray, shape (m,k)
+            Array of cell indices. Must be integers.
+
+        Returns
+        -------
+        lower: ndarray, shape (m, 3)
+            Lower cell wall values for each point.
+        upper: ndarray, shape (m, 3)
+            Upper cell wall values for each point.
+        """
+        # Validate digits
+        vlds.validate_digits(digits, self.N_cells)
+
         kb = self.k_bins_
         # get bin values for the walls
         lower = np.vstack([kb[digits[:, k], k] for k in range(self.dim)]).T
         upper = np.vstack([kb[digits[:, k] + 1, k] for k in range(self.dim)]).T
         return lower, upper
 
-    def cell_center(self, digits):
-        """Return cell center coordinates for a given cell id."""
+    def cell_centre(self, digits):
+        """Return cell centre coordinates for given cell digits.
+
+        Parameters
+        ----------
+        digits: ndarray, shape (m,k)
+            Array of cell indices. Must be integers.
+
+        Returns
+        -------
+        centres: ndarray, shape (m, k)
+            Cell centre for each point.
+        """
+        # Validate digits
+        vlds.validate_digits(digits, self.N_cells)
+
         lower, upper = self.cell_walls(digits)
         center = (lower + upper) * 0.5
-        raise center
+        return center
 
     def cell_count(self, digits):
-        """Return number of points within a given cell id."""
+        """Return number of points within given cell digits.
+
+        Parameters
+        ----------
+        digits: ndarray, shape (m,k)
+            Array of cell indices. Must be integers.
+
+        Returns
+        -------
+        count: ndarray, shape (m,)
+            Cell count for each for each cell.
+        """
+        # Validate digits
+        vlds.validate_digits(digits, self.N_cells)
+
         counts = [len(self.grid_.get(tuple(dgt), ())) for dgt in digits]
         return np.asarray(counts)
 
     def cell_points(self, digits):
-        """Return indices of points within a given cell id."""
+        """Return indices of points within given cell digits.
+
+        Parameters
+        ----------
+        digits: ndarray, shape (m,k)
+            Array of cell indices. Must be integers.
+
+        Returns
+        -------
+        points: list
+            Cell point indices within each cell.
+        """
+        # Validate digits
+        vlds.validate_digits(digits, self.N_cells)
+
         points = [self.grid_.get(tuple(dgt), ()) for dgt in digits]
         return points
 
