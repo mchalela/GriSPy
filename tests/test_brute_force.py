@@ -82,6 +82,18 @@ class Test_grispy:
         for i in range(len(b)):
             npt.assert_equal(sorted(b[i]), b[i])
 
+    def test_nearest_neighbors_same_result_twice(self):
+        # Run it twice and make sure it works ok.
+        # when executing twice the tutorial cell of this method
+        # the second time never ended
+        gsp = self.make_gsp({})
+
+        b, ind = gsp.nearest_neighbors(self.centres, n=10)
+        b2, ind2 = gsp.nearest_neighbors(self.centres, n=10)
+
+        npt.assert_almost_equal(b, b2, 14)
+        npt.assert_equal(ind, ind2)
+
     def test_all_in_bubble(self):
         gsp = self.make_gsp({})
         b, ind = gsp.bubble_neighbors(
