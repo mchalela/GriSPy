@@ -63,6 +63,7 @@ def do_setup():
             "Emanuel Sillero",
             "Luis Pereyra",
             "Alejandro Garcia",
+            "Juan B. Cabral",
         ],
         author_email="tinchochalela@gmail.com",
         url="https://github.com/mchalela/GriSPy",
