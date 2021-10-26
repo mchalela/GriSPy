@@ -20,10 +20,11 @@ from grispy import GriSPy
 
 
 @pytest.mark.parametrize("dim", [1, 2, 3, 4])
+@pytest.mark.parametrize("N_cells", [1, 2, 8, 16])
 @pytest.mark.parametrize("isperiodic", [False, True])
-def test_auto_search_data(make_grispy, dim, isperiodic):
+def test_auto_search_data(make_grispy, dim, N_cells, isperiodic):
     """Test using the same indexed data as centres."""
-    gsp = make_grispy(dim=dim, isperiodic=isperiodic)
+    gsp = make_grispy(dim=dim, N_cells=N_cells, isperiodic=isperiodic)
     centres = np.copy(gsp.data)
 
     dist, index = gsp.bubble_neighbors(centres, distance_upper_bound=1e-15)
@@ -33,9 +34,10 @@ def test_auto_search_data(make_grispy, dim, isperiodic):
 
 
 @pytest.mark.parametrize("dim", [1, 2, 3, 4])
+@pytest.mark.parametrize("N_cells", [1, 2, 8, 16])
 @pytest.mark.parametrize("isperiodic", [False, True])
-def test_nearest_neighbors_sort(make_grispy, dim, isperiodic):
-    gsp = make_grispy(dim=dim, isperiodic=isperiodic)
+def test_nearest_neighbors_sort(make_grispy, dim, N_cells, isperiodic):
+    gsp = make_grispy(dim=dim, N_cells=N_cells, isperiodic=isperiodic)
 
     rng = np.random.default_rng(0)
     centres = rng.uniform(0, 100, size=(10, dim))
@@ -47,12 +49,15 @@ def test_nearest_neighbors_sort(make_grispy, dim, isperiodic):
 
 
 @pytest.mark.parametrize("dim", [1, 2, 3, 4])
+@pytest.mark.parametrize("N_cells", [1, 2, 8, 16])
 @pytest.mark.parametrize("isperiodic", [False, True])
-def test_nearest_neighbors_same_result_twice(make_grispy, dim, isperiodic):
+def test_nearest_neighbors_same_result_twice(
+    make_grispy, dim, N_cells, isperiodic
+):
     # Run it twice and make sure it works ok.
     # when executing twice the tutorial cell of this method
     # the second time never ended
-    gsp = make_grispy(dim=dim, isperiodic=isperiodic)
+    gsp = make_grispy(dim=dim, N_cells=N_cells, isperiodic=isperiodic)
 
     rng = np.random.default_rng(0)
     centres = rng.uniform(0, 100, size=(10, dim))
@@ -65,9 +70,27 @@ def test_nearest_neighbors_same_result_twice(make_grispy, dim, isperiodic):
 
 
 @pytest.mark.parametrize("dim", [2, 3, 4])
-@pytest.mark.parametrize("isperiodic", [False, True])
-def test_all_in_bubble(make_grispy, dim, isperiodic):
-    gsp = make_grispy(dim=dim, isperiodic=isperiodic)
+@pytest.mark.parametrize("N_cells", [1, 2, 8, 16])
+def test_all_in_bubble(make_grispy, dim, N_cells):
+    gsp = make_grispy(dim=dim, N_cells=N_cells)
+
+    rng = np.random.default_rng(0)
+    centres = rng.uniform(0, 100, size=(10, dim))
+    radii = 10.0
+
+    _, ind = gsp.bubble_neighbors(centres, distance_upper_bound=radii)
+
+    for i, l in enumerate(ind):
+        for j in l:
+            d = gsp.data[j] - centres[i]
+            d = np.linalg.norm(d)
+            assert (d <= radii).all()
+
+
+@pytest.mark.parametrize("dim", [2, 3, 4])
+@pytest.mark.parametrize("N_cells", [1, 2, 8, 16])
+def test_all_in_bubble_with_periodicity(make_grispy, dim, N_cells):
+    gsp = make_grispy(dim=dim, N_cells=N_cells, isperiodic=True)
 
     rng = np.random.default_rng(0)
     centres = rng.uniform(0, 100, size=(10, dim))
@@ -78,23 +101,43 @@ def test_all_in_bubble(make_grispy, dim, isperiodic):
 
     for i, l in enumerate(ind):
         for j in l:
-            d = gsp.data[j] - centres[i]
 
-            if isperiodic:
-                for k in range(dim):
-                    if d[k] > 0.5 * lbox:
-                        d[k] -= lbox
-                    elif d[k] < -0.5 * lbox:
-                        d[k] += lbox
+            d = gsp.data[j] - centres[i]
+            for k in range(dim):
+                if d[k] > 0.5 * lbox:
+                    d[k] -= lbox
+                elif d[k] < -0.5 * lbox:
+                    d[k] += lbox
 
             d = np.linalg.norm(d)
             assert (d <= radii).all()
 
 
 @pytest.mark.parametrize("dim", [2, 3, 4])
-@pytest.mark.parametrize("isperiodic", [False, True])
-def test_all_in_shell(make_grispy, dim, isperiodic):
-    gsp = make_grispy(dim=dim, isperiodic=isperiodic)
+@pytest.mark.parametrize("N_cells", [1, 2, 8, 16])
+def test_all_in_shell(make_grispy, dim, N_cells):
+    gsp = make_grispy(dim=dim, N_cells=N_cells)
+
+    rng = np.random.default_rng(0)
+    centres = rng.uniform(0, 100, size=(10, dim))
+    upper_radii = 50.0
+    lower_radii = 10.0
+
+    b, ind = gsp.shell_neighbors(centres, lower_radii, upper_radii)
+
+    for i, l in enumerate(ind):
+        for j in l:
+            d = gsp.data[j] - centres[i]
+            d = np.linalg.norm(d)
+
+            assert (d <= upper_radii).all()
+            assert (d >= lower_radii).all()
+
+
+@pytest.mark.parametrize("dim", [2, 3, 4])
+@pytest.mark.parametrize("N_cells", [1, 2, 8, 16])
+def test_all_in_shell_with_periodicity(make_grispy, dim, N_cells):
+    gsp = make_grispy(dim=dim, N_cells=N_cells, isperiodic=True)
 
     rng = np.random.default_rng(0)
     centres = rng.uniform(0, 100, size=(10, dim))
@@ -106,152 +149,202 @@ def test_all_in_shell(make_grispy, dim, isperiodic):
 
     for i, l in enumerate(ind):
         for j in l:
-            d = gsp.data[j] - centres[i]
 
-            if isperiodic:
-                for k in range(dim):
-                    if d[k] > 0.5 * lbox:
-                        d[k] -= lbox
-                    elif d[k] < -0.5 * lbox:
-                        d[k] += lbox
+            d = gsp.data[j] - centres[i]
+            for k in range(dim):
+                if d[k] > 0.5 * lbox:
+                    d[k] -= lbox
+                elif d[k] < -0.5 * lbox:
+                    d[k] += lbox
 
             d = np.linalg.norm(d)
             assert (d <= upper_radii).all()
             assert (d >= lower_radii).all()
 
 
-class Test_grispy:
-    """Test GriSPy methods correct functionality."""
+@pytest.mark.parametrize("dim", [2, 3, 4])
+@pytest.mark.parametrize("N_cells", [1, 2, 8, 16])
+def test_bubble_precision(make_grispy, dim, N_cells):
+    gsp = make_grispy(dim=dim, N_cells=N_cells)
 
-    def setup_method(self, *args):
-        self.random = np.random.RandomState(1234)
-        self.lbox = 100.0
-        self.centres = self.lbox * (0.5 - self.random.rand(1, 10).T)
-        self.data = self.random.uniform(
-            -0.5 * self.lbox, 0.5 * self.lbox, size=(10 ** 3, 1)
-        )
-        self.upper_radii = 0.25 * self.lbox
-        self.lower_radii = 0.20 * self.lbox
-        self.n_nearest = 32
-        self.eps = np.finfo(np.float64).resolution
+    rng = np.random.default_rng(0)
+    centres = rng.uniform(0, 100, size=(1, dim))
+    upper_radii = 50.0
 
-    def make_gsp(self, periodic):
-        return GriSPy(self.data, periodic=periodic)
+    b, _ = gsp.bubble_neighbors(centres, upper_radii, sorted=True)
 
-    def test_bubble_precision(self):
-        gsp = self.make_gsp({})
-        b, ind = gsp.bubble_neighbors(
-            self.centres, distance_upper_bound=self.upper_radii, sorted=True
-        )
+    for i, centre in enumerate(centres):
+        d = gsp.data - centre
+        d = np.linalg.norm(d, axis=1)
+        mask = d <= upper_radii
+        d = d[mask]
 
-        for i, centre in enumerate(self.centres):
-            d = np.fabs(self.data - centre)
-            mask = d < self.upper_radii
-            d = d[mask]
-            npt.assert_equal(len(b[i]), len(d))
-            npt.assert_almost_equal(b[i], sorted(d), decimal=14)
+        assert len(b[i]) == len(d)
+        npt.assert_almost_equal(b[i], sorted(d), decimal=14)
 
-        gsp = self.make_gsp({0: (-self.lbox * 0.5, self.lbox * 0.5)})
-        b, ind = gsp.bubble_neighbors(
-            self.centres, distance_upper_bound=self.upper_radii, sorted=True
-        )
 
-        for i, centre in enumerate(self.centres):
-            d = self.data - centre
-            mask = d > 0.5 * self.lbox
-            d[mask] = d[mask] - self.lbox
-            mask = d < -0.5 * self.lbox
-            d[mask] = d[mask] + self.lbox
-            d = np.fabs(d)
+@pytest.mark.parametrize("dim", [2, 3, 4])
+@pytest.mark.parametrize("N_cells", [1, 2, 8, 16])
+def test_bubble_precision_with_periodicity(make_grispy, dim, N_cells):
+    gsp = make_grispy(dim=dim, N_cells=N_cells, isperiodic=True)
 
-            mask = d < self.upper_radii
-            d = d[mask]
-            npt.assert_equal(len(b[i]), len(d))
-            npt.assert_almost_equal(b[i], sorted(d), decimal=14)
+    rng = np.random.default_rng(0)
+    centres = rng.uniform(0, 100, size=(1, dim))
+    upper_radii = 50.0
+    lbox = 100.0
 
-    def test_shell_precision(self):
-        gsp = self.make_gsp({})
-        b, ind = gsp.shell_neighbors(
-            self.centres,
-            distance_lower_bound=self.lower_radii,
-            distance_upper_bound=self.upper_radii,
-            sorted=True,
-        )
+    b, _ = gsp.bubble_neighbors(centres, upper_radii, sorted=True)
 
-        for i, centre in enumerate(self.centres):
-            d = np.fabs(self.data - centre)
-            mask = (d <= self.upper_radii) * (d >= self.lower_radii)
-            d = d[mask]
-            npt.assert_equal(len(b[i]), len(d))
-            npt.assert_almost_equal(b[i], sorted(d), decimal=14)
+    for i, centre in enumerate(centres):
+        d = gsp.data - centre
 
-        gsp = self.make_gsp({0: (-self.lbox * 0.5, self.lbox * 0.5)})
-        b, ind = gsp.shell_neighbors(
-            self.centres,
-            distance_lower_bound=self.lower_radii,
-            distance_upper_bound=self.upper_radii,
-            sorted=True,
-        )
+        mask = d > 0.5 * lbox
+        d[mask] -= lbox
+        mask = d < -0.5 * lbox
+        d[mask] += lbox
 
-        for i, centre in enumerate(self.centres):
-            d = self.data - centre
-            mask = d > 0.5 * self.lbox
-            d[mask] = d[mask] - self.lbox
-            mask = d < -0.5 * self.lbox
-            d[mask] = d[mask] + self.lbox
-            d = np.fabs(d)
+        d = np.linalg.norm(d, axis=1)
+        mask = d <= upper_radii
+        d = d[mask]
 
-            mask = (d <= self.upper_radii) * (d >= self.lower_radii)
-            d = d[mask]
-            npt.assert_equal(len(b[i]), len(d))
-            npt.assert_almost_equal(b[i], sorted(d), decimal=14)
+        assert len(b[i]) == len(d)
+        npt.assert_almost_equal(b[i], sorted(d), decimal=14)
 
-    def test_nearest_neighbors_precision(self):
-        gsp = self.make_gsp({})
-        b, ind = gsp.nearest_neighbors(self.centres, n=self.n_nearest)
-        for i, centre in enumerate(self.centres):
-            d = np.fabs(self.data - centre)
-            d = sorted(np.concatenate(d))
-            d = d[: self.n_nearest]
-            npt.assert_equal(len(b[i]), len(d))
-            npt.assert_almost_equal(b[i], d, decimal=16)
 
-        gsp = self.make_gsp({0: (-self.lbox * 0.5, self.lbox * 0.5)})
-        b, ind = gsp.nearest_neighbors(self.centres, n=self.n_nearest)
-        for i, centre in enumerate(self.centres):
-            d = self.data - centre
-            mask = d > 0.5 * self.lbox
-            d[mask] = d[mask] - self.lbox
-            mask = d < -0.5 * self.lbox
-            d[mask] = d[mask] + self.lbox
-            d = np.fabs(d)
-            d = sorted(np.concatenate(d))
-            d = d[: self.n_nearest]
-            npt.assert_equal(len(b[i]), len(d))
-            npt.assert_almost_equal(b[i], d, decimal=16)
+@pytest.mark.parametrize("dim", [2, 3, 4])
+@pytest.mark.parametrize("N_cells", [1, 2, 8, 16])
+def test_shell_precision(make_grispy, dim, N_cells):
+    gsp = make_grispy(dim=dim, N_cells=N_cells)
 
-    @pytest.mark.parametrize("floatX", [np.float32, np.float64])
-    def test_floatX_precision(self, floatX):
+    rng = np.random.default_rng(0)
+    centres = rng.uniform(0, 100, size=(10, dim))
+    upper_radii = 50.0
+    lower_radii = 10.0
 
-        rng = np.random.default_rng(1234)
-        data_floatX = rng.random(size=(1000, 3), dtype=floatX)
-        centres_floatX = rng.random(size=(100, 3), dtype=floatX)
-        upper_radii = 0.2
+    b, _ = gsp.shell_neighbors(centres, lower_radii, upper_radii, sorted=True)
 
-        gsp_floatX = GriSPy(data_floatX)
-        dist_floatX, ind_floatX = gsp_floatX.bubble_neighbors(
-            centres_floatX, distance_upper_bound=upper_radii
-        )
+    for i, centre in enumerate(centres):
+        d = gsp.data - centre
+        d = np.linalg.norm(d, axis=1)
+        mask = (d <= upper_radii) * (d >= lower_radii)
+        d = d[mask]
 
-        eps = np.finfo(floatX).resolution
+        assert len(b[i]) == len(d)
+        npt.assert_almost_equal(b[i], sorted(d), decimal=14)
 
-        for i, ind_list in enumerate(ind_floatX):
-            for j, il in enumerate(ind_list):
-                delta = data_floatX[il] - centres_floatX[i]
-                dist = np.sqrt(np.sum(delta ** 2))
-                npt.assert_(dist <= upper_radii + eps)
-                gsp_dist = dist_floatX[i][j]
-                npt.assert_(abs(dist - gsp_dist) <= eps)
+
+@pytest.mark.parametrize("dim", [2, 3, 4])
+@pytest.mark.parametrize("N_cells", [1, 2, 8, 16])
+def test_shell_precision_with_periodicity(make_grispy, dim, N_cells):
+    gsp = make_grispy(dim=dim, N_cells=N_cells, isperiodic=True)
+
+    rng = np.random.default_rng(0)
+    centres = rng.uniform(0, 100, size=(10, dim))
+    upper_radii = 50.0
+    lower_radii = 10.0
+    lbox = 100.0
+
+    b, _ = gsp.shell_neighbors(centres, lower_radii, upper_radii, sorted=True)
+
+    for i, centre in enumerate(centres):
+        d = gsp.data - centre
+
+        mask = d > 0.5 * lbox
+        d[mask] -= lbox
+        mask = d < -0.5 * lbox
+        d[mask] += lbox
+
+        d = np.linalg.norm(d, axis=1)
+        mask = (d <= upper_radii) * (d >= lower_radii)
+        d = d[mask]
+        assert len(b[i]) == len(d)
+        npt.assert_almost_equal(b[i], sorted(d), decimal=14)
+
+
+@pytest.mark.parametrize("dim", [2, 3, 4])
+@pytest.mark.parametrize("N_cells", [1, 2, 8, 16])
+@pytest.mark.parametrize("isperiodic", [False, True])
+def test_nearest_neighbors_precision(make_grispy, dim, N_cells, isperiodic):
+    gsp = make_grispy(dim=dim, N_cells=N_cells, isperiodic=isperiodic)
+
+    rng = np.random.default_rng(0)
+    centres = rng.uniform(0, 100, size=(10, dim))
+    n_nearest = 8
+    lbox = 100.0
+
+    b, _ = gsp.nearest_neighbors(centres, n=n_nearest)
+    for i, centre in enumerate(centres):
+        d = gsp.data - centre
+
+        if isperiodic:
+            mask = d > 0.5 * lbox
+            d[mask] -= lbox
+            mask = d < -0.5 * lbox
+            d[mask] += lbox
+
+        d = np.linalg.norm(d, axis=1)
+        d = sorted(d)
+        d = d[:n_nearest]
+        assert len(b[i]) == len(d)
+        npt.assert_almost_equal(b[i], d, decimal=14)
+
+
+@pytest.mark.parametrize("dim", [2, 3, 4])
+@pytest.mark.parametrize("N_cells", [1, 2, 8, 16])
+def test_nearest_neighbors_precision_with_periodicity(
+    make_grispy, dim, N_cells
+):
+    gsp = make_grispy(dim=dim, N_cells=N_cells, isperiodic=True)
+
+    rng = np.random.default_rng(0)
+    centres = rng.uniform(0, 100, size=(10, dim))
+    n_nearest = 8
+    lbox = 100.0
+
+    b, _ = gsp.nearest_neighbors(centres, n=n_nearest)
+
+    for i, centre in enumerate(centres):
+        d = gsp.data - centre
+
+        mask = d > 0.5 * lbox
+        d[mask] -= lbox
+        mask = d < -0.5 * lbox
+        d[mask] += lbox
+
+        d = np.linalg.norm(d, axis=1)
+        d = sorted(d)
+        d = d[:n_nearest]
+        assert len(b[i]) == len(d)
+        npt.assert_almost_equal(b[i], d, decimal=14)
+
+
+@pytest.mark.parametrize("dim", [2, 3, 4])
+@pytest.mark.parametrize("N_cells", [1, 2, 8, 16])
+@pytest.mark.parametrize("floatX", [np.float32, np.float64])
+def test_floatX_precision(dim, N_cells, floatX):
+
+    rng = np.random.default_rng(1234)
+    data_floatX = rng.random(size=(100, dim), dtype=floatX)
+    centres_floatX = rng.random(size=(10, dim), dtype=floatX)
+    upper_radii = 0.2
+
+    gsp_floatX = GriSPy(data_floatX, N_cells=N_cells)
+    dist_floatX, ind_floatX = gsp_floatX.bubble_neighbors(
+        centres_floatX, distance_upper_bound=upper_radii
+    )
+
+    eps = np.finfo(floatX).resolution
+    decimal = np.abs(int(np.log10(eps)))
+
+    for i, ind_list in enumerate(ind_floatX):
+        for j, il in enumerate(ind_list):
+            gsp_dist = dist_floatX[i][j]
+
+            delta = data_floatX[il] - centres_floatX[i]
+            dist = np.linalg.norm(delta)
+
+            assert (dist <= upper_radii).all()
+            npt.assert_almost_equal(dist, gsp_dist, decimal)
 
 
 class Test_periodicity_grispy:
