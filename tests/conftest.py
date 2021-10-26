@@ -93,3 +93,16 @@ def grispy_input():
     d["kind"] = "quicksort"
     d["sorted"] = True
     return d
+
+
+@pytest.fixture
+def make_grispy():
+    def _make(dim=2, N_cells=8, isperiodic=False):
+        rng = np.random.default_rng(seed=42)
+
+        data = rng.uniform(0, 100, size=(100, dim))
+        periodic = {k: (0, 100) for k in range(dim)} if isperiodic else dict()
+
+        return GriSPy(data, N_cells=N_cells, periodic=periodic)
+
+    return _make
