@@ -1015,6 +1015,9 @@ class GriSPy(Grid):
     ):
         """Find all points within given lower and upper distances of each centre.
 
+        The distance condition is:
+            `distance_lower_bound <= distance < distance_upper_bound`
+
         Parameters
         ----------
         centres: ndarray, shape (m,k)
@@ -1110,12 +1113,12 @@ class GriSPy(Grid):
 
         for i in range(len(centres)):
             mask_distances_upper = (
-                neighbors_distances[i] <= distance_upper_bound[i]
+                neighbors_distances[i] < distance_upper_bound[i]
             )
 
             mask_distances_lower = neighbors_distances[i][mask_distances_upper]
             mask_distances_lower = (
-                mask_distances_lower > distance_lower_bound[i]
+                mask_distances_lower >= distance_lower_bound[i]
             )
 
             aux = neighbors_distances[i]

@@ -22,7 +22,7 @@ from grispy import GriSPy
 @pytest.mark.parametrize("dim", [1, 2, 3, 4])
 @pytest.mark.parametrize("N_cells", [1, 2, 8, 16])
 @pytest.mark.parametrize("isperiodic", [False, True])
-def test_auto_search_data(make_grispy, dim, N_cells, isperiodic):
+def test_self_search_bubble(make_grispy, dim, N_cells, isperiodic):
     """Test using the same indexed data as centres."""
     gsp = make_grispy(dim=dim, N_cells=N_cells, isperiodic=isperiodic)
     centres = np.copy(gsp.data)
@@ -31,6 +31,46 @@ def test_auto_search_data(make_grispy, dim, N_cells, isperiodic):
     for idx in range(len(centres)):
         assert len(dist[idx]) == 1
         assert len(index[idx]) == 1
+
+
+@pytest.mark.parametrize("dim", [1, 2, 3, 4])
+@pytest.mark.parametrize("N_cells", [1, 2, 8, 16])
+@pytest.mark.parametrize("isperiodic", [False, True])
+def test_self_search_shell(make_grispy, dim, N_cells, isperiodic):
+    """Test using the same indexed data as centres with the shell.
+
+    The idea is to test the distance comparisson symbols.
+    Points that are within lower_bound <= distance < upper_bound
+    """
+    gsp = make_grispy(dim=dim, N_cells=N_cells, isperiodic=isperiodic)
+    centres = np.copy(gsp.data)
+
+    dist, index = gsp.shell_neighbors(
+        centres, distance_lower_bound=0.0, distance_upper_bound=1e-15
+    )
+    for idx in range(len(centres)):
+        assert len(dist[idx]) == 1
+        assert len(index[idx]) == 1
+        assert index[idx] == idx
+
+
+@pytest.mark.parametrize("dim", [1, 2, 3, 4])
+@pytest.mark.parametrize("N_cells", [1, 2, 8, 16])
+@pytest.mark.parametrize("isperiodic", [False, True])
+def test_self_search_nearest(make_grispy, dim, N_cells, isperiodic):
+    """Test using the same indexed data as centres with the shell.
+
+    The idea is to test the distance comparisson symbols.
+    Points that are within lower_bound <= distance < upper_bound
+    """
+    gsp = make_grispy(dim=dim, N_cells=N_cells, isperiodic=isperiodic)
+    centres = np.copy(gsp.data)
+
+    dist, index = gsp.nearest_neighbors(centres, n=1)
+    for idx in range(len(centres)):
+        assert len(dist[idx]) == 1
+        assert len(index[idx]) == 1
+        assert index[idx] == idx
 
 
 @pytest.mark.parametrize("dim", [1, 2, 3, 4])
