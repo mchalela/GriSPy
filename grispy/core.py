@@ -89,14 +89,14 @@ class Grid:
 
     Attributes
     ----------
-    dim_: int
+    dim: int
         The dimension of a single data-point.
-    grid_: dict
+    grid: dict
         This dictionary contains the data indexed in a grid. The key is a
         tuple with the k-dimensional index of each grid cell. Empty cells
         do not have a key. The value is a list of data points indices which
         are located within the given cell.
-    k_bins_: ndarray, shape (N_cells+1,k)
+    k_bins: ndarray, shape (N_cells + 1, k)
         The limits of the grid cells in each dimension.
 
     """
@@ -117,8 +117,8 @@ class Grid:
         if self.copy_data:
             self.data = self.data.copy()
 
-        self.k_bins_ = self._make_bins()
-        self.grid_ = self._build_grid()
+        self.k_bins = self._make_bins()
+        self.grid = self._build_grid()
 
     @data.validator
     def _validate_data(self, attribute, value):
@@ -171,7 +171,7 @@ class Grid:
     @property
     def edges(self):
         """Edges of the grid in each dimension."""
-        return self.k_bins_[[0, -1], :].copy()
+        return self.k_bins[[0, -1], :].copy()
 
     @property
     def epsilon(self):
@@ -230,7 +230,7 @@ class Grid:
     def _build_grid(self):
         """Build the grid."""
         # Digitize data points
-        k_digit = self._digitize(self.data, self.k_bins_)
+        k_digit = self._digitize(self.data, self.k_bins)
 
         # Store in grid all cell neighbors
         compact_ind = np.ravel_multi_index(
@@ -299,7 +299,7 @@ class Grid:
         # Validate inputs
         vlds.validate_centres(points, self.data)
 
-        digits = self._digitize(points, bins=self.k_bins_)
+        digits = self._digitize(points, bins=self.k_bins)
 
         # Check if outside the grid
         outside = ~self.contains(points)
@@ -324,7 +324,7 @@ class Grid:
         # Validate points
         vlds.validate_centres(points, self.data)
 
-        digits = self._digitize(points, bins=self.k_bins_)
+        digits = self._digitize(points, bins=self.k_bins)
         ids = np.ravel_multi_index(
             digits.T, self.shape, order="F", mode="clip"
         )
@@ -394,7 +394,7 @@ class Grid:
         # Validate digits
         vlds.validate_digits(digits, self.N_cells)
 
-        kb = self.k_bins_
+        kb = self.k_bins
         # get bin values for the walls
         lower = np.vstack([kb[digits[:, k], k] for k in range(self.dim)]).T
         upper = np.vstack([kb[digits[:, k] + 1, k] for k in range(self.dim)]).T
@@ -436,7 +436,7 @@ class Grid:
         # Validate digits
         vlds.validate_digits(digits, self.N_cells)
 
-        get = self.grid_.get
+        get = self.grid.get
         counts = [len(get(tuple(dgt), ())) for dgt in digits]
         return np.asarray(counts)
 
@@ -457,7 +457,7 @@ class Grid:
         # Validate digits
         vlds.validate_digits(digits, self.N_cells)
 
-        get = self.grid_.get
+        get = self.grid.get
         points = [np.asarray(get(tuple(dgt), ())) for dgt in digits]
         return points
 
@@ -516,18 +516,18 @@ class GriSPy(Grid):
 
     Attributes
     ----------
-    dim_: int
+    dim: int
         The dimension of a single data-point.
-    grid_: dict
+    grid: dict
         This dictionary contains the data indexed in a grid. The key is a
         tuple with the k-dimensional index of each grid cell. Empty cells
         do not have a key. The value is a list of data points indices which
         are located within the given cell.
-    k_bins_: ndarray, shape (N_cells+1,k)
+    k_bins: ndarray, shape (N_cells+1,k)
         The limits of the grid cells in each dimension.
-    periodic_flag_: bool
+    periodic_flag: bool
         If any dimension has periodicity.
-    periodic_conf_: grispy.core.PeriodicityConf
+    periodic_conf: grispy.core.PeriodicityConf
         Statistics and intermediate results to make easy and fast the searchs
         with periodicity.
 
@@ -545,7 +545,7 @@ class GriSPy(Grid):
         """Init more params and build the grid."""
         super().__attrs_post_init__()
 
-        self.periodic, self.periodic_conf_ = self._build_periodicity(
+        self.periodic, self.periodic_conf = self._build_periodicity(
             periodic=self.periodic, dim=self.dim
         )
 
@@ -617,9 +617,9 @@ class GriSPy(Grid):
     # =========================================================================
 
     @property
-    def periodic_flag_(self):
+    def periodic_flag(self):
         """Proxy to ``periodic_conf_.periodic_flag``."""
-        return self.periodic_conf_.periodic_flag
+        return self.periodic_conf.periodic_flag
 
     # =========================================================================
     # INTERNAL IMPLEMENTATION
@@ -711,7 +711,7 @@ class GriSPy(Grid):
                 continue
 
             # Genera una lista con los vecinos de cada celda
-            ind_tmp = [self.grid_.get(nt, []) for nt in map(tuple, neighbors)]
+            ind_tmp = [self.grid.get(nt, []) for nt in map(tuple, neighbors)]
 
             # Une en una sola lista todos sus vecinos
             inds = np.fromiter(itertools.chain(*ind_tmp), dtype=np.int32)
@@ -738,13 +738,13 @@ class GriSPy(Grid):
         out_of_field = np.zeros(len(cell_point), dtype=bool)
         for k in range(self.dim):
             cell_point[:, k] = self._digitize(
-                centres[:, k], bins=self.k_bins_[:, k]
+                centres[:, k], bins=self.k_bins[:, k]
             )
             out_of_field[
-                (centres[:, k] - distance_upper_bound > self.k_bins_[-1, k])
+                (centres[:, k] - distance_upper_bound > self.k_bins[-1, k])
             ] = True
             out_of_field[
-                (centres[:, k] + distance_upper_bound < self.k_bins_[0, k])
+                (centres[:, k] + distance_upper_bound < self.k_bins[0, k])
             ] = True
 
         if np.all(out_of_field):
@@ -756,10 +756,10 @@ class GriSPy(Grid):
         k_cell_max = np.zeros((len(centres), self.dim), dtype=int)
         for k in range(self.dim):
             k_cell_min[:, k] = self._digitize(
-                centres[:, k] - distance_upper_bound, bins=self.k_bins_[:, k]
+                centres[:, k] - distance_upper_bound, bins=self.k_bins[:, k]
             )
             k_cell_max[:, k] = self._digitize(
-                centres[:, k] + distance_upper_bound, bins=self.k_bins_[:, k]
+                centres[:, k] + distance_upper_bound, bins=self.k_bins[:, k]
             )
 
             k_cell_min[k_cell_min[:, k] < 0, k] = 0
@@ -767,7 +767,7 @@ class GriSPy(Grid):
             k_cell_min[k_cell_min[:, k] >= self.N_cells, k] = self.N_cells - 1
             k_cell_max[k_cell_max[:, k] >= self.N_cells, k] = self.N_cells - 1
 
-        cell_size = self.k_bins_[1, :] - self.k_bins_[0, :]
+        cell_size = self.k_bins[1, :] - self.k_bins[0, :]
         cell_radii = 0.5 * np.sum(cell_size ** 2) ** 0.5
 
         neighbor_cells = []
@@ -786,7 +786,7 @@ class GriSPy(Grid):
             # luego descarto las celdas que no toca el circulo definido por
             # la distancia
             cells_physical = [
-                self.k_bins_[neighbor_cells[i][:, k], k] + 0.5 * cell_size[k]
+                self.k_bins[neighbor_cells[i][:, k], k] + 0.5 * cell_size[k]
                 for k in range(self.dim)
             ]
 
@@ -823,10 +823,10 @@ class GriSPy(Grid):
 
     def _mirror(self, centre, distance_upper_bound):
         pd_hi, pd_low, periodic_edges, periodic_direc = (
-            self.periodic_conf_.pd_hi,
-            self.periodic_conf_.pd_low,
-            self.periodic_conf_.periodic_edges,
-            self.periodic_conf_.periodic_direc,
+            self.periodic_conf.pd_hi,
+            self.periodic_conf.pd_low,
+            self.periodic_conf.periodic_edges,
+            self.periodic_conf.periodic_direc,
         )
 
         mirror_centre = centre - periodic_edges
@@ -890,7 +890,7 @@ class GriSPy(Grid):
         if inplace:
             periodic_attr = attr.fields(GriSPy).periodic
             periodic_attr.validator(self, periodic_attr, periodic)
-            self.periodic, self.periodic_conf_ = self._build_periodicity(
+            self.periodic, self.periodic_conf = self._build_periodicity(
                 periodic=periodic, dim=self.dim
             )
         else:
@@ -965,7 +965,7 @@ class GriSPy(Grid):
         )
 
         # We need to generate mirror centres for periodic boundaries...
-        if self.periodic_flag_:
+        if self.periodic_flag:
             terran_centres, terran_indices = self._mirror_universe(
                 centres, distance_upper_bound
             )
@@ -1082,7 +1082,7 @@ class GriSPy(Grid):
         )
 
         # We need to generate mirror centres for periodic boundaries...
-        if self.periodic_flag_:
+        if self.periodic_flag:
             terran_centres, terran_indices = self._mirror_universe(
                 centres, distance_upper_bound
             )
@@ -1179,7 +1179,7 @@ class GriSPy(Grid):
         upper_distance_tmp = np.zeros(N_centres)
 
         # First estimation is the cell radii
-        cell_size = self.k_bins_[1, :] - self.k_bins_[0, :]
+        cell_size = self.k_bins[1, :] - self.k_bins[0, :]
         cell_radii = 0.5 * np.sum(cell_size ** 2) ** 0.5
 
         upper_distance_tmp = cell_radii * np.ones(N_centres)

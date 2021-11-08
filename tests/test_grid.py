@@ -35,8 +35,8 @@ def test_grid_arguments(grid):
 
 
 def test_grid_attrs_post_init(grid):
-    assert isinstance(grid.k_bins_, np.ndarray)
-    assert isinstance(grid.grid_, dict)
+    assert isinstance(grid.k_bins, np.ndarray)
+    assert isinstance(grid.grid, dict)
 
 
 def test_invalid_data_inf():
@@ -429,7 +429,7 @@ def test_cell_id2digits_result(grid):
 def test_cell_walls_result(grid, grid_input):
     digits = grid.cell_digits(grid_input["points"])
 
-    kb = grid.k_bins_
+    kb = grid.k_bins
     exp_lower = np.vstack([kb[digits[:, k], k] for k in range(grid.dim)]).T
     exp_upper = np.vstack([kb[digits[:, k] + 1, k] for k in range(grid.dim)]).T
 
@@ -466,6 +466,6 @@ def test_cell_points_result(grid, grid_input):
 
     points = grid.cell_points(digits)
 
-    get = grid.grid_.get
+    get = grid.grid.get
     exp_points = [np.asarray(get(tuple(dgt), ())) for dgt in digits]
     npt.assert_equal(points, exp_points)

@@ -89,11 +89,11 @@ def test_grispy_arguments(gsp):
 
 
 def test_grispy_attrs(gsp):
-    assert isinstance(gsp.k_bins_, np.ndarray)
-    assert isinstance(gsp.grid_, dict)
+    assert isinstance(gsp.k_bins, np.ndarray)
+    assert isinstance(gsp.grid, dict)
     assert isinstance(gsp.dim, int)
-    assert isinstance(gsp.periodic_flag_, bool)
-    assert isinstance(gsp.periodic_conf_, PeriodicityConf)
+    assert isinstance(gsp.periodic_flag, bool)
+    assert isinstance(gsp.periodic_conf, PeriodicityConf)
 
 
 def test_bubble_single_query(gsp, grispy_input):
@@ -223,30 +223,30 @@ def test_near_boundary(gsp_periodic, grispy_input):
 def test_set_periodicity_inplace(gsp):
     periodicity = {0: (-50, 50)}
 
-    assert gsp.periodic_flag_ is False
+    assert gsp.periodic_flag is False
     assert gsp.periodic == {}
 
     result = gsp.set_periodicity(periodicity, inplace=True)
 
     assert result is None
-    assert gsp.periodic_flag_
+    assert gsp.periodic_flag
     assert gsp.periodic == {0: (-50, 50), 1: None, 2: None}
 
 
 def test_set_periodicity_no_inplace(gsp):
     periodicity = {0: (-50, 50)}
 
-    assert gsp.periodic_flag_ is False
+    assert gsp.periodic_flag is False
     assert gsp.periodic == {}
 
     result = gsp.set_periodicity(periodicity)
 
     assert isinstance(result, GriSPy)
     assert result is not gsp
-    assert result.periodic_flag_
+    assert result.periodic_flag
     assert result.periodic == {0: (-50, 50), 1: None, 2: None}
 
-    assert gsp.periodic_flag_ is False
+    assert gsp.periodic_flag is False
     assert gsp.periodic == {}
 
 
