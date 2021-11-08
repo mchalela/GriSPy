@@ -14,21 +14,37 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
-
+        py_version: [3.8]
+        tox_env:
+          - style
+          - docstyle
+          - check-manifest
+          - coverage
+          - make-docs
+        include:
+          - py_version: 3.7
+            tox_env: py37
+          - py_version: 3.8
+            tox_env: py38
+          - py_version: 3.9
+            tox_env: py39
+            
     steps:
       - uses: actions/checkout@master
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version}}
+          python-version: ${{ matrix.python-version }}
+
       - name: Install pandoc
+        if: ${{ matrix.tox_env == 'make-docs'}}
         run: sudo apt-get install pandoc
       - name: Install tox
-        run: pip install tox tox-gh-actions
+        run: pip install tox
       - name: Test with tox
         run: tox -r
-      - name: Test Coverage
+
+      - name: Export coverage
         if: ${{ matrix.python-version == '3.8' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}        
