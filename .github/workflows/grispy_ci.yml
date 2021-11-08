@@ -22,6 +22,8 @@ jobs:
           - coverage
           - make-docs
         include:
+          - py_version: 3.6
+            tox_env: py36
           - py_version: 3.7
             tox_env: py37
           - py_version: 3.8
@@ -31,21 +33,22 @@ jobs:
 
     steps:
       - uses: actions/checkout@master
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python ${{ matrix.py_version }}
         uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.py_version }}
 
       - name: Install pandoc
         if: ${{ matrix.tox_env == 'make-docs'}}
         run: sudo apt-get install pandoc
+
       - name: Install tox
         run: pip install tox
-      - name: Test with tox
-        run: tox -r
+      - name: tox -e ${{ matrix.tox_env }}
+        run: tox -re ${{ matrix.tox_env }}
 
       - name: Export coverage
-        if: ${{ matrix.python-version == '3.8' }}
+        if: ${{ matrix.py_version == '3.9' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}        
         run: |
