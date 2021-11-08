@@ -48,7 +48,7 @@ jobs:
         run: tox -re ${{ matrix.tox_env }}
 
       - name: Export coverage
-        if: ${{ matrix.py_version == '3.9' }}
+        if: ${{ matrix.tox_env == 'coverage' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}        
         run: |
