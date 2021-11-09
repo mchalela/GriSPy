@@ -19,13 +19,12 @@
 # =============================================================================
 
 import numpy as np
-
 from scipy.spatial.distance import cdist
-
 
 # =============================================================================
 # FUNCTIONS
 # =============================================================================
+
 
 def euclid(c0, centres, dim):
     """Classic Euclidean distance.
@@ -60,8 +59,8 @@ def haversine(c0, centres, dim):
     lon2 = np.deg2rad(centres[:, 0])
     lat2 = np.deg2rad(centres[:, 1])
 
-    sdlon = np.sin((lon2 - lon1) / 2.)
-    sdlat = np.sin((lat2 - lat1) / 2.)
+    sdlon = np.sin((lon2 - lon1) / 2.0)
+    sdlat = np.sin((lat2 - lat1) / 2.0)
     clat1 = np.cos(lat1)
     clat2 = np.cos(lat2)
     num1 = sdlat ** 2

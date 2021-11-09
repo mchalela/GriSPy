@@ -12,11 +12,24 @@
 
 import numpy as np
 
-
 # ---------------------------------
 # Validators for method params
 # Meant to be called within each method
 # --------------------------------
+
+
+def validate_digits(digits, N_cells):
+    """Validate method params: digits."""
+    # Check if inside the grid
+    if np.any(digits < 0) or np.any(digits >= N_cells):
+        raise ValueError(f"Digits: values must be in the range 0-{N_cells}.")
+
+
+def validate_ids(ids, size):
+    """Validate method params: ids."""
+    # Check if inside the grid
+    if np.any(ids < 0) or np.any(ids >= size):
+        raise ValueError(f"Ids: values must be in the range 0-{size}.")
 
 
 def validate_centres(centres, data):
@@ -124,16 +137,4 @@ def validate_n_nearest(n, data, periodic):
         raise ValueError(
             "Nth-nearest: Argument must be higher than 1. "
             "Got instead {}".format(n)
-        )
-
-    # check that n is not larger than the number of data points
-    # within 1 periodic range
-    Np = len(data)
-    valid_axis = len([v for v in periodic.values() if v is not None])
-    Nvalid = Np * 3**valid_axis
-    if n > Nvalid:
-        raise ValueError(
-            "Nth-nearest: Argument must be lower than the number of "
-            "available data points within 1 periodic range, {}. "
-            "Got instead {}".format(Nvalid, n)
         )

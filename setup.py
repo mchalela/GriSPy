@@ -25,12 +25,11 @@ import pathlib
 
 from setuptools import setup
 
-
 # =============================================================================
 # CONSTANTS
 # =============================================================================
 
-REQUIREMENTS = ["numpy", "scipy", "attrs", "matplotlib"]
+REQUIREMENTS = ["numpy", "scipy", "attrs"]
 
 PATH = pathlib.Path(os.path.abspath(os.path.dirname(__file__)))
 
@@ -40,7 +39,7 @@ with open(PATH / "README.md") as fp:
 with open(PATH / "grispy" / "__init__.py") as fp:
     for line in fp.readlines():
         if line.startswith("__version__ = "):
-            VERSION = line.split("=", 1)[-1].replace('"', '').strip()
+            VERSION = line.split("=", 1)[-1].replace('"', "").strip()
             break
 
 
@@ -51,25 +50,25 @@ DESCRIPTION = "Grid Search in Python"
 # FUNCTIONS
 # =============================================================================
 
+
 def do_setup():
     setup(
         name="grispy",
         version=VERSION,
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
-        long_description_content_type='text/markdown',
-
+        long_description_content_type="text/markdown",
         author=[
             "Martin Chalela",
             "Emanuel Sillero",
             "Luis Pereyra",
-            "Alejandro Garcia"],
+            "Alejandro Garcia",
+            "Juan B. Cabral",
+        ],
         author_email="tinchochalela@gmail.com",
         url="https://github.com/mchalela/GriSPy",
         license="MIT",
-
         keywords=["grispy", "nearest", "neighbors", "search", "grid"],
-
         classifiers=[
             "Development Status :: 4 - Beta",
             "Intended Audience :: Education",
@@ -79,12 +78,12 @@ def do_setup():
             "Programming Language :: Python",
             "Programming Language :: Python :: 3.8",
             "Programming Language :: Python :: Implementation :: CPython",
-            "Topic :: Scientific/Engineering"],
-
+            "Topic :: Scientific/Engineering",
+        ],
         packages=["grispy"],
         py_modules=["ez_setup"],
-
-        install_requires=REQUIREMENTS)
+        install_requires=REQUIREMENTS,
+    )
 
 
 if __name__ == "__main__":
