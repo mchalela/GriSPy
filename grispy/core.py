@@ -68,12 +68,6 @@ class Grid:
     Grid is a regular grid indexing algorithm. This class indexes a set of
     k-dimensional points in a regular grid.
 
-    To be implemented:
-    - cell_id: Return grid indices for a given point.
-    - cell_center: Return cell center coordinates for a given cell id.
-    - cell_count: Return number of points within a given cell id.
-    - cell_points: Return indices of points within a given cell id.
-
     Parameters
     ----------
     data: ndarray, shape(n,k)
@@ -98,6 +92,18 @@ class Grid:
         are located within the given cell.
     k_bins: ndarray, shape (N_cells + 1, k)
         The limits of the grid cells in each dimension.
+    edges: ndarray, shape (2, k)
+        Grid edges or bound values. The lower and upper bounds per dimension.
+    epsilon: float
+        Value of increment used to create the grid edges.
+    ndata: int
+        Total number of a data-points.
+    shape: tuple
+        Number of cells per dimension.
+    size: int
+        Total number of cells.
+    cell_width: ndarray
+        Cell size in each dimension.
 
     """
 
@@ -523,8 +529,20 @@ class GriSPy(Grid):
         tuple with the k-dimensional index of each grid cell. Empty cells
         do not have a key. The value is a list of data points indices which
         are located within the given cell.
-    k_bins: ndarray, shape (N_cells+1,k)
+    k_bins: ndarray, shape (N_cells + 1, k)
         The limits of the grid cells in each dimension.
+    edges: ndarray, shape (2, k)
+        Grid edges or bound values. The lower and upper bounds per dimension.
+    epsilon: float
+        Value of increment used to create the grid edges.
+    ndata: int
+        Total number of a data-points.
+    shape: tuple
+        Number of cells per dimension.
+    size: int
+        Total number of cells.
+    cell_width: ndarray
+        Cell size in each dimension.
     periodic_flag: bool
         If any dimension has periodicity.
     periodic_conf: grispy.core.PeriodicityConf
@@ -632,47 +650,45 @@ class GriSPy(Grid):
         a configuration for use in the search.
 
         """
+        # assume no periodicity
         cleaned_periodic = {}
-        if len(periodic) == 0:
-            periodic_flag = False
-            pd_hi, pd_low = None, None
-            periodic_edges, periodic_direc = None, None
-        else:
-            periodic_flag = any(
-                [x is not None for x in list(periodic.values())]
-            )
 
-            if periodic_flag:
+        periodic_flag = False
+        pd_hi, pd_low = None, None
+        periodic_edges, periodic_direc = None, None
 
-                pd_hi = np.ones((1, dim)) * np.inf
-                pd_low = np.ones((1, dim)) * -np.inf
-                periodic_edges = []
-                for k in range(dim):
-                    aux = periodic.get(k)
-                    cleaned_periodic[k] = aux
-                    if aux:
-                        pd_low[0, k] = aux[0]
-                        pd_hi[0, k] = aux[1]
-                        aux = np.insert(aux, 1, 0.0)
-                    else:
-                        aux = np.zeros((1, 3))
-                    periodic_edges = np.hstack(
-                        [
-                            periodic_edges,
-                            np.tile(
-                                aux, (3 ** (dim - 1 - k), 3 ** k)
-                            ).T.ravel(),
-                        ]
-                    )
+        periodic_flag = any([x is not None for x in list(periodic.values())])
 
-                periodic_edges = periodic_edges.reshape(dim, 3 ** dim).T
-                periodic_edges -= periodic_edges[::-1]
-                periodic_edges = np.unique(periodic_edges, axis=0)
+        # now check if periodic
+        if periodic_flag:
 
-                mask = periodic_edges.sum(axis=1, dtype=bool)
-                periodic_edges = periodic_edges[mask]
+            pd_hi = np.ones((1, dim)) * np.inf
+            pd_low = np.ones((1, dim)) * -np.inf
+            periodic_edges = []
+            for k in range(dim):
+                aux = periodic.get(k)
+                cleaned_periodic[k] = aux
+                if aux:
+                    pd_low[0, k] = aux[0]
+                    pd_hi[0, k] = aux[1]
+                    aux = np.insert(aux, 1, 0.0)
+                else:
+                    aux = np.zeros((1, 3))
+                periodic_edges = np.hstack(
+                    [
+                        periodic_edges,
+                        np.tile(aux, (3 ** (dim - 1 - k), 3 ** k)).T.ravel(),
+                    ]
+                )
 
-                periodic_direc = np.sign(periodic_edges)
+            periodic_edges = periodic_edges.reshape(dim, 3 ** dim).T
+            periodic_edges -= periodic_edges[::-1]
+            periodic_edges = np.unique(periodic_edges, axis=0)
+
+            mask = periodic_edges.sum(axis=1, dtype=bool)
+            periodic_edges = periodic_edges[mask]
+
+            periodic_direc = np.sign(periodic_edges)
 
         return cleaned_periodic, PeriodicityConf(
             periodic_flag=periodic_flag,

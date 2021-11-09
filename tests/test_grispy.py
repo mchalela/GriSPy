@@ -75,6 +75,16 @@ def test_invalid_metric(grispy_init):
         GriSPy(grispy_init["data"], metric=bad_metric)
 
 
+def test_valid_periodic_empty(grispy_init):
+    # both initializations should be equivalent
+    periodic_explicit = {0: None, 1: None, 2: None}
+    periodic_implicit = dict()
+
+    exp = GriSPy(grispy_init["data"], periodic=periodic_explicit)
+    imp = GriSPy(grispy_init["data"], periodic=periodic_implicit)
+    assert exp == imp
+
+
 # =========================================================
 # QUERY METHODS
 # =========================================================
