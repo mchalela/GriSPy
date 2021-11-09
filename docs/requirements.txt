@@ -3,3 +3,4 @@ Sphinx<3.0
 sphinx-rtd-theme
 nbsphinx
 textdistance
+docutils<0.18
