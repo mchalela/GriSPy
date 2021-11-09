@@ -12,8 +12,7 @@
 # DOCS
 # =============================================================================
 
-"""This file is for distribute and install GriSPy
-"""
+"""This file manages the distribution and installation of GriSPy."""
 
 
 # =============================================================================
@@ -81,7 +80,6 @@ def do_setup():
             "Topic :: Scientific/Engineering",
         ],
         packages=["grispy"],
-        py_modules=["ez_setup"],
         install_requires=REQUIREMENTS,
     )
 
