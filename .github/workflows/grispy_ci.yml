@@ -2,7 +2,7 @@
 # CI with GitHub Actions
 # ==============================================================
 
-name: GriSPy
+name: GriSPy CI
 
 on:
   - push
@@ -13,6 +13,7 @@ jobs:
 
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         py_version: [3.9]
         tox_env:
@@ -50,7 +51,7 @@ jobs:
       - name: Export coverage
         if: ${{ matrix.tox_env == 'coverage' }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}        
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           pip install coveralls
-          coveralls --service=github             
+          coveralls --service=github
