@@ -24,29 +24,49 @@ GriSPy has the following queries implemented:
 - **shell_neighbors**: find neighbors within given lower and upper radius. Different lower and upper radius can be provided for each centre.
 - **nearest_neighbors**: find the nth nearest neighbors for each centre.
 
-And the following method is available:
-- **set_periodicity**: define the periodicity conditions.
+## Usage example
+
+Let's create a 2D random distribution of points as an example:
+
+```python
+import numpy as np
+import grispy as gsp
+
+data = np.random.uniform(size=(1000, 2))
+grid = gsp.GriSPy(data)
+```
+
+The `grid` object now has all the data points indexed in a grid. Now let's search for neighbors around new points:
+```python
+centres = np.random.uniform(size=(10, 2))
+dist, ind = grid.bubble_neighbors(centres, distance_upper_bound=0.1)
+```
+
+And that's it! The `dist` and `ind` lists contain the distances and indices to `data` neighbors within a 0.1 search radius.
 
 --------------------------------
 
 ## Requirements
 
-You need Python 3.6 or later to run GriSPy. You can have multiple Python
-versions (2.x and 3.x) installed on the same system without problems.
+You will need Python 3.6 or later to run GriSPy.
 
 
 ## Standard Installation
 
 GriSPy is available at [PyPI](https://pypi.org/project/grispy/). You can install it via the pip command
 
-        $ pip install grispy
+```bash
+$ pip install grispy
+```
 
 ## Development Install
 
 Clone this repo and then inside the local directory execute
 
-        $ pip install -e .
-        
+```bash
+$ pip install -e .
+```
+
 ## Citation
 
 If you use *GriSPy* in a scientific publication, we would appreciate citations to the following paper:
