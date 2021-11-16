@@ -56,6 +56,34 @@ class PeriodicityConf:
     periodic_direc = attr.ib()
 
 
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# EXPERIMENTAL
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#
+# The idea is to move all periodicity method inside GriSPy into a new class
+#
+
+
+def complete_periodicity_boundaries(incomplete_boundaries, dim):
+    """Take a half constructed periodicity dictionary and complete it."""
+    default_boundaries = {key: None for key in range(dim)}
+    default_boundaries.update(incomplete_boundaries)
+    return default_boundaries
+
+
+@attr.s
+class Periodicity:
+    """Periodicity configuration of the Grid."""
+
+    boundaries = attr.ib()
+    dim = attr.ib()
+
+    def __attrs_post_init__(self):
+        self.boundaries = complete_periodicity_boundaries(
+            self.boundaries, self.dim
+        )
+
+
 # =============================================================================
 # MAIN CLASS
 # =============================================================================
