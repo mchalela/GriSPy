@@ -20,7 +20,6 @@
 import itertools as it
 
 import attr
-
 import numpy as np
 
 # from . import validators as vlds

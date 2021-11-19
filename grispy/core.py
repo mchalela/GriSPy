@@ -25,6 +25,7 @@ import numpy as np
 
 from . import distances
 from . import validators as vlds
+from .periodicity import Periodicity
 
 # =============================================================================
 # CONSTANTS
