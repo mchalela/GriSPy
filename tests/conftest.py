@@ -11,7 +11,7 @@
 import numpy as np
 import pytest
 
-from grispy import Grid, GriSPy
+from grispy import Grid, GriSPy, Periodicity
 
 # =========================================================================
 # Grid fixtures
@@ -114,5 +114,28 @@ def make_grispy():
         periodic = {k: (0, 100) for k in range(dim)} if isperiodic else dict()
 
         return GriSPy(data, N_cells=N_cells, periodic=periodic)
+
+    return _make
+
+
+# =========================================================================
+# Periodicity fixtures
+# =========================================================================
+
+
+@pytest.fixture
+def periodicity_init():
+    # Define valid input data
+    d = dict()
+    d["periodic"] = {0: (0, 100), 1: (0, 100), 2: None}
+    d["dim"] = 3
+    return d
+
+
+@pytest.fixture
+def make_periodicity():
+    def _make(dim):
+        periodic = {k: (0, 100) for k in range(dim)}
+        return Periodicity(periodic, dim)
 
     return _make

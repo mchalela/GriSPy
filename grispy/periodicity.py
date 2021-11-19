@@ -22,7 +22,7 @@ import itertools as it
 import attr
 import numpy as np
 
-# from . import validators as vlds
+from . import validators as vlds
 
 # =============================================================================
 # EXPERIMENTAL
@@ -61,12 +61,84 @@ class Periodicity:
     """
 
     edges = attr.ib()
-    dim = attr.ib()
+    dim = attr.ib(validator=attr.validators.instance_of(int))
 
     def __attrs_post_init__(self):
 
         self.edges = complete_periodicity_edges(self.edges, self.dim)
         self.low_edges, self.high_edges = self.edges_asarray()
+
+    @edges.validator
+    def _validate_edges(self, attr, value):
+
+        # Chek if dict
+        if not isinstance(value, dict):
+            raise TypeError(
+                "Periodicity: Argument must be a dictionary. "
+                "Got instead type {}".format(type(value))
+            )
+
+        # If dict is empty means no periodicity, stop validation.
+        if len(value) == 0:
+            return
+
+        # Check if keys and values are valid
+        for k, v in value.items():
+            # Check if integer
+            if not isinstance(k, int):
+                raise TypeError(
+                    "Periodicity: Keys must be integers. "
+                    "Got instead type {}".format(type(k))
+                )
+
+            # Check if tuple or None
+            if not (isinstance(v, tuple) or v is None):
+                raise TypeError(
+                    "Periodicity: Values must be tuples. "
+                    "Got instead type {}".format(type(v))
+                )
+            if v is None:
+                continue
+
+            # Check if edges are valid numbers
+            has_valid_number = all(
+                [
+                    isinstance(v[0], (int, float)),
+                    isinstance(v[1], (int, float)),
+                ]
+            )
+            if not has_valid_number:
+                raise TypeError(
+                    "Periodicity: Argument must be a tuple of "
+                    "2 real numbers as edge descriptors. "
+                )
+
+            # Check that first number is lower than second
+            if not v[0] < v[1]:
+                raise ValueError(
+                    "Periodicity: First argument in tuple must be "
+                    "lower than second argument."
+                )
+
+    @dim.validator
+    def _validate_dim(self, attr, value):
+
+        # Chek if int
+        if not isinstance(value, int):
+            raise TypeError(
+                "Edges: Argument must be an integer. "
+                "Got instead type {}".format(type(value))
+            )
+
+        if value < len(self.edges):
+            raise ValueError(
+                "Dimension: The number of dimension must be "
+                "larger than the number of axis in `edges`."
+            )
+
+    # =========================================================================
+    # INTERNAL IMPLEMENTATION
+    # =========================================================================
 
     def _modulus(self, x, length):
         """This returns x traslated to the interval (0, length)."""
@@ -99,19 +171,28 @@ class Periodicity:
 
     def multiplicity(self, levels=1):
         """Number of image points per real point."""
+        vlds.validate_levels(levels)
+
         num_levels = 2 * levels + 1
         num_pe = len(self.periodic_edges)
         return num_levels ** num_pe - 1
 
-    def ranges(self, nonperiodic_fill_value=np.inf):
+    def ranges(self, fill_value=np.inf):
         """Return the range of each dimension."""
+        if not isinstance(fill_value, (int, float)):
+            raise TypeError(
+                f"Fill value must be a number. Got instead {fill_value}"
+            )
+
         low, high = self.edges_asarray()
         diff = high - low
-        diff = np.where(np.isfinite(diff), diff, nonperiodic_fill_value)
+        diff = np.where(np.isfinite(diff), diff, fill_value)
         return diff
 
     def imaging_matrix(self, levels=1):
         """Create the matrix that traslates real points to image points."""
+        vlds.validate_levels(levels)
+
         base = tuple(range(-levels, levels + 1))
 
         list_ = []
@@ -135,6 +216,8 @@ class Periodicity:
 
     def mirror(self, points, levels=1):
         """Generate Terran points in the Mirror Universe."""
+        vlds.validate_levels(levels)
+
         ranges = self.ranges(nonperiodic_fill_value=0.0)
         matrix = self.imaging_matrix(levels)
 

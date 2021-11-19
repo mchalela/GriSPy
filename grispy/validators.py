@@ -18,6 +18,12 @@ import numpy as np
 # --------------------------------
 
 
+def validate_levels(levels):
+    """Validate periodicity method params: levels"""
+    if not isinstance(levels, int) or levels < 0:
+        raise ValueError("Number of levels must be a positive integer.")
+
+
 def validate_digits(digits, N_cells):
     """Validate method params: digits."""
     # Check if inside the grid
