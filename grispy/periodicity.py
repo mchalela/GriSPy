@@ -17,7 +17,7 @@
 # IMPORTS
 # =============================================================================
 
-# import itertools
+import itertools as it
 
 import attr
 
@@ -65,52 +65,63 @@ class Periodicity:
     dim = attr.ib()
 
     def __attrs_post_init__(self):
+
         self.edges = complete_periodicity_edges(self.edges, self.dim)
+        self.low_edges, self.high_edges = self.edges_asarray()
 
-        self.low_edges, self.high_edges = self.edges_arrays()
+    def _modulus(self, x, length):
+        """This returns x traslated to the interval (0, length)."""
+        mod = x % length
+        center_mod = mod - length * (mod // ((length + 1) // 2))
+        return center_mod + length / 2
 
-        if self.isperiodic:
-            self._unraveled_edges = self._unravel_edges()
-            self._unraveled_direction = np.sign(self._unraveled_edges)
-
-    def _unravel_edges(self, periodic, dim):
-        """Cleanup the periodicity configuration.
-
-        Remove the unnecessary axis from the periodic dict and also creates
-        a configuration for use in the search.
-
-        """
-
-        unraveled_edges = []
-        for k in range(dim):
-            k_edges = periodic.get(k)
-
-            if k_edges:
-                k_edges = np.insert(k_edges, 1, 0.0)
-            else:
-                k_edges = np.zeros((1, 3))
-
-            tiled_k_edges = np.tile(
-                k_edges, (3 ** (dim - 1 - k), 3 ** k)
-            ).T.ravel()
-            unraveled_edges = np.hstack([unraveled_edges, tiled_k_edges])
-
-        unraveled_edges = unraveled_edges.reshape(dim, 3 ** dim).T
-        unraveled_edges -= unraveled_edges[::-1]
-        unraveled_edges = np.unique(unraveled_edges, axis=0)
-
-        mask = unraveled_edges.sum(axis=1, dtype=bool)
-        unraveled_edges = unraveled_edges[mask]
-
-        return unraveled_edges
+    # =========================================================================
+    # PROPERTIES
+    # =========================================================================
 
     @property
     def isperiodic(self):
-        if not hasattr(self, "_isperiodic"):
-            self._isperiodic = any(
-                [x is not None for x in list(self.edges.values())]
-            )
-        return self._isperiodic
+        """Return True if at least one dimension is periodic."""
+        return any([x is not None for x in list(self.edges.values())])
+
+    @property
+    def periodic_edges(self):
+        """Return only periodic edges."""
+        return {k: v for k, v in self.edges.items() if v is not None}
+
+    @property
+    def nonperiodic_edges(self):
+        """Return only non-periodic edges."""
+        return {k: v for k, v in self.edges.items() if v is None}
+
+    # =========================================================================
+    # METHODS
+    # =========================================================================
+
+    def multiplicity(self, levels=1):
+        """Number of image points per real point."""
+        num_levels = 2 * levels + 1
+        num_pe = len(self.periodic_edges)
+        return num_levels ** num_pe - 1
+
+    def ranges(self, nonperiodic_fill_value=np.inf):
+        """Return the range of each dimension."""
+        low, high = self.edges_asarray()
+        diff = high - low
+        diff = np.where(np.isfinite(diff), diff, nonperiodic_fill_value)
+        return diff
+
+    def imaging_matrix(self, levels=1):
+        """Create the matrix that traslates real points to image points."""
+        base = tuple(range(-levels, levels + 1))
+
+        list_ = []
+        for i in range(self.dim):
+            list_.append(base if self.edges[i] else (0,))
+
+        matrix = np.asarray(list(it.product(*list_)))
+        zeros_idx = self.multiplicity(levels) // 2
+        return np.delete(matrix, zeros_idx, axis=0)
 
     def edges_asarray(self):
         """Create two arrays with the periodic edges."""
@@ -119,24 +130,24 @@ class Periodicity:
 
         for k in range(self.dim):
             k_edges = self.edges.get(k)
-
             if k_edges:
-                low[0, k] = k_edges[0]
-                high[0, k] = k_edges[1]
+                low[0, k], high[0, k] = k_edges
         return low, high
 
-    def mirror(self, points):
+    def mirror(self, points, levels=1):
         """Generate Terran points in the Mirror Universe."""
-        pass
+        ranges = self.ranges(nonperiodic_fill_value=0.0)
+        matrix = self.imaging_matrix(levels)
 
-    def near_edge(self, points, distance):
-        """Check if points are near a boundary for a given distance."""
-        pass
+        mirror_points = np.repeat(points, self.multiplicity(levels), axis=0)
+        tiled_matrix = np.tile(matrix.T, len(points)).T
 
-    def near_edge_mirror(self, points, distance):
-        """Generate Terran points in the Mirror Universe if close to edges."""
-        pass
+        return mirror_points + ranges * tiled_matrix
 
     def wrap(self, points):
         """Compute inside-domain coords of points that are outside."""
-        pass
+        wrapped_points = points.copy()
+        for k, (low, high) in self.periodic_edges.items():
+            length = high - low
+            wrapped_points[:, k] = self._modulus(points[:, k], length) + low
+        return wrapped_points
