@@ -10,11 +10,9 @@
 
 import numpy as np
 import numpy.testing as npt
-
 import pytest
 
 from grispy import Periodicity
-from tests.conftest import periodicity_init
 
 # =========================================================
 # INITIALIZATION
@@ -185,4 +183,133 @@ def test_imaging_matrix():
 
 
 def test_edges_asarray():
-    pass
+    edges = {k: (0, 100) for k in range(3)}
+    periodicity = Periodicity(edges, 3)
+
+    low_exp = np.array([[0, 0, 0]])
+    high_exp = np.array([[100, 100, 100]])
+
+    result = periodicity.edges_asarray()
+    assert isinstance(result, tuple)
+    assert len(result) == 2
+
+    low, high = result
+    npt.assert_array_equal(low, low_exp)
+    npt.assert_array_equal(high, high_exp)
+
+
+def test_mirror_1point():
+    edges = {k: (0, 100) for k in range(2)}
+    periodicity = Periodicity(edges, 2)
+
+    p1 = np.array([[25.0, 25.0]])
+
+    p1_exp_mirrors = np.array(
+        [
+            [-75.0, -75.0],
+            [-75.0, 25.0],
+            [-75.0, 125.0],
+            [25.0, -75.0],
+            [25.0, 125.0],
+            [125.0, -75.0],
+            [125.0, 25.0],
+            [125.0, 125.0],
+        ]
+    )
+
+    result = periodicity.mirror(p1, levels=1)
+    npt.assert_array_equal(result, p1_exp_mirrors)
+
+
+def test_mirror_2points():
+    edges = {k: (0, 100) for k in range(2)}
+    periodicity = Periodicity(edges, 2)
+
+    p1 = np.array([[25.0, 25.0]])
+    p2 = np.array([[51.0, 51.0]])
+    p = np.vstack((p1, p2))
+
+    p1_exp_mirrors = np.array(
+        [
+            [-75.0, -75.0],
+            [-75.0, 25.0],
+            [-75.0, 125.0],
+            [25.0, -75.0],
+            [25.0, 125.0],
+            [125.0, -75.0],
+            [125.0, 25.0],
+            [125.0, 125.0],
+        ]
+    )
+
+    p2_exp_mirrors = np.array(
+        [
+            [-49.0, -49.0],
+            [-49.0, 51.0],
+            [-49.0, 151.0],
+            [51.0, -49.0],
+            [51.0, 151.0],
+            [151.0, -49.0],
+            [151.0, 51.0],
+            [151.0, 151.0],
+        ]
+    )
+
+    p_exp_mirrors = np.vstack((p1_exp_mirrors, p2_exp_mirrors))
+
+    p1_result = periodicity.mirror(p1, levels=1)
+    npt.assert_array_equal(p1_result, p1_exp_mirrors)
+
+    p2_result = periodicity.mirror(p2, levels=1)
+    npt.assert_array_equal(p2_result, p2_exp_mirrors)
+
+    p_result = periodicity.mirror(p, levels=1)
+    npt.assert_array_equal(p_result, p_exp_mirrors)
+
+
+def test_wrap_zero_origin():
+    edges = {k: (0, 100) for k in range(2)}
+    periodicity = Periodicity(edges, 2)
+
+    p = np.array([[130.0, -60.0]])
+
+    p_exp_wrap = np.array([[30.0, 40.0]])
+
+    result = periodicity.wrap(p)
+    npt.assert_array_equal(result, p_exp_wrap)
+
+
+def test_wrap_any_origin():
+    edges = {k: (50, 100) for k in range(2)}
+    periodicity = Periodicity(edges, 2)
+
+    p = np.array([[130.0, -60.0]])
+
+    p_exp_wrap = np.array([[80.0, 90.0]])
+
+    result = periodicity.wrap(p)
+    npt.assert_array_equal(result, p_exp_wrap)
+
+
+@pytest.mark.parametrize("levels", [1, 2, 3, 4, 5])
+@pytest.mark.parametrize("dim", [2, 3, 4])
+def test_mirror_to_wrap_and_back(levels, dim):
+    # Take some points, mirror them
+    # then wrap them back and compare with original
+    edges = {k: (66, 98) for k in range(dim)}
+    periodicity = Periodicity(edges, dim)
+
+    rng = np.random.default_rng(42)
+    p = rng.uniform(66, 98, size=(10, dim))
+
+    p_mirrors = periodicity.mirror(p, levels=levels)
+    p_mirrors_to_wrap = periodicity.wrap(p_mirrors)
+
+    # each part must be the same point repeated m times
+    m = periodicity.multiplicity(levels=levels)
+    nparts = len(p_mirrors_to_wrap) / m
+    parts = np.split(p_mirrors_to_wrap, nparts, axis=0)
+
+    for pi, part in zip(p, parts):
+        expected = np.vstack((pi,) * m)
+        npt.assert_array_almost_equal(part, expected, decimal=12)

@@ -61,7 +61,7 @@ class Periodicity:
     """
 
     edges = attr.ib()
-    dim = attr.ib(validator=attr.validators.instance_of(int))
+    dim = attr.ib()
 
     def __attrs_post_init__(self):
 
@@ -137,16 +137,6 @@ class Periodicity:
             )
 
     # =========================================================================
-    # INTERNAL IMPLEMENTATION
-    # =========================================================================
-
-    def _modulus(self, x, length):
-        """This returns x traslated to the interval (0, length)."""
-        mod = x % length
-        center_mod = mod - length * (mod // ((length + 1) // 2))
-        return center_mod + length / 2
-
-    # =========================================================================
     # PROPERTIES
     # =========================================================================
 
@@ -218,7 +208,7 @@ class Periodicity:
         """Generate Terran points in the Mirror Universe."""
         vlds.validate_levels(levels)
 
-        ranges = self.ranges(nonperiodic_fill_value=0.0)
+        ranges = self.ranges(fill_value=0.0)
         matrix = self.imaging_matrix(levels)
 
         mirror_points = np.repeat(points, self.multiplicity(levels), axis=0)
@@ -228,8 +218,14 @@ class Periodicity:
 
     def wrap(self, points):
         """Compute inside-domain coords of points that are outside."""
-        wrapped_points = points.copy()
-        for k, (low, high) in self.periodic_edges.items():
-            length = high - low
-            wrapped_points[:, k] = self._modulus(points[:, k], length) + low
-        return wrapped_points
+        low, high = self.edges_asarray()
+        length = high - low
+        return (points - low) % length + low
+
+        # wrapped_points = points.copy()
+
+        # for k, (low, high) in self.periodic_edges.items():
+        #     length = high - low
+        #     wrapped_points[:, k] = points[:, k] % length + low
+
+        # return wrapped_points
