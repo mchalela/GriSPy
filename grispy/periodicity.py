@@ -204,17 +204,22 @@ class Periodicity:
                 low[0, k], high[0, k] = k_edges
         return low, high
 
-    def mirror(self, points, levels=1):
+    def mirror(self, points, levels=1, *, return_indices=False):
         """Generate Terran points in the Mirror Universe."""
         vlds.validate_levels(levels)
 
         ranges = self.ranges(fill_value=0.0)
         matrix = self.imaging_matrix(levels)
-
-        mirror_points = np.repeat(points, self.multiplicity(levels), axis=0)
         tiled_matrix = np.tile(matrix.T, len(points)).T
 
-        return mirror_points + ranges * tiled_matrix
+        m = self.multiplicity(levels)
+        mirror_points = np.repeat(points, m, axis=0)
+        mirror_points = mirror_points + ranges * tiled_matrix
+
+        if return_indices:
+            indices = np.repeat(np.arange(len(points)), m)
+            return mirror_points, indices
+        return mirror_points
 
     def wrap(self, points):
         """Compute inside-domain coords of points that are outside."""

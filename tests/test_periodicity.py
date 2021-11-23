@@ -267,6 +267,23 @@ def test_mirror_2points():
     npt.assert_array_equal(p_result, p_exp_mirrors)
 
 
+@pytest.mark.parametrize("levels", [1, 2, 3, 4, 5])
+def test_mirror_return_indices(levels):
+    edges = {k: (0, 100) for k in range(2)}
+    periodicity = Periodicity(edges, 2)
+
+    rng = np.random.default_rng(42)
+    points = rng.uniform(0, 100, size=(10, 2))
+    result = periodicity.mirror(points, levels, return_indices=True)
+    assert len(result) == 2
+    assert isinstance(result, tuple)
+
+    _, indices = result
+    m = periodicity.multiplicity(levels=levels)
+    expected_indices = np.repeat(np.arange(len(points)), m)
+    npt.assert_array_equal(indices, expected_indices)
+
+
 def test_wrap_zero_origin():
     edges = {k: (0, 100) for k in range(2)}
     periodicity = Periodicity(edges, 2)
