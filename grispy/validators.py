@@ -19,7 +19,7 @@ import numpy as np
 
 
 def validate_levels(levels):
-    """Validate periodicity method params: levels"""
+    """Validate periodicity method params: levels."""
     if not isinstance(levels, int) or levels < 0:
         raise ValueError("Number of levels must be a positive integer.")
 

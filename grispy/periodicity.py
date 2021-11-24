@@ -18,6 +18,7 @@
 # =============================================================================
 
 import itertools as it
+from collections.abc import Mapping
 
 import attr
 import numpy as np
@@ -41,7 +42,7 @@ def complete_periodicity_edges(incomplete_edges, dim):
 
 
 @attr.s
-class Periodicity:
+class Periodicity(Mapping):
     """Handle the periodicity of a k-dimensional domain.
 
     Parameters
@@ -64,9 +65,8 @@ class Periodicity:
     dim = attr.ib()
 
     def __attrs_post_init__(self):
-
+        """Complete edges dict if necesary."""
         self.edges = complete_periodicity_edges(self.edges, self.dim)
-        self.low_edges, self.high_edges = self.edges_asarray()
 
     @edges.validator
     def _validate_edges(self, attr, value):
@@ -137,6 +137,23 @@ class Periodicity:
             )
 
     # =========================================================================
+    # DUNDERS
+    # =========================================================================
+    # Mandatory: __getitem__, __iter__, __len__
+
+    def __getitem__(self, k):
+        """x[k] <=> x.__getitem__(k)."""
+        return self.edges.__getitem__(k)
+
+    def __iter__(self):
+        """iter(x) <=> x.__iter__()."""
+        return self.edges.__iter__()
+
+    def __len__(self):
+        """len(x) <=> x.__len__()."""
+        return self.dim
+
+    # =========================================================================
     # PROPERTIES
     # =========================================================================
 
@@ -160,7 +177,22 @@ class Periodicity:
     # =========================================================================
 
     def multiplicity(self, levels=1):
-        """Number of image points per real point."""
+        """Return number of image points per real point.
+
+        Parameters
+        ----------
+        levels: int, optional
+            Number of periodic levels around the original box. For example: in
+            a fully periodic 2 dimensional domain there are 8 boxes in the
+            first level. Default: 1.
+
+        Return
+        ------
+        m: int
+            Number of image points per real point. For example: in the first
+            level, i.e. levels=1, of a fully periodic 2 dimensional domain
+            the multiplicity is 8.
+        """
         vlds.validate_levels(levels)
 
         num_levels = 2 * levels + 1
@@ -168,7 +200,17 @@ class Periodicity:
         return num_levels ** num_pe - 1
 
     def ranges(self, fill_value=np.inf):
-        """Return the range of each dimension."""
+        """Return the range of each dimension.
+
+        Parameters
+        ----------
+        fill_value: scalar, optional
+            Value to use for a non-periodic edge. Default: inf.
+        Return
+        ------
+        ranges: array
+            Domain range in each dimension.
+        """
         if not isinstance(fill_value, (int, float)):
             raise TypeError(
                 f"Fill value must be a number. Got instead {fill_value}"
@@ -180,7 +222,20 @@ class Periodicity:
         return diff
 
     def imaging_matrix(self, levels=1):
-        """Create the matrix that traslates real points to image points."""
+        """Create the matrix that traslates real points to image points.
+
+        Parameters
+        ----------
+        levels: int, optional
+            Number of periodic levels around the original box. For example: in
+            a fully periodic 2 dimensional domain there are 8 boxes in the
+            first level. Default: 1.
+
+        Return
+        ------
+        matrix: array
+            Directional matrix that is used to traslate coordinates.
+        """
         vlds.validate_levels(levels)
 
         base = tuple(range(-levels, levels + 1))
@@ -194,7 +249,13 @@ class Periodicity:
         return np.delete(matrix, zeros_idx, axis=0)
 
     def edges_asarray(self):
-        """Create two arrays with the periodic edges."""
+        """Create two arrays with the periodic edges.
+
+        Return
+        ------
+        low, high: array
+            Lower and upper edges as a numpy array.
+        """
         low = np.full((1, self.dim), -np.inf)
         high = np.full((1, self.dim), np.inf)
 
@@ -205,7 +266,27 @@ class Periodicity:
         return low, high
 
     def mirror(self, points, levels=1, *, return_indices=False):
-        """Generate Terran points in the Mirror Universe."""
+        """Generate Terran points in the Mirror Universe.
+
+        Parameters
+        ----------
+        points: array, shape (m, dim)
+            The point or points to create mirror points.
+        levels: int, optional
+            Number of periodic levels around the original box. For example: in
+            a fully periodic 2 dimensional domain there are 8 boxes in the
+            first level. Default: 1.
+        return_indices: bool, optional
+            Flag to indicate if an array of original indices must be returned.
+            Default: False.
+        Return
+        ------
+        mirror_points: array
+            Periodic points mirrored outside the domain.
+        (indices): array
+            If return_indices=True an array that matches mirror_point indices
+            with the location in the original array.
+        """
         vlds.validate_levels(levels)
 
         ranges = self.ranges(fill_value=0.0)
@@ -222,15 +303,17 @@ class Periodicity:
         return mirror_points
 
     def wrap(self, points):
-        """Compute inside-domain coords of points that are outside."""
+        """Compute inside-domain coords of points that are outside.
+
+        Parameters
+        ----------
+        points: array, shape (m, dim)
+            The point or points to create mirror points.
+        Return
+        ------
+        wrapped_points: array (m, dim)
+            Points coordinates within the periodic domain.
+        """
         low, high = self.edges_asarray()
         length = high - low
         return (points - low) % length + low
-
-        # wrapped_points = points.copy()
-
-        # for k, (low, high) in self.periodic_edges.items():
-        #     length = high - low
-        #     wrapped_points[:, k] = points[:, k] % length + low
-
-        # return wrapped_points
