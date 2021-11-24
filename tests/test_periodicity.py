@@ -80,6 +80,14 @@ def test_invalid_dim_value(bad_dim):
         Periodicity(edges=edges, dim=bad_dim)
 
 
+def test_mapping_dunders():
+    edges = {0: (0, 10), 1: (100, 110), 2: (200, 210)}
+    periodicity = Periodicity(edges=edges, dim=3)
+
+    assert len(periodicity) == 3
+    assert periodicity.items() == edges.items()
+
+
 # =========================================================
 # PROPERTIES
 # =========================================================

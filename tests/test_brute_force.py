@@ -133,22 +133,23 @@ def test_all_in_bubble_with_periodicity(make_grispy, dim, N_cells):
     gsp = make_grispy(dim=dim, N_cells=N_cells, isperiodic=True)
 
     rng = np.random.default_rng(0)
-    centres = rng.uniform(0, 100, size=(10, dim))
+    centres = rng.uniform(0, 100, size=(2, dim))
     radii = 10.0
     lbox = 100.0
 
-    _, ind = gsp.bubble_neighbors(centres, distance_upper_bound=radii)
-
+    dists, ind = gsp.bubble_neighbors(centres, distance_upper_bound=radii)
+    # print(dists)
     for i, l in enumerate(ind):
         for j in l:
 
             d = gsp.data[j] - centres[i]
+            print(d)
             for k in range(dim):
                 if d[k] > 0.5 * lbox:
                     d[k] -= lbox
                 elif d[k] < -0.5 * lbox:
                     d[k] += lbox
-
+            print(d, "---", gsp.data[j], centres[i])
             d = np.linalg.norm(d)
             assert (d <= radii).all()
 
