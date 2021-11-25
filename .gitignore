@@ -1,4 +1,5 @@
 # My ignored files
+lprofile*
 issue8/
 *.pickle
 *mutmut-cache

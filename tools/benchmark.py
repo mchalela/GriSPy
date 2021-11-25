@@ -23,6 +23,18 @@ import pandas as pd
 from grispy import GriSPy
 from grispy import __version__ as grispy_version
 
+plt.ion()
+
+# =============================================================================
+# OUTPUT GRISPY VERSION AT IMPORT
+# =============================================================================
+
+HEADER = "\033[95m"
+END = "\033[0m"
+BOLD = "\033[1m"
+
+print(f"{HEADER}{BOLD}Using GriSPy version = {grispy_version}{END}")
+
 # =============================================================================
 # GRISPY PARAMS
 # =============================================================================
@@ -174,8 +186,8 @@ class TimeReport:
             legend_title=legend_title,
             logy=logy,
         )
-
-        fig.suptitle(f"GriSPy v{grispy_version} time report")
+        version = self.metadata.get("version", "diff")
+        fig.suptitle(f"GriSPy {version} time report")
         return ax
 
     # =====================================================
@@ -251,7 +263,13 @@ def time_benchmark(
 
     # Empty report and metadata
     axes = {"n_data": n_data, "n_centres": n_centres, "n_cells": n_cells}
-    metadata = {"dim": dim, "repeats": repeats, "n_jobs": n_jobs, "seed": seed}
+    metadata = {
+        "dim": dim,
+        "repeats": repeats,
+        "n_jobs": n_jobs,
+        "seed": seed,
+        "version": grispy_version,
+    }
     report = []
 
     # Compute the parameter space

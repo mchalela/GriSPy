@@ -46,7 +46,7 @@ EMPTY_ARRAY = np.array([], dtype=int)
 # =============================================================================
 
 
-@attr.s
+@attr.s(slots=True)
 class Grid:
     """Grid indexing.
 
@@ -551,6 +551,10 @@ class GriSPy(Grid):
         if isinstance(self.periodic, dict):
             self.periodic = Periodicity(edges=self.periodic, dim=self.dim)
 
+        self._metric_func = (
+            self.metric if callable(self.metric) else METRICS[self.metric]
+        )
+
     @metric.validator
     def _validate_metric(self, attr, value):
         """Validate init params: metric."""
@@ -592,13 +596,15 @@ class GriSPy(Grid):
         """Compute distance between points."""
         if len(centres) == 0:
             return EMPTY_ARRAY.copy()
-        metric_func = (
-            self.metric if callable(self.metric) else METRICS[self.metric]
-        )
-        return metric_func(centre_0, centres, self.dim)
+        return self._metric_func(centre_0, centres, self.dim)
 
     def _get_neighbor_distance(self, centres, neighbor_cells):
         """Retrieve neighbor distances whithin the given cells."""
+        # Loacl variable for speedup
+        get = self.grid.get
+        data = self.data
+        _distance = self._distance
+
         # combine the centres with the neighbors
         centres_ngb = zip(centres, neighbor_cells)
 
@@ -611,17 +617,23 @@ class GriSPy(Grid):
                 continue
 
             # Genera una lista con los vecinos de cada celda
-            ind_tmp = [self.grid.get(nt, []) for nt in map(tuple, neighbors)]
+            ind_tmp = [get(nt, []) for nt in map(tuple, neighbors)]
+            counts = np.fromiter(
+                map(len, ind_tmp), count=len(neighbors), dtype=int
+            ).sum()
 
             # Une en una sola lista todos sus vecinos
-            inds = np.fromiter(itertools.chain(*ind_tmp), dtype=np.int32)
-            n_idxs.append(inds)
+            ichain = itertools.chain(*ind_tmp)
+            inds = np.fromiter(ichain, dtype=int, count=counts)
 
             if self.dim == 1:
-                dis = self._distance(centre, self.data[inds])
+                dis = _distance(centre, data[inds])
             else:
-                dis = self._distance(centre, self.data.take(inds, axis=0))
+                idata = data.take(inds, axis=0)
+                dis = _distance(centre, idata)
+
             n_dis.append(dis)
+            n_idxs.append(inds.astype(np.int32))
 
         return n_dis, n_idxs
 
