@@ -99,6 +99,10 @@ class Grid:
         default=False, validator=attr.validators.instance_of(bool)
     )
 
+    # Post init params
+    k_bins = attr.ib(default=None, init=False, repr=False)
+    grid = attr.ib(default=None, init=False, repr=False)
+
     # =========================================================================
     # ATTRS INITIALIZATION
     # =========================================================================
@@ -453,7 +457,7 @@ class Grid:
         return points
 
 
-@attr.s
+@attr.s(slots=True)
 class GriSPy(Grid):
     """Grid Search in Python.
 
@@ -540,6 +544,9 @@ class GriSPy(Grid):
     periodic = attr.ib(factory=dict)
     metric = attr.ib(default="euclid")
 
+    # Post init params
+    _metric_func = attr.ib(default=None, init=False, repr=False)
+
     # =========================================================================
     # ATTRS INITIALIZATION
     # =========================================================================
@@ -598,6 +605,7 @@ class GriSPy(Grid):
             return EMPTY_ARRAY.copy()
         return self._metric_func(centre_0, centres, self.dim)
 
+    # @profile
     def _get_neighbor_distance(self, centres, neighbor_cells):
         """Retrieve neighbor distances whithin the given cells."""
         # Loacl variable for speedup
