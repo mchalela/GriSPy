@@ -81,7 +81,8 @@ def test_valid_periodic_empty(grispy_init):
 
     exp = GriSPy(grispy_init["data"], periodic=periodic_explicit)
     imp = GriSPy(grispy_init["data"], periodic=periodic_implicit)
-    assert exp == imp
+    assert exp.periodic == imp.periodic
+    
 
 
 def test_valid_periodic_instance(grispy_init):
