@@ -1,3 +1,9 @@
+# My ignored files
+lprofile*
+issue8/
+*.pickle
+*mutmut-cache
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

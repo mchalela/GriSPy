@@ -8,13 +8,10 @@
 #   Full Text: https://github.com/mchalela/GriSPy/blob/master/LICENSE
 
 
-import importlib
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+
 from grispy import GriSPy
-
-
-
 
 # Example 1. 2D Uniform Distribution ------------------------------------------
 # This example generates a 2D random uniform distribution.
@@ -55,28 +52,28 @@ near_dist, near_ind = gsp.nearest_neighbors(centres, n=n_nearest)
 
 
 # Plot results
-plt.figure(4, figsize=(10,3.2))
+plt.figure(4, figsize=(10, 3.2))
 
-plt.subplot(1,3,1, aspect='equal')
+plt.subplot(1, 3, 1, aspect="equal")
 plt.title("Bubble query")
 plt.scatter(data[:, 0], data[:, 1], c="k", marker=".", s=3)
 for ind in bubble_ind:
     plt.scatter(data[ind, 0], data[ind, 1], c="C3", marker="o", s=5)
-plt.plot(centres[:,0],centres[:,1],'ro',ms=10)
+plt.plot(centres[:, 0], centres[:, 1], "ro", ms=10)
 
-plt.subplot(1,3,2, aspect='equal')
+plt.subplot(1, 3, 2, aspect="equal")
 plt.title("Shell query")
 plt.scatter(data[:, 0], data[:, 1], c="k", marker=".", s=2)
 for ind in shell_ind:
     plt.scatter(data[ind, 0], data[ind, 1], c="C2", marker="o", s=5)
-plt.plot(centres[:,0],centres[:,1],'ro',ms=10)
+plt.plot(centres[:, 0], centres[:, 1], "ro", ms=10)
 
-plt.subplot(1,3,3, aspect='equal')
+plt.subplot(1, 3, 3, aspect="equal")
 plt.title("n-Nearest query")
 plt.scatter(data[:, 0], data[:, 1], c="k", marker=".", s=2)
 for ind in near_ind:
     plt.scatter(data[ind, 0], data[ind, 1], c="C0", marker="o", s=5)
-plt.plot(centres[:,0],centres[:,1],'ro',ms=10)
+plt.plot(centres[:, 0], centres[:, 1], "ro", ms=10)
 
 plt.tight_layout()
 plt.show()
