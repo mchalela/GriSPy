@@ -19,7 +19,7 @@
 # =============================================================================
 
 import itertools
-
+from joblib import Parallel, delayed, dump, load
 import attr
 import numpy as np
 
@@ -616,44 +616,47 @@ class GriSPy(Grid):
             return EMPTY_ARRAY.copy()
         return self._metric_func(centre_0, centres, self.dim)
 
-    # @profile
-    def _get_neighbor_distance(self, centres, neighbor_cells):
-        """Retrieve neighbor distances whithin the given cells."""
-        # Loacl variable for speedup
+    def _parallel_neighbor_distance(self, centre, neighbors):
+        """Parallel wrap for _get_neighbor_distance."""
+
+        if len(neighbors) == 0:
+            return EMPTY_ARRAY.copy(), EMPTY_ARRAY.copy()
+
+        # Genera una lista con los vecinos de cada celda
         get = self.grid.get
-        data = self.data
-        _distance = self._distance
+        ind_tmp = [get(nt, []) for nt in map(tuple, neighbors)]
+        counts = np.fromiter(
+            map(len, ind_tmp), count=len(neighbors), dtype=int
+        ).sum()
+
+        # Une en una sola lista todos sus vecinos
+        ichain = itertools.chain(*ind_tmp)
+        inds = np.fromiter(ichain, dtype=int, count=counts)
+
+        if self.dim == 1:
+            dis = self._distance(centre, self.data[inds])
+        else:
+            idata = self.data.take(inds, axis=0)
+            dis = self._distance(centre, idata)
+
+        return dis, inds.astype(np.int32)
+
+    def _get_neighbor_distance(self, centres, neighbor_cells, n_jobs):
+        """Retrieve neighbor distances whithin the given cells."""
 
         # combine the centres with the neighbors
         centres_ngb = zip(centres, neighbor_cells)
 
+        # Parallel section
+        compute = delayed(self._parallel_neighbor_distance)
+        with Parallel(n_jobs=n_jobs, backend="threading") as parallel:
+            results = parallel(compute(cc, nn) for cc, nn in centres_ngb)
+        
+        # Join results
         n_idxs, n_dis = [], []
-        for centre, neighbors in centres_ngb:
-
-            if len(neighbors) == 0:  # no hay celdas vecinas
-                n_idxs.append(EMPTY_ARRAY.copy())
-                n_dis.append(EMPTY_ARRAY.copy())
-                continue
-
-            # Genera una lista con los vecinos de cada celda
-            ind_tmp = [get(nt, []) for nt in map(tuple, neighbors)]
-            counts = np.fromiter(
-                map(len, ind_tmp), count=len(neighbors), dtype=int
-            ).sum()
-
-            # Une en una sola lista todos sus vecinos
-            ichain = itertools.chain(*ind_tmp)
-            inds = np.fromiter(ichain, dtype=int, count=counts)
-
-            if self.dim == 1:
-                dis = _distance(centre, data[inds])
-            else:
-                idata = data.take(inds, axis=0)
-                dis = _distance(centre, idata)
-
-            n_dis.append(dis)
-            n_idxs.append(inds.astype(np.int32))
-
+        for dd, ii in results:
+            n_dis.append(dd)
+            n_idxs.append(ii)
         return n_dis, n_idxs
 
     # Neighbor-cells methods
@@ -821,6 +824,7 @@ class GriSPy(Grid):
         distance_upper_bound=-1.0,
         sorted=False,
         kind="quicksort",
+        n_jobs=1,
     ):
         """Find all points within given distances of each centre.
 
@@ -839,8 +843,8 @@ class GriSPy(Grid):
             When sorted = True, the sorting algorithm can be specified in this
             keyword. Available algorithms are: ['quicksort', 'mergesort',
             'heapsort', 'stable']. Default: 'quicksort'
-        njobs: int, optional
-            Number of jobs for parallel computation. Not implemented yet.
+        n_jobs: int, optional
+            Number of jobs for parallel computation.
 
         Returns
         -------
@@ -870,7 +874,7 @@ class GriSPy(Grid):
         )
 
         neighbors_distances, neighbors_indices = self._get_neighbor_distance(
-            centres, neighbor_cells
+            centres, neighbor_cells, n_jobs
         )
 
         # We need to generate mirror centres for periodic boundaries...
@@ -889,7 +893,7 @@ class GriSPy(Grid):
                 terran_neighbors_distances,
                 terran_neighbors_indices,
             ) = self._get_neighbor_distance(
-                terran_centres, terran_neighbor_cells
+                terran_centres, terran_neighbor_cells, n_jobs
             )
 
             for i, t in zip(terran_indices, np.arange(len(terran_centres))):
@@ -921,6 +925,7 @@ class GriSPy(Grid):
         distance_upper_bound=-1.0,
         sorted=False,
         kind="quicksort",
+        n_jobs=1,
     ):
         """Find all points within given lower and upper distances of each centre.
 
@@ -946,7 +951,7 @@ class GriSPy(Grid):
             When sorted = True, the sorting algorithm can be specified in this
             keyword. Available algorithms are: ['quicksort', 'mergesort',
             'heapsort', 'stable']. Default: 'quicksort'
-        njobs: int, optional
+        n_jobs: int, optional
             Number of jobs for parallel computation. Not implemented yet.
 
         Returns
@@ -987,7 +992,7 @@ class GriSPy(Grid):
         )
 
         neighbors_distances, neighbors_indices = self._get_neighbor_distance(
-            centres, neighbor_cells
+            centres, neighbor_cells, n_jobs
         )
 
         # We need to generate mirror centres for periodic boundaries...
@@ -1006,7 +1011,7 @@ class GriSPy(Grid):
                 terran_neighbors_distances,
                 terran_neighbors_indices,
             ) = self._get_neighbor_distance(
-                terran_centres, terran_neighbor_cells
+                terran_centres, terran_neighbor_cells, n_jobs
             )
 
             for i, t in zip(terran_indices, np.arange(len(terran_centres))):
@@ -1047,7 +1052,7 @@ class GriSPy(Grid):
 
         return neighbors_distances, neighbors_indices
 
-    def nearest_neighbors(self, centres, n=1, kind="quicksort"):
+    def nearest_neighbors(self, centres, n=1, kind="quicksort", n_jobs=1):
         """Find the n nearest-neighbors for each centre.
 
         Parameters
@@ -1061,7 +1066,7 @@ class GriSPy(Grid):
             to the centre. The sorting algorithm can be specified in this
             keyword. Available algorithms are: ['quicksort', 'mergesort',
             'heapsort', 'stable']. Default: 'quicksort'
-        njobs: int, optional
+        n_jobs: int, optional
             Number of jobs for parallel computation. Not implemented yet.
 
         Returns
@@ -1100,6 +1105,7 @@ class GriSPy(Grid):
                 centres[~n_found],
                 distance_lower_bound=lower_distance_tmp[~n_found],
                 distance_upper_bound=upper_distance_tmp[~n_found],
+                n_jobs=n_jobs,
             )
 
             for i_tmp, i in enumerate(centres_lookup_ind[~n_found]):
