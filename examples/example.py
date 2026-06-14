@@ -19,7 +19,7 @@ from grispy import GriSPy
 # We search for neighbors within a given radius and n-nearest neighbors.
 
 # Create random points and centres
-Npoints = 10 ** 4
+Npoints = 10**4
 Ncentres = 2
 dim = 2
 Lbox = 100.0

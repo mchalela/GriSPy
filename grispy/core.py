@@ -194,7 +194,7 @@ class Grid:
     @property
     def size(self):
         """Grid size, i.e. total number of cells."""
-        return self.N_cells ** self.dim
+        return self.N_cells**self.dim
 
     @property
     def cell_width(self):
@@ -508,7 +508,6 @@ class GriSPy(Grid):
         Metric definition to compute distances. Options: 'euclid', 'haversine'
         'vincenty' or a custom callable.
 
-
     Attributes
     ----------
     dim: int
@@ -605,10 +604,9 @@ class GriSPy(Grid):
             return EMPTY_ARRAY.copy()
         return self._metric_func(centre_0, centres, self.dim)
 
-    # @profile
     def _get_neighbor_distance(self, centres, neighbor_cells):
         """Retrieve neighbor distances whithin the given cells."""
-        # Loacl variable for speedup
+        # Local variable for speedup
         get = self.grid.get
         data = self.data
         _distance = self._distance
@@ -688,7 +686,7 @@ class GriSPy(Grid):
             k_cell_max[k_cell_max[:, k] >= self.N_cells, k] = self.N_cells - 1
 
         cell_size = self.k_bins[1, :] - self.k_bins[0, :]
-        cell_radii = 0.5 * np.sum(cell_size ** 2) ** 0.5
+        cell_radii = 0.5 * np.sum(cell_size**2) ** 0.5
 
         neighbor_cells = []
         for i, centre in enumerate(centres):
@@ -810,6 +808,7 @@ class GriSPy(Grid):
         distance_upper_bound=-1.0,
         sorted=False,
         kind="quicksort",
+        n_jobs=1,
     ):
         """Find all points within given distances of each centre.
 
@@ -828,7 +827,7 @@ class GriSPy(Grid):
             When sorted = True, the sorting algorithm can be specified in this
             keyword. Available algorithms are: ['quicksort', 'mergesort',
             'heapsort', 'stable']. Default: 'quicksort'
-        njobs: int, optional
+        n_jobs: int, optional
             Number of jobs for parallel computation. Not implemented yet.
 
         Returns
@@ -847,6 +846,10 @@ class GriSPy(Grid):
         vlds.validate_distance_bound(distance_upper_bound, self.periodic)
         vlds.validate_bool(sorted)
         vlds.validate_sortkind(kind)
+        if n_jobs != 1:
+            raise NotImplementedError(
+                "Parallel computation is not implemented yet."
+            )
         # Match distance_upper_bound shape with centres shape
         if np.isscalar(distance_upper_bound):
             distance_upper_bound *= np.ones(len(centres))
@@ -910,8 +913,9 @@ class GriSPy(Grid):
         distance_upper_bound=-1.0,
         sorted=False,
         kind="quicksort",
+        n_jobs=1,
     ):
-        """Find all points within given lower and upper distances of each centre.
+        """Find points within a lower and upper distance of each centre.
 
         The distance condition is:
             `distance_lower_bound <= distance < distance_upper_bound`
@@ -935,7 +939,7 @@ class GriSPy(Grid):
             When sorted = True, the sorting algorithm can be specified in this
             keyword. Available algorithms are: ['quicksort', 'mergesort',
             'heapsort', 'stable']. Default: 'quicksort'
-        njobs: int, optional
+        n_jobs: int, optional
             Number of jobs for parallel computation. Not implemented yet.
 
         Returns
@@ -956,6 +960,10 @@ class GriSPy(Grid):
         vlds.validate_shell_distances(
             distance_lower_bound, distance_upper_bound, self.periodic
         )
+        if n_jobs != 1:
+            raise NotImplementedError(
+                "Parallel computation is not implemented yet."
+            )
 
         # Match distance bounds shapes with centres shape
         if np.isscalar(distance_lower_bound):
@@ -1036,7 +1044,7 @@ class GriSPy(Grid):
 
         return neighbors_distances, neighbors_indices
 
-    def nearest_neighbors(self, centres, n=1, kind="quicksort"):
+    def nearest_neighbors(self, centres, n=1, kind="quicksort", n_jobs=1):
         """Find the n nearest-neighbors for each centre.
 
         Parameters
@@ -1050,7 +1058,7 @@ class GriSPy(Grid):
             to the centre. The sorting algorithm can be specified in this
             keyword. Available algorithms are: ['quicksort', 'mergesort',
             'heapsort', 'stable']. Default: 'quicksort'
-        njobs: int, optional
+        n_jobs: int, optional
             Number of jobs for parallel computation. Not implemented yet.
 
         Returns
@@ -1068,6 +1076,10 @@ class GriSPy(Grid):
         vlds.validate_centres(centres, self.data)
         vlds.validate_n_nearest(n, self.data, self.periodic)
         vlds.validate_sortkind(kind)
+        if n_jobs != 1:
+            raise NotImplementedError(
+                "Parallel computation is not implemented yet."
+            )
 
         # Initial definitions
         N_centres = len(centres)
@@ -1078,7 +1090,7 @@ class GriSPy(Grid):
 
         # First estimation is the cell radii
         cell_size = self.k_bins[1, :] - self.k_bins[0, :]
-        cell_radii = 0.5 * np.sum(cell_size ** 2) ** 0.5
+        cell_radii = 0.5 * np.sum(cell_size**2) ** 0.5
 
         upper_distance_tmp = cell_radii * np.ones(N_centres)
 

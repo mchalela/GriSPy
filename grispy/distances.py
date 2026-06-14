@@ -13,7 +13,6 @@
 
 """Distances implementations for GriSPy."""
 
-
 # =============================================================================
 # IMPORTS
 # =============================================================================
@@ -63,8 +62,8 @@ def haversine(c0, centres, dim):
     sdlat = np.sin((lat2 - lat1) / 2.0)
     clat1 = np.cos(lat1)
     clat2 = np.cos(lat2)
-    num1 = sdlat ** 2
-    num2 = clat1 * clat2 * sdlon ** 2
+    num1 = sdlat**2
+    num2 = clat1 * clat2 * sdlon**2
     sep = 2 * np.arcsin(np.sqrt(num1 + num2))
     return np.rad2deg(sep)
 
@@ -94,5 +93,5 @@ def vincenty(c0, centres, dim):
     num1 = clat2 * sdlon
     num2 = clat1 * slat2 - slat1 * clat2 * cdlon
     denominator = slat1 * slat2 + clat1 * clat2 * cdlon
-    sep = np.arctan2(np.sqrt(num1 ** 2 + num2 ** 2), denominator)
+    sep = np.arctan2(np.sqrt(num1**2 + num2**2), denominator)
     return np.rad2deg(sep)

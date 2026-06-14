@@ -82,7 +82,6 @@ def test_valid_periodic_empty(grispy_init):
     exp = GriSPy(grispy_init["data"], periodic=periodic_explicit)
     imp = GriSPy(grispy_init["data"], periodic=periodic_implicit)
     assert exp.periodic == imp.periodic
-    
 
 
 def test_valid_periodic_instance(grispy_init):
@@ -194,6 +193,34 @@ def test_nearest_neighbors_multiple_query(gsp, grispy_input):
     for i in range(len(b)):
         assert b[i].shape == (grispy_input["n_nearest"],)
         assert ind[i].shape == (grispy_input["n_nearest"],)
+
+
+def test_bubble_njobs_not_implemented(gsp, grispy_input):
+    with pytest.raises(NotImplementedError):
+        gsp.bubble_neighbors(
+            grispy_input["centres"],
+            distance_upper_bound=grispy_input["upper_radii"],
+            n_jobs=2,
+        )
+
+
+def test_shell_njobs_not_implemented(gsp, grispy_input):
+    with pytest.raises(NotImplementedError):
+        gsp.shell_neighbors(
+            grispy_input["centres"],
+            distance_lower_bound=grispy_input["lower_radii"],
+            distance_upper_bound=grispy_input["upper_radii"],
+            n_jobs=2,
+        )
+
+
+def test_nearest_njobs_not_implemented(gsp, grispy_input):
+    with pytest.raises(NotImplementedError):
+        gsp.nearest_neighbors(
+            grispy_input["centres"],
+            n=grispy_input["n_nearest"],
+            n_jobs=2,
+        )
 
 
 # =========================================================

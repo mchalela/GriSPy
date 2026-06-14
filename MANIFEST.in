@@ -2,7 +2,6 @@ include LICENSE
 include README.md
 
 exclude tox.ini
-exclude pyproject.toml
 recursive-exclude examples *
 recursive-exclude tools *
 recursive-exclude tests *
