@@ -23,8 +23,6 @@ import pandas as pd
 from grispy import GriSPy
 from grispy import __version__ as grispy_version
 
-plt.ion()
-
 # =============================================================================
 # OUTPUT GRISPY VERSION AT IMPORT
 # =============================================================================
@@ -40,7 +38,7 @@ print(f"{HEADER}{BOLD}Using GriSPy version = {grispy_version}{END}")
 # =============================================================================
 
 # Default parameter space
-NDATA = [10_000, 100_000, 1_000_000]
+NDATA = [10_000, 100_000, 1_000_000, 10_000_000]
 NCENTRES = [10, 100, 1_000]
 NCELLS = [4, 8, 16, 32, 64]
 
@@ -254,7 +252,6 @@ def time_benchmark(
     n_cells=NCELLS,
     dim=3,
     repeats=10,
-    n_jobs=-1,
     seed=42,
 ):
     """Create time benchmark statistics."""
@@ -266,7 +263,6 @@ def time_benchmark(
     metadata = {
         "dim": dim,
         "repeats": repeats,
-        "n_jobs": n_jobs,
         "seed": seed,
         "version": grispy_version,
     }

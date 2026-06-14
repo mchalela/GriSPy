@@ -22,7 +22,6 @@ import itertools
 
 import attr
 import numpy as np
-from joblib import Parallel, delayed
 
 from . import distances
 from . import validators as vlds
@@ -508,18 +507,6 @@ class GriSPy(Grid):
     metric: str, optional
         Metric definition to compute distances. Options: 'euclid', 'haversine'
         'vincenty' or a custom callable.
-    n_jobs: int, default: None
-        The maximum number of concurrently running jobs, such as the number
-        of Python worker processes when backend is "multiprocessing"
-        or the size of the thread-pool when backend is "threading".
-        If -1 all CPUs are used. If 1 is given, no parallel computing code
-        is used at all, which is useful for debugging. For n_jobs below -1,
-        (n_cpus + 1 + n_jobs) are used. Thus for n_jobs = -2, all
-        CPUs but one are used.
-        None is a marker for 'unset' that will be interpreted as n_jobs=1
-        (sequential execution) unless the call is performed under a
-        parallel_backend context manager that sets another value for
-        n_jobs. Please see https://joblib.readthedocs.io/
 
     Attributes
     ----------
@@ -617,45 +604,43 @@ class GriSPy(Grid):
             return EMPTY_ARRAY.copy()
         return self._metric_func(centre_0, centres, self.dim)
 
-    def _parallel_neighbor_distance(self, centre, neighbors):
-        """Parallel wrap for _get_neighbor_distance."""
-        if len(neighbors) == 0:
-            return EMPTY_ARRAY.copy(), EMPTY_ARRAY.copy()
-
-        # Genera una lista con los vecinos de cada celda
-        get = self.grid.get
-        ind_tmp = [get(nt, []) for nt in map(tuple, neighbors)]
-        counts = np.fromiter(
-            map(len, ind_tmp), count=len(neighbors), dtype=int
-        ).sum()
-
-        # Une en una sola lista todos sus vecinos
-        ichain = itertools.chain(*ind_tmp)
-        inds = np.fromiter(ichain, dtype=int, count=counts)
-
-        if self.dim == 1:
-            dis = self._distance(centre, self.data[inds])
-        else:
-            idata = self.data.take(inds, axis=0)
-            dis = self._distance(centre, idata)
-
-        return dis, inds.astype(np.int32)
-
-    def _get_neighbor_distance(self, centres, neighbor_cells, n_jobs):
+    def _get_neighbor_distance(self, centres, neighbor_cells):
         """Retrieve neighbor distances whithin the given cells."""
+        # Local variable for speedup
+        get = self.grid.get
+        data = self.data
+        _distance = self._distance
+
         # combine the centres with the neighbors
         centres_ngb = zip(centres, neighbor_cells)
 
-        # Parallel section
-        compute = delayed(self._parallel_neighbor_distance)
-        with Parallel(n_jobs=n_jobs, backend="threading") as parallel:
-            results = parallel(compute(cc, nn) for cc, nn in centres_ngb)
-
-        # Join results
         n_idxs, n_dis = [], []
-        for dd, ii in results:
-            n_dis.append(dd)
-            n_idxs.append(ii)
+        for centre, neighbors in centres_ngb:
+
+            if len(neighbors) == 0:  # no hay celdas vecinas
+                n_idxs.append(EMPTY_ARRAY.copy())
+                n_dis.append(EMPTY_ARRAY.copy())
+                continue
+
+            # Genera una lista con los vecinos de cada celda
+            ind_tmp = [get(nt, []) for nt in map(tuple, neighbors)]
+            counts = np.fromiter(
+                map(len, ind_tmp), count=len(neighbors), dtype=int
+            ).sum()
+
+            # Une en una sola lista todos sus vecinos
+            ichain = itertools.chain(*ind_tmp)
+            inds = np.fromiter(ichain, dtype=int, count=counts)
+
+            if self.dim == 1:
+                dis = _distance(centre, data[inds])
+            else:
+                idata = data.take(inds, axis=0)
+                dis = _distance(centre, idata)
+
+            n_dis.append(dis)
+            n_idxs.append(inds.astype(np.int32))
+
         return n_dis, n_idxs
 
     # Neighbor-cells methods
@@ -843,7 +828,7 @@ class GriSPy(Grid):
             keyword. Available algorithms are: ['quicksort', 'mergesort',
             'heapsort', 'stable']. Default: 'quicksort'
         n_jobs: int, optional
-            Number of jobs for parallel computation.
+            Number of jobs for parallel computation. Not implemented yet.
 
         Returns
         -------
@@ -861,6 +846,10 @@ class GriSPy(Grid):
         vlds.validate_distance_bound(distance_upper_bound, self.periodic)
         vlds.validate_bool(sorted)
         vlds.validate_sortkind(kind)
+        if n_jobs != 1:
+            raise NotImplementedError(
+                "Parallel computation is not implemented yet."
+            )
         # Match distance_upper_bound shape with centres shape
         if np.isscalar(distance_upper_bound):
             distance_upper_bound *= np.ones(len(centres))
@@ -873,7 +862,7 @@ class GriSPy(Grid):
         )
 
         neighbors_distances, neighbors_indices = self._get_neighbor_distance(
-            centres, neighbor_cells, n_jobs
+            centres, neighbor_cells
         )
 
         # We need to generate mirror centres for periodic boundaries...
@@ -892,7 +881,7 @@ class GriSPy(Grid):
                 terran_neighbors_distances,
                 terran_neighbors_indices,
             ) = self._get_neighbor_distance(
-                terran_centres, terran_neighbor_cells, n_jobs
+                terran_centres, terran_neighbor_cells
             )
 
             for i, t in zip(terran_indices, np.arange(len(terran_centres))):
@@ -971,6 +960,10 @@ class GriSPy(Grid):
         vlds.validate_shell_distances(
             distance_lower_bound, distance_upper_bound, self.periodic
         )
+        if n_jobs != 1:
+            raise NotImplementedError(
+                "Parallel computation is not implemented yet."
+            )
 
         # Match distance bounds shapes with centres shape
         if np.isscalar(distance_lower_bound):
@@ -991,7 +984,7 @@ class GriSPy(Grid):
         )
 
         neighbors_distances, neighbors_indices = self._get_neighbor_distance(
-            centres, neighbor_cells, n_jobs
+            centres, neighbor_cells
         )
 
         # We need to generate mirror centres for periodic boundaries...
@@ -1010,7 +1003,7 @@ class GriSPy(Grid):
                 terran_neighbors_distances,
                 terran_neighbors_indices,
             ) = self._get_neighbor_distance(
-                terran_centres, terran_neighbor_cells, n_jobs
+                terran_centres, terran_neighbor_cells
             )
 
             for i, t in zip(terran_indices, np.arange(len(terran_centres))):
@@ -1083,6 +1076,10 @@ class GriSPy(Grid):
         vlds.validate_centres(centres, self.data)
         vlds.validate_n_nearest(n, self.data, self.periodic)
         vlds.validate_sortkind(kind)
+        if n_jobs != 1:
+            raise NotImplementedError(
+                "Parallel computation is not implemented yet."
+            )
 
         # Initial definitions
         N_centres = len(centres)
@@ -1104,7 +1101,6 @@ class GriSPy(Grid):
                 centres[~n_found],
                 distance_lower_bound=lower_distance_tmp[~n_found],
                 distance_upper_bound=upper_distance_tmp[~n_found],
-                n_jobs=n_jobs,
             )
 
             for i_tmp, i in enumerate(centres_lookup_ind[~n_found]):
