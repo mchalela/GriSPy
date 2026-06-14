@@ -1,5 +1,5 @@
 ipykernel
-Sphinx<3.0
+Sphinx
 sphinx-rtd-theme
 nbsphinx
 textdistance

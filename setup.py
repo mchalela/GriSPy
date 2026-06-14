@@ -14,7 +14,6 @@
 
 """This file manages the distribution and installation of GriSPy."""
 
-
 # =============================================================================
 # IMPORTS
 # =============================================================================
@@ -28,7 +27,7 @@ from setuptools import setup
 # CONSTANTS
 # =============================================================================
 
-REQUIREMENTS = ["numpy", "scipy", "attrs"]
+REQUIREMENTS = ["numpy", "scipy", "attrs", "joblib"]
 
 PATH = pathlib.Path(os.path.abspath(os.path.dirname(__file__)))
 
@@ -75,10 +74,14 @@ def do_setup():
             "License :: OSI Approved :: MIT License",
             "Operating System :: OS Independent",
             "Programming Language :: Python",
-            "Programming Language :: Python :: 3.8",
+            "Programming Language :: Python :: 3.10",
+            "Programming Language :: Python :: 3.11",
+            "Programming Language :: Python :: 3.12",
+            "Programming Language :: Python :: 3.13",
             "Programming Language :: Python :: Implementation :: CPython",
             "Topic :: Scientific/Engineering",
         ],
+        python_requires=">=3.10",
         packages=["grispy"],
         install_requires=REQUIREMENTS,
     )

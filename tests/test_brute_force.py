@@ -504,13 +504,13 @@ class Test_hypersphere_grispy:
         ############################################
         rng = np.random.default_rng(1234)
 
-        npoints = 10 ** 5
+        npoints = 10**5
         x = rng.uniform(-1.0, 1.0, size=(npoints, 1))
         y = rng.uniform(-1.0, 1.0, size=(npoints, 1))
         z = rng.uniform(-1.0, 1.0, size=(npoints, 1))
         w = rng.uniform(-1.0, 1.0, size=(npoints, 1))
 
-        tttt = (x ** 2 + y ** 2 < 1.0) * (z ** 2 + w ** 2 < 1.0)
+        tttt = (x**2 + y**2 < 1.0) * (z**2 + w**2 < 1.0)
         npoints = np.sum(tttt)
         self.radius = valid_input["lbox"] * rng.random(npoints)
         x = x[tttt]
@@ -518,13 +518,13 @@ class Test_hypersphere_grispy:
         z = z[tttt]
         w = w[tttt]
 
-        tttt = np.sqrt((1.0 - x ** 2 - y ** 2) / (z ** 2 + w ** 2))
+        tttt = np.sqrt((1.0 - x**2 - y**2) / (z**2 + w**2))
         x = self.radius * x
         y = self.radius * y
         z = self.radius * z * tttt
         w = self.radius * w * tttt
 
-        tttt = np.sqrt(x ** 2 + y ** 2 + z ** 2 + w ** 2)
+        tttt = np.sqrt(x**2 + y**2 + z**2 + w**2)
         npt.assert_almost_equal(self.radius, tttt, decimal=12)
         data = np.array([x, y, z, w]).T
 

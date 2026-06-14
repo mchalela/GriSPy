@@ -197,7 +197,7 @@ class Periodicity(Mapping):
 
         num_levels = 2 * levels + 1
         num_pe = len(self.periodic_edges)
-        return num_levels ** num_pe - 1
+        return num_levels**num_pe - 1
 
     def ranges(self, fill_value=np.inf):
         """Return the range of each dimension.

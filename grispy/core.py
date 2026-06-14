@@ -19,9 +19,10 @@
 # =============================================================================
 
 import itertools
-from joblib import Parallel, delayed, dump, load
+
 import attr
 import numpy as np
+from joblib import Parallel, delayed
 
 from . import distances
 from . import validators as vlds
@@ -194,7 +195,7 @@ class Grid:
     @property
     def size(self):
         """Grid size, i.e. total number of cells."""
-        return self.N_cells ** self.dim
+        return self.N_cells**self.dim
 
     @property
     def cell_width(self):
@@ -618,7 +619,6 @@ class GriSPy(Grid):
 
     def _parallel_neighbor_distance(self, centre, neighbors):
         """Parallel wrap for _get_neighbor_distance."""
-
         if len(neighbors) == 0:
             return EMPTY_ARRAY.copy(), EMPTY_ARRAY.copy()
 
@@ -643,7 +643,6 @@ class GriSPy(Grid):
 
     def _get_neighbor_distance(self, centres, neighbor_cells, n_jobs):
         """Retrieve neighbor distances whithin the given cells."""
-
         # combine the centres with the neighbors
         centres_ngb = zip(centres, neighbor_cells)
 
@@ -651,7 +650,7 @@ class GriSPy(Grid):
         compute = delayed(self._parallel_neighbor_distance)
         with Parallel(n_jobs=n_jobs, backend="threading") as parallel:
             results = parallel(compute(cc, nn) for cc, nn in centres_ngb)
-        
+
         # Join results
         n_idxs, n_dis = [], []
         for dd, ii in results:
@@ -702,7 +701,7 @@ class GriSPy(Grid):
             k_cell_max[k_cell_max[:, k] >= self.N_cells, k] = self.N_cells - 1
 
         cell_size = self.k_bins[1, :] - self.k_bins[0, :]
-        cell_radii = 0.5 * np.sum(cell_size ** 2) ** 0.5
+        cell_radii = 0.5 * np.sum(cell_size**2) ** 0.5
 
         neighbor_cells = []
         for i, centre in enumerate(centres):
@@ -927,7 +926,7 @@ class GriSPy(Grid):
         kind="quicksort",
         n_jobs=1,
     ):
-        """Find all points within given lower and upper distances of each centre.
+        """Find points within a lower and upper distance of each centre.
 
         The distance condition is:
             `distance_lower_bound <= distance < distance_upper_bound`
@@ -1094,7 +1093,7 @@ class GriSPy(Grid):
 
         # First estimation is the cell radii
         cell_size = self.k_bins[1, :] - self.k_bins[0, :]
-        cell_radii = 0.5 * np.sum(cell_size ** 2) ** 0.5
+        cell_radii = 0.5 * np.sum(cell_size**2) ** 0.5
 
         upper_distance_tmp = cell_radii * np.ones(N_centres)
 
