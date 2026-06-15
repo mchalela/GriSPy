@@ -10,8 +10,9 @@
 
 """Functions to benchmark GriSPy methods."""
 
+import itertools
+import json
 import os
-import pickle
 import time
 from timeit import Timer
 
@@ -22,16 +23,6 @@ import pandas as pd
 
 from grispy import GriSPy
 from grispy import __version__ as grispy_version
-
-# =============================================================================
-# OUTPUT GRISPY VERSION AT IMPORT
-# =============================================================================
-
-HEADER = "\033[95m"
-END = "\033[0m"
-BOLD = "\033[1m"
-
-print(f"{HEADER}{BOLD}Using GriSPy version = {grispy_version}{END}")
 
 # =============================================================================
 # GRISPY PARAMS
@@ -56,6 +47,17 @@ QUERY_STATEMENT = "gsp.bubble_neighbors(**query_kwargs)"
 # Others
 NS2S = 1e-9  # Nanoseconds to seconds factor
 
+# Columns of the timing report DataFrame.
+REPORT_COLUMNS = [
+    "n_data",
+    "n_centres",
+    "n_cells",
+    "BT_mean",
+    "QT_mean",
+    "BT_std",
+    "QT_std",
+]
+
 
 # =============================================================================
 # HELPER FUNCTIONS
@@ -72,15 +74,15 @@ def parameter_grid(parameters):
     """Full parameter space combinations from a dict with iterables.
 
     parameters = {'A': [34, 56, 567], 'C': [12, 0], 'G': [1245]}
-    This format is similar to sklearn ParameterGrid
+    This format is similar to sklearn ParameterGrid.
+
+    Uses itertools.product so each value keeps its native Python type
+    (no implicit int->float promotion as with np.meshgrid).
     """
-    keys, values = list(zip(*parameters.items()))
-    mesh = np.meshgrid(*values)
-    flat_mesh = map(np.ravel, mesh)
+    keys = list(parameters)
     grid = []
-    for params in zip(*flat_mesh):
-        d = {key: params[i] for i, key in enumerate(keys)}
-        grid.append(d)
+    for combo in itertools.product(*parameters.values()):
+        grid.append(dict(zip(keys, combo)))
     return grid
 
 
@@ -157,11 +159,23 @@ class TimeReport:
         axes[0].set_ylabel("Time [sec]")
         return
 
-    def plot(self, ax=None, logy=True):
-        """Time benchmark plot."""
+    def plot(self, ax=None, logy=None):
+        """Time benchmark plot.
+
+        By default the y-scale is chosen automatically: logarithmic for an
+        absolute time report (all positive, spanning several orders of
+        magnitude) and linear for a difference report from `diff_report`
+        (signed values that cannot be log-scaled). Pass `logy=True/False`
+        to force a scale.
+        """
+        # A difference report has no plain `version` in its metadata
+        # (diff_report stores version_a/version_b instead).
+        is_diff = "version" not in self.metadata
+        if logy is None:
+            logy = not is_diff
 
         if ax is None:
-            fig, ax = plt.subplots(2, 3, figsize=(10, 14))
+            _, ax = plt.subplots(2, 3, figsize=(10, 14))
 
         # First row: fixed n_centres at higher value.
         gby, fixed_value = self.fix_and_group(fixed_col="n_centres")
@@ -184,42 +198,59 @@ class TimeReport:
             legend_title=legend_title,
             logy=logy,
         )
-        version = self.metadata.get("version", "diff")
+        version = "diff" if is_diff else self.metadata["version"]
+        fig = ax[0, 0].figure
         fig.suptitle(f"GriSPy {version} time report")
         return ax
 
     # =====================================================
-    # PICKLE REPORT
+    # JSON REPORT
     # =====================================================
 
     def save_report(self, filename=None, overwrite=False):
-        """Write this instance to a file using pickle."""
+        """Write this report to a JSON file.
 
+        The file stores the metadata, axes and the timing table as separate
+        keys, so it is self-describing and version-independent: it can be
+        loaded and compared with `load_report`/`diff_report` from any
+        environment with pandas, without importing grispy or unpickling a
+        version-specific class.
+        """
         if filename is None:
-            filename = f"benchmark_v{grispy_version}.pickle"
+            filename = f"benchmark_v{grispy_version}.json"
 
-        if os.path.isfile(filename):
-            if overwrite:
-                os.remove(filename)
-            else:
-                raise FileExistsError(
-                    f"File `{filename}` already exist. "
-                    "You may want to use `overwrite=True`."
-                )
+        if os.path.isfile(filename) and not overwrite:
+            raise FileExistsError(
+                f"File `{filename}` already exist. "
+                "You may want to use `overwrite=True`."
+            )
 
-        with open(filename, mode="wb") as fp:
-            pickle.dump(self, fp)
+        payload = {
+            "metadata": self.metadata,
+            "axes": self.axes,
+            "report": self.report.to_dict(orient="records"),
+        }
+        with open(filename, mode="w") as fp:
+            json.dump(payload, fp, indent=2)
 
 
 def load_report(filename):
-    """Load a pickled TimeReport instance."""
+    """Load a TimeReport from a JSON file written by `save_report`.
 
+    No pickle, no grispy import required.
+    """
     if not os.path.isfile(filename):
         raise FileNotFoundError(f"File `{filename}` not found.")
 
-    with open(filename, mode="rb") as fp:
-        report = pickle.load(fp)
-    return report
+    with open(filename, mode="r") as fp:
+        payload = json.load(fp)
+
+    report = pd.DataFrame(payload["report"], columns=REPORT_COLUMNS)
+    return TimeReport(
+        report=report,
+        axes=payload.get("axes", {}),
+        metadata=payload.get("metadata", {}),
+    )
 
 
 def diff_report(a, b):
@@ -254,19 +285,43 @@ def time_benchmark(
     repeats=10,
     seed=42,
 ):
-    """Create time benchmark statistics."""
+    """Create time benchmark statistics.
+
+    For every point in the parameter grid the build and query times are
+    measured over ``repeats`` independent data realizations: each realization
+    regenerates the data and centres from a distinct, deterministically
+    derived seed, so the reported standard deviation reflects true
+    realization-to-realization variance (not timer jitter on a single
+    dataset). The whole run is reproducible from the single master ``seed``.
+    """
+    # Report which version is being measured (useful when running this tool
+    # standalone against an older installed GriSPy to compare versions).
+    print(
+        f"\033[95m\033[1m"
+        f"Benchmarking GriSPy version = {grispy_version}"
+        f"\033[0m"
+    )
+
     # Set timer in units of nanoseconds
     timer_ns = time.perf_counter_ns
 
-    # Empty report and metadata
+    # Report axes and self-describing metadata.
     axes = {"n_data": n_data, "n_centres": n_centres, "n_cells": n_cells}
     metadata = {
+        "version": grispy_version,
         "dim": dim,
         "repeats": repeats,
         "seed": seed,
-        "version": grispy_version,
+        "query": "bubble_neighbors",
+        "metric": "euclid",
+        "radius": UPPER_RADII,
+        "domain": list(DOMAIN),
     }
     report = []
+
+    # Derive `repeats` independent, reproducible seeds from the master seed.
+    # Each realization uses its own child seed.
+    realization_seeds = np.random.SeedSequence(seed).spawn(repeats)
 
     # Compute the parameter space
     pdict = {"n_data": n_data, "n_centres": n_centres, "n_cells": n_cells}
@@ -275,29 +330,30 @@ def time_benchmark(
     for p in grid:
         ndt, nct, ncl = p["n_data"], p["n_centres"], p["n_cells"]
 
-        # Prepare grispy inputs
-        data, centres = generate_points(ndt, nct, dim, seed)
-        build_kwargs = {"data": data, "N_cells": int(ncl)}
-        query_kwargs = {
-            "centres": centres,
-            "distance_upper_bound": UPPER_RADII,
-        }
+        build_time, query_time = [], []
+        for rseed in realization_seeds:
+            # New data realization for each repeat.
+            data, centres = generate_points(ndt, nct, dim, rseed)
+            build_kwargs = {"data": data, "N_cells": ncl}
+            query_kwargs = {
+                "centres": centres,
+                "distance_upper_bound": UPPER_RADII,
+            }
 
-        # Initialize Timers
-        build_globals = {"GriSPy": GriSPy, "build_kwargs": build_kwargs}
-        build_timer = Timer(
-            stmt=BUILD_STATEMENT, globals=build_globals, timer=timer_ns
-        )
+            # Time a single build on this realization.
+            build_globals = {"GriSPy": GriSPy, "build_kwargs": build_kwargs}
+            build_timer = Timer(
+                stmt=BUILD_STATEMENT, globals=build_globals, timer=timer_ns
+            )
+            build_time.append(build_timer.timeit(number=1))
 
-        gsp = GriSPy(**build_kwargs)
-        query_globals = {"gsp": gsp, "query_kwargs": query_kwargs}
-        query_timer = Timer(
-            stmt=QUERY_STATEMENT, globals=query_globals, timer=timer_ns
-        )
-
-        # Compute times
-        build_time = build_timer.repeat(repeat=repeats, number=1)
-        query_time = query_timer.repeat(repeat=repeats, number=1)
+            # Time a single query on this realization.
+            gsp = GriSPy(**build_kwargs)
+            query_globals = {"gsp": gsp, "query_kwargs": query_kwargs}
+            query_timer = Timer(
+                stmt=QUERY_STATEMENT, globals=query_globals, timer=timer_ns
+            )
+            query_time.append(query_timer.timeit(number=1))
 
         # Save time values. Convert nanoseconds to seconds.
         bt_mean, bt_std = stats(build_time) * NS2S
@@ -305,15 +361,6 @@ def time_benchmark(
         report.append([ndt, nct, ncl, bt_mean, qt_mean, bt_std, qt_std])
 
     # Prepare report data frame
-    col_names = [
-        "n_data",
-        "n_centres",
-        "n_cells",
-        "BT_mean",
-        "QT_mean",
-        "BT_std",
-        "QT_std",
-    ]
-    df = pd.DataFrame(report, columns=col_names)
+    df = pd.DataFrame(report, columns=REPORT_COLUMNS)
 
     return TimeReport(report=df, axes=axes, metadata=metadata)
