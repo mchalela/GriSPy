@@ -18,8 +18,6 @@
 # IMPORTS
 # =============================================================================
 
-import itertools
-
 import attr
 import numpy as np
 
@@ -101,7 +99,15 @@ class Grid:
 
     # Post init params
     k_bins = attr.ib(default=None, init=False, repr=False)
-    grid = attr.ib(default=None, init=False, repr=False)
+    # CSR (compressed-sparse-row) view of the grid, built eagerly and used by
+    # the query hot path. `_csr_order` holds the data indices grouped by cell;
+    # `_csr_offsets` brackets each flattened cell's slice:
+    # cell `c` -> _csr_order[_csr_offsets[c]:_csr_offsets[c + 1]].
+    _csr_order = attr.ib(default=None, init=False, repr=False)
+    _csr_offsets = attr.ib(default=None, init=False, repr=False)
+    # Lazy cache for the public dict-of-tuples `grid` (see the `grid`
+    # property). Built on first access from the CSR arrays, not at init.
+    _grid_cache = attr.ib(default=None, init=False, repr=False)
 
     # =========================================================================
     # ATTRS INITIALIZATION
@@ -113,7 +119,7 @@ class Grid:
             self.data = self.data.copy()
 
         self.k_bins = self._make_bins()
-        self.grid = self._build_grid()
+        self._csr_order, self._csr_offsets = self._build_csr()
 
     @data.validator
     def _validate_data(self, attribute, value):
@@ -157,6 +163,21 @@ class Grid:
     # =========================================================================
     # PROPERTIES
     # =========================================================================
+
+    @property
+    def grid(self):
+        """Dict-of-tuples view of the grid, built lazily on first access.
+
+        The key is a tuple with the k-dimensional index of each grid cell and
+        the value is a tuple of the data-point indices located within it.
+        Empty cells do not have a key. The grid is derived from the CSR arrays
+        the first time it is accessed and cached afterwards; the query methods
+        do not use it, so it is only built if explicitly requested (e.g. by
+        ``cell_count`` and ``cell_points``).
+        """
+        if self._grid_cache is None:
+            self._grid_cache = self._build_grid()
+        return self._grid_cache
 
     @property
     def dim(self):
@@ -222,34 +243,55 @@ class Grid:
         # allowed indeces with int16: (-32768 to 32767)
         return d.astype(np.int16)
 
-    def _build_grid(self):
-        """Build the grid."""
-        # Digitize data points
-        k_digit = self._digitize(self.data, self.k_bins)
+    def _build_csr(self):
+        """Build the CSR view of the grid.
 
-        # Store in grid all cell neighbors
+        Returns ``(csr_order, csr_offsets)``: the data-point indices grouped
+        by cell and the per-cell offsets bracketing each flattened cell's
+        slice. The public dict-of-tuples ``grid`` is built lazily from these
+        arrays on demand (see the ``grid`` property / ``_build_grid``).
+        """
+        # Digitize data points and compute their flattened cell ids.
+        k_digit = self._digitize(self.data, self.k_bins)
         compact_ind = np.ravel_multi_index(
             k_digit.T, self.shape, order="F", mode="clip"
         )
 
+        # CSR view: data indices grouped by cell (`compact_ind_sort`), plus a
+        # per-cell offset array bracketing each flattened cell's slice.
         compact_ind_sort = np.argsort(compact_ind)
         compact_ind = compact_ind[compact_ind_sort]
-        k_digit = k_digit[compact_ind_sort]
 
-        split_ind = np.searchsorted(compact_ind, np.arange(self.size))
-        deleted_cells = np.diff(np.append(-1, split_ind)).astype(bool)
-        split_ind = split_ind[deleted_cells]
+        csr_order = compact_ind_sort.astype(np.int32)
+        csr_offsets = np.searchsorted(
+            compact_ind, np.arange(self.size + 1)
+        ).astype(np.int64)
 
-        data_ind = np.arange(self.ndata)
-        if split_ind[-1] > data_ind[-1]:
-            split_ind = split_ind[:-1]
+        return csr_order, csr_offsets
 
-        list_ind = np.split(data_ind[compact_ind_sort], split_ind[1:])
-        k_digit = k_digit[split_ind]
+    def _build_grid(self):
+        """Build the dict-of-tuples grid from the CSR arrays.
+
+        Each populated cell (a flattened id whose CSR slice is non-empty) is
+        keyed by its k-dimensional digit tuple, with the data-point indices as
+        the value. Used by the ``grid`` property; not on the query hot path.
+        """
+        order = self._csr_order
+        offsets = self._csr_offsets
+
+        # Populated cells are those with a non-empty CSR slice.
+        counts = np.diff(offsets)
+        populated = np.flatnonzero(counts)
+
+        # Recover the cell digits from the flattened ids (inverse of the
+        # ravel_multi_index used to build the CSR arrays).
+        digits = np.unravel_index(populated, self.shape, order="F")
+        digits = np.vstack(digits).T
 
         grid = dict()
-        for i, j in enumerate(k_digit):
-            grid[tuple(j)] = tuple(list_ind[i])
+        for cid, digit in zip(populated, digits):
+            inds = order[offsets[cid] : offsets[cid + 1]]
+            grid[tuple(digit)] = tuple(inds.tolist())
 
         return grid
 
@@ -605,11 +647,19 @@ class GriSPy(Grid):
         return self._metric_func(centre_0, centres, self.dim)
 
     def _get_neighbor_distance(self, centres, neighbor_cells):
-        """Retrieve neighbor distances whithin the given cells."""
+        """Retrieve neighbor distances whithin the given cells.
+
+        Gathers candidate points from the CSR grid view: neighbor cell digits
+        are converted to flattened cell ids, and each cell's data indices are
+        a contiguous slice ``_csr_order[_csr_offsets[c]:_csr_offsets[c + 1]]``.
+        This avoids per-cell dict hashing and boxed-int iteration.
+        """
         # Local variable for speedup
-        get = self.grid.get
         data = self.data
         _distance = self._distance
+        order = self._csr_order
+        offsets = self._csr_offsets
+        shape = self.shape
 
         # combine the centres with the neighbors
         centres_ngb = zip(centres, neighbor_cells)
@@ -622,15 +672,16 @@ class GriSPy(Grid):
                 n_dis.append(EMPTY_ARRAY.copy())
                 continue
 
-            # Genera una lista con los vecinos de cada celda
-            ind_tmp = [get(nt, []) for nt in map(tuple, neighbors)]
-            counts = np.fromiter(
-                map(len, ind_tmp), count=len(neighbors), dtype=int
-            ).sum()
+            # Cell digits -> flattened cell ids (vectorized, no Python hashing)
+            cids = np.ravel_multi_index(
+                neighbors.T, shape, order="F", mode="clip"
+            )
 
-            # Une en una sola lista todos sus vecinos
-            ichain = itertools.chain(*ind_tmp)
-            inds = np.fromiter(ichain, dtype=int, count=counts)
+            # Une en una sola lista todos sus vecinos: each cell's indices are
+            # a contiguous slice of the CSR `order` array.
+            inds = np.concatenate(
+                [order[offsets[c] : offsets[c + 1]] for c in cids]
+            )
 
             if self.dim == 1:
                 dis = _distance(centre, data[inds])
