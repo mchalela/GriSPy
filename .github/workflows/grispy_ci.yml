@@ -23,14 +23,14 @@ jobs:
           - coverage
           - make-docs
         include:
+          - py_version: '3.14'
+            tox_env: py314
           - py_version: '3.13'
             tox_env: py313
           - py_version: '3.12'
             tox_env: py312
           - py_version: '3.11'
             tox_env: py311
-          - py_version: '3.10'
-            tox_env: py310
 
     steps:
       - uses: actions/checkout@v4
