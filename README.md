@@ -50,7 +50,7 @@ And that's it! The `dist` and `ind` lists contain the distances and indices to `
 
 ## Requirements
 
-You will need Python 3.10 or later to run GriSPy.
+You will need Python 3.11 or later to run GriSPy.
 
 
 ## Standard Installation

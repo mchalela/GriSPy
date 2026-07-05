@@ -34,9 +34,9 @@ GriSPy documentation
    :target: https://tldrlegal.com/license/mit-license
    :alt: License
 
-.. image:: https://img.shields.io/badge/Python-3.10+-blue.svg
+.. image:: https://img.shields.io/badge/Python-3.11+-blue.svg
    :target: https://www.python.org/downloads/
-   :alt: Python 3.10+
+   :alt: Python 3.11+
 
 .. image:: https://img.shields.io/pypi/dm/grispy
    :target: https://pypistats.org/packages/grispy
