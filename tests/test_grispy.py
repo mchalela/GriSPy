@@ -11,8 +11,7 @@
 import numpy as np
 import pytest
 
-from grispy import Grid, GriSPy
-from grispy.core import PeriodicityConf
+from grispy import Grid, GriSPy, Periodicity
 
 # =========================================================
 # INITIALIZATION
@@ -82,7 +81,15 @@ def test_valid_periodic_empty(grispy_init):
 
     exp = GriSPy(grispy_init["data"], periodic=periodic_explicit)
     imp = GriSPy(grispy_init["data"], periodic=periodic_implicit)
-    assert exp == imp
+    assert exp.periodic == imp.periodic
+
+
+def test_valid_periodic_instance(grispy_init):
+    # both initializations should be equivalent
+    periodicity = Periodicity({0: None, 1: None, 2: None}, dim=3)
+
+    grispy = GriSPy(grispy_init["data"], periodic=periodicity)
+    assert grispy.periodic is periodicity
 
 
 # =========================================================
@@ -94,7 +101,7 @@ def test_grispy_arguments(gsp):
     assert isinstance(gsp.data, np.ndarray)
     assert isinstance(gsp.metric, str)
     assert isinstance(gsp.N_cells, int)
-    assert isinstance(gsp.periodic, dict)
+    assert isinstance(gsp.periodic, Periodicity)
     assert isinstance(gsp.copy_data, bool)
 
 
@@ -102,8 +109,7 @@ def test_grispy_attrs(gsp):
     assert isinstance(gsp.k_bins, np.ndarray)
     assert isinstance(gsp.grid, dict)
     assert isinstance(gsp.dim, int)
-    assert isinstance(gsp.periodic_flag, bool)
-    assert isinstance(gsp.periodic_conf, PeriodicityConf)
+    assert isinstance(gsp.isperiodic, bool)
 
 
 def test_bubble_single_query(gsp, grispy_input):
@@ -189,6 +195,34 @@ def test_nearest_neighbors_multiple_query(gsp, grispy_input):
         assert ind[i].shape == (grispy_input["n_nearest"],)
 
 
+def test_bubble_njobs_not_implemented(gsp, grispy_input):
+    with pytest.raises(NotImplementedError):
+        gsp.bubble_neighbors(
+            grispy_input["centres"],
+            distance_upper_bound=grispy_input["upper_radii"],
+            n_jobs=2,
+        )
+
+
+def test_shell_njobs_not_implemented(gsp, grispy_input):
+    with pytest.raises(NotImplementedError):
+        gsp.shell_neighbors(
+            grispy_input["centres"],
+            distance_lower_bound=grispy_input["lower_radii"],
+            distance_upper_bound=grispy_input["upper_radii"],
+            n_jobs=2,
+        )
+
+
+def test_nearest_njobs_not_implemented(gsp, grispy_input):
+    with pytest.raises(NotImplementedError):
+        gsp.nearest_neighbors(
+            grispy_input["centres"],
+            n=grispy_input["n_nearest"],
+            n_jobs=2,
+        )
+
+
 # =========================================================
 # PERIODICITY
 # =========================================================
@@ -208,16 +242,6 @@ def test_mirror_universe(gsp_periodic, grispy_input):
     assert t_cen.shape[1] == r_cen.shape[1]
 
 
-def test_mirror(gsp_periodic, grispy_input):
-    # Private methods should not be tested, but the idea is to make
-    # some mirror method public.. so they can stay for now
-    t_cen = gsp_periodic._mirror(
-        np.array([[0, 0, 0]]),
-        distance_upper_bound=[grispy_input["upper_radii"]],
-    )
-    assert isinstance(t_cen, np.ndarray)
-
-
 def test_near_boundary(gsp_periodic, grispy_input):
     # Private methods should not be tested, but the idea is to make
     # some mirror method public.. so they can stay for now
@@ -233,31 +257,31 @@ def test_near_boundary(gsp_periodic, grispy_input):
 def test_set_periodicity_inplace(gsp):
     periodicity = {0: (-50, 50)}
 
-    assert gsp.periodic_flag is False
-    assert gsp.periodic == {}
+    assert gsp.isperiodic is False
+    assert gsp.periodic.edges == {0: None, 1: None, 2: None}
 
     result = gsp.set_periodicity(periodicity, inplace=True)
 
     assert result is None
-    assert gsp.periodic_flag
-    assert gsp.periodic == {0: (-50, 50), 1: None, 2: None}
+    assert gsp.isperiodic
+    assert gsp.periodic.edges == {0: (-50, 50), 1: None, 2: None}
 
 
 def test_set_periodicity_no_inplace(gsp):
     periodicity = {0: (-50, 50)}
 
-    assert gsp.periodic_flag is False
-    assert gsp.periodic == {}
+    assert gsp.isperiodic is False
+    assert gsp.periodic.edges == {0: None, 1: None, 2: None}
 
     result = gsp.set_periodicity(periodicity)
 
     assert isinstance(result, GriSPy)
     assert result is not gsp
-    assert result.periodic_flag
-    assert result.periodic == {0: (-50, 50), 1: None, 2: None}
+    assert result.isperiodic
+    assert result.periodic.edges == {0: (-50, 50), 1: None, 2: None}
 
-    assert gsp.periodic_flag is False
-    assert gsp.periodic == {}
+    assert gsp.isperiodic is False
+    assert gsp.periodic.edges == {0: None, 1: None, 2: None}
 
 
 # =========================================================

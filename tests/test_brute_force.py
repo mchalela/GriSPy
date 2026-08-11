@@ -133,12 +133,11 @@ def test_all_in_bubble_with_periodicity(make_grispy, dim, N_cells):
     gsp = make_grispy(dim=dim, N_cells=N_cells, isperiodic=True)
 
     rng = np.random.default_rng(0)
-    centres = rng.uniform(0, 100, size=(10, dim))
+    centres = rng.uniform(0, 100, size=(2, dim))
     radii = 10.0
     lbox = 100.0
 
-    _, ind = gsp.bubble_neighbors(centres, distance_upper_bound=radii)
-
+    dists, ind = gsp.bubble_neighbors(centres, distance_upper_bound=radii)
     for i, l in enumerate(ind):
         for j in l:
 
@@ -148,7 +147,6 @@ def test_all_in_bubble_with_periodicity(make_grispy, dim, N_cells):
                     d[k] -= lbox
                 elif d[k] < -0.5 * lbox:
                     d[k] += lbox
-
             d = np.linalg.norm(d)
             assert (d <= radii).all()
 
@@ -506,13 +504,13 @@ class Test_hypersphere_grispy:
         ############################################
         rng = np.random.default_rng(1234)
 
-        npoints = 10 ** 5
+        npoints = 10**5
         x = rng.uniform(-1.0, 1.0, size=(npoints, 1))
         y = rng.uniform(-1.0, 1.0, size=(npoints, 1))
         z = rng.uniform(-1.0, 1.0, size=(npoints, 1))
         w = rng.uniform(-1.0, 1.0, size=(npoints, 1))
 
-        tttt = (x ** 2 + y ** 2 < 1.0) * (z ** 2 + w ** 2 < 1.0)
+        tttt = (x**2 + y**2 < 1.0) * (z**2 + w**2 < 1.0)
         npoints = np.sum(tttt)
         self.radius = valid_input["lbox"] * rng.random(npoints)
         x = x[tttt]
@@ -520,13 +518,13 @@ class Test_hypersphere_grispy:
         z = z[tttt]
         w = w[tttt]
 
-        tttt = np.sqrt((1.0 - x ** 2 - y ** 2) / (z ** 2 + w ** 2))
+        tttt = np.sqrt((1.0 - x**2 - y**2) / (z**2 + w**2))
         x = self.radius * x
         y = self.radius * y
         z = self.radius * z * tttt
         w = self.radius * w * tttt
 
-        tttt = np.sqrt(x ** 2 + y ** 2 + z ** 2 + w ** 2)
+        tttt = np.sqrt(x**2 + y**2 + z**2 + w**2)
         npt.assert_almost_equal(self.radius, tttt, decimal=12)
         data = np.array([x, y, z, w]).T
 

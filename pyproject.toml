@@ -1,3 +1,55 @@
+[build-system]
+requires = ["setuptools>=77.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "grispy"
+dynamic = ["version"]
+description = "Grid Search in Python"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    {name = "Martin Chalela", email = "tinchochalela@gmail.com"},
+    {name = "Emanuel Sillero"},
+    {name = "Luis Pereyra"},
+    {name = "Alejandro Garcia"},
+    {name = "Juan B. Cabral"},
+]
+dependencies = ["numpy", "scipy", "attrs", "joblib"]
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["grispy", "nearest", "neighbors", "search", "grid"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Scientific/Engineering",
+]
+
+[project.urls]
+Homepage = "https://github.com/mchalela/GriSPy"
+Documentation = "https://grispy.readthedocs.io"
+
+[tool.setuptools]
+packages = ["grispy"]
+
+[tool.setuptools.dynamic]
+version = {attr = "grispy.__version__"}
+
+[tool.coverage.run]
+source = ["grispy"]
+
+[tool.coverage.report]
+fail_under = 95
+show_missing = true
+
 [tool.black]
 line-length = 79
-target-version = ['py38']
+target-version = ['py311','py312','py313','py314']

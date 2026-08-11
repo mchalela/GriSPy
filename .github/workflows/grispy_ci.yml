@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        py_version: [3.9]
+        py_version: ['3.12']
         tox_env:
           - style
           - docstyle
@@ -23,19 +23,19 @@ jobs:
           - coverage
           - make-docs
         include:
-          - py_version: 3.6
-            tox_env: py36
-          - py_version: 3.7
-            tox_env: py37
-          - py_version: 3.8
-            tox_env: py38
-          - py_version: 3.9
-            tox_env: py39
+          - py_version: '3.14'
+            tox_env: py314
+          - py_version: '3.13'
+            tox_env: py313
+          - py_version: '3.12'
+            tox_env: py312
+          - py_version: '3.11'
+            tox_env: py311
 
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.py_version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.py_version }}
 

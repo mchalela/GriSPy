@@ -18,13 +18,12 @@
 # IMPORTS
 # =============================================================================
 
-import itertools
-
 import attr
 import numpy as np
 
 from . import distances
 from . import validators as vlds
+from .periodicity import Periodicity
 
 # =============================================================================
 # CONSTANTS
@@ -41,27 +40,11 @@ EMPTY_ARRAY = np.array([], dtype=int)
 
 
 # =============================================================================
-#  PERIODICITY CONF CLASS
-# =============================================================================
-
-
-@attr.s(frozen=True)
-class PeriodicityConf:
-    """Internal representation of the periodicity of the Grid."""
-
-    periodic_flag = attr.ib()
-    pd_hi = attr.ib()
-    pd_low = attr.ib()
-    periodic_edges = attr.ib()
-    periodic_direc = attr.ib()
-
-
-# =============================================================================
 # MAIN CLASS
 # =============================================================================
 
 
-@attr.s
+@attr.s(slots=True)
 class Grid:
     """Grid indexing.
 
@@ -114,6 +97,18 @@ class Grid:
         default=False, validator=attr.validators.instance_of(bool)
     )
 
+    # Post init params
+    k_bins = attr.ib(default=None, init=False, repr=False)
+    # CSR (compressed-sparse-row) view of the grid, built eagerly and used by
+    # the query hot path. `_csr_order` holds the data indices grouped by cell;
+    # `_csr_offsets` brackets each flattened cell's slice:
+    # cell `c` -> _csr_order[_csr_offsets[c]:_csr_offsets[c + 1]].
+    _csr_order = attr.ib(default=None, init=False, repr=False)
+    _csr_offsets = attr.ib(default=None, init=False, repr=False)
+    # Lazy cache for the public dict-of-tuples `grid` (see the `grid`
+    # property). Built on first access from the CSR arrays, not at init.
+    _grid_cache = attr.ib(default=None, init=False, repr=False)
+
     # =========================================================================
     # ATTRS INITIALIZATION
     # =========================================================================
@@ -124,7 +119,7 @@ class Grid:
             self.data = self.data.copy()
 
         self.k_bins = self._make_bins()
-        self.grid = self._build_grid()
+        self._csr_order, self._csr_offsets = self._build_csr()
 
     @data.validator
     def _validate_data(self, attribute, value):
@@ -170,6 +165,21 @@ class Grid:
     # =========================================================================
 
     @property
+    def grid(self):
+        """Dict-of-tuples view of the grid, built lazily on first access.
+
+        The key is a tuple with the k-dimensional index of each grid cell and
+        the value is a tuple of the data-point indices located within it.
+        Empty cells do not have a key. The grid is derived from the CSR arrays
+        the first time it is accessed and cached afterwards; the query methods
+        do not use it, so it is only built if explicitly requested (e.g. by
+        ``cell_count`` and ``cell_points``).
+        """
+        if self._grid_cache is None:
+            self._grid_cache = self._build_grid()
+        return self._grid_cache
+
+    @property
     def dim(self):
         """Grid dimension."""
         return self.data.shape[1]
@@ -205,7 +215,7 @@ class Grid:
     @property
     def size(self):
         """Grid size, i.e. total number of cells."""
-        return self.N_cells ** self.dim
+        return self.N_cells**self.dim
 
     @property
     def cell_width(self):
@@ -233,34 +243,55 @@ class Grid:
         # allowed indeces with int16: (-32768 to 32767)
         return d.astype(np.int16)
 
-    def _build_grid(self):
-        """Build the grid."""
-        # Digitize data points
-        k_digit = self._digitize(self.data, self.k_bins)
+    def _build_csr(self):
+        """Build the CSR view of the grid.
 
-        # Store in grid all cell neighbors
+        Returns ``(csr_order, csr_offsets)``: the data-point indices grouped
+        by cell and the per-cell offsets bracketing each flattened cell's
+        slice. The public dict-of-tuples ``grid`` is built lazily from these
+        arrays on demand (see the ``grid`` property / ``_build_grid``).
+        """
+        # Digitize data points and compute their flattened cell ids.
+        k_digit = self._digitize(self.data, self.k_bins)
         compact_ind = np.ravel_multi_index(
             k_digit.T, self.shape, order="F", mode="clip"
         )
 
+        # CSR view: data indices grouped by cell (`compact_ind_sort`), plus a
+        # per-cell offset array bracketing each flattened cell's slice.
         compact_ind_sort = np.argsort(compact_ind)
         compact_ind = compact_ind[compact_ind_sort]
-        k_digit = k_digit[compact_ind_sort]
 
-        split_ind = np.searchsorted(compact_ind, np.arange(self.size))
-        deleted_cells = np.diff(np.append(-1, split_ind)).astype(bool)
-        split_ind = split_ind[deleted_cells]
+        csr_order = compact_ind_sort.astype(np.int32)
+        csr_offsets = np.searchsorted(
+            compact_ind, np.arange(self.size + 1)
+        ).astype(np.int64)
 
-        data_ind = np.arange(self.ndata)
-        if split_ind[-1] > data_ind[-1]:
-            split_ind = split_ind[:-1]
+        return csr_order, csr_offsets
 
-        list_ind = np.split(data_ind[compact_ind_sort], split_ind[1:])
-        k_digit = k_digit[split_ind]
+    def _build_grid(self):
+        """Build the dict-of-tuples grid from the CSR arrays.
+
+        Each populated cell (a flattened id whose CSR slice is non-empty) is
+        keyed by its k-dimensional digit tuple, with the data-point indices as
+        the value. Used by the ``grid`` property; not on the query hot path.
+        """
+        order = self._csr_order
+        offsets = self._csr_offsets
+
+        # Populated cells are those with a non-empty CSR slice.
+        counts = np.diff(offsets)
+        populated = np.flatnonzero(counts)
+
+        # Recover the cell digits from the flattened ids (inverse of the
+        # ravel_multi_index used to build the CSR arrays).
+        digits = np.unravel_index(populated, self.shape, order="F")
+        digits = np.vstack(digits).T
 
         grid = dict()
-        for i, j in enumerate(k_digit):
-            grid[tuple(j)] = tuple(list_ind[i])
+        for cid, digit in zip(populated, digits):
+            inds = order[offsets[cid] : offsets[cid + 1]]
+            grid[tuple(digit)] = tuple(inds.tolist())
 
         return grid
 
@@ -468,7 +499,7 @@ class Grid:
         return points
 
 
-@attr.s
+@attr.s(slots=True)
 class GriSPy(Grid):
     """Grid Search in Python.
 
@@ -519,7 +550,6 @@ class GriSPy(Grid):
         Metric definition to compute distances. Options: 'euclid', 'haversine'
         'vincenty' or a custom callable.
 
-
     Attributes
     ----------
     dim: int
@@ -543,7 +573,7 @@ class GriSPy(Grid):
         Total number of cells.
     cell_width: ndarray
         Cell size in each dimension.
-    periodic_flag: bool
+    isperiodic: bool
         If any dimension has periodicity.
     periodic_conf: grispy.core.PeriodicityConf
         Statistics and intermediate results to make easy and fast the searchs
@@ -555,6 +585,9 @@ class GriSPy(Grid):
     periodic = attr.ib(factory=dict)
     metric = attr.ib(default="euclid")
 
+    # Post init params
+    _metric_func = attr.ib(default=None, init=False, repr=False)
+
     # =========================================================================
     # ATTRS INITIALIZATION
     # =========================================================================
@@ -563,8 +596,11 @@ class GriSPy(Grid):
         """Init more params and build the grid."""
         super().__attrs_post_init__()
 
-        self.periodic, self.periodic_conf = self._build_periodicity(
-            periodic=self.periodic, dim=self.dim
+        if isinstance(self.periodic, dict):
+            self.periodic = Periodicity(edges=self.periodic, dim=self.dim)
+
+        self._metric_func = (
+            self.metric if callable(self.metric) else METRICS[self.metric]
         )
 
     @metric.validator
@@ -580,141 +616,51 @@ class GriSPy(Grid):
 
     @periodic.validator
     def _validate_periodic(self, attr, value):
+        """Validate if dict or Periodicity instance.
 
+        The rest of the validation is handled by Periodicty validators.
+        """
         # Chek if dict
-        if not isinstance(value, dict):
+        if not isinstance(value, (dict, Periodicity)):
             raise TypeError(
-                "Periodicity: Argument must be a dictionary. "
-                "Got instead type {}".format(type(value))
+                "Periodicity: Argument must be of type dictionary or "
+                "Periodicity. Got instead type {}".format(type(value))
             )
-
-        # If dict is empty means no perioity, stop validation.
-        if len(value) == 0:
-            return
-
-        # Check if keys and values are valid
-        for k, v in value.items():
-            # Check if integer
-            if not isinstance(k, int):
-                raise TypeError(
-                    "Periodicity: Keys must be integers. "
-                    "Got instead type {}".format(type(k))
-                )
-
-            # Check if tuple or None
-            if not (isinstance(v, tuple) or v is None):
-                raise TypeError(
-                    "Periodicity: Values must be tuples. "
-                    "Got instead type {}".format(type(v))
-                )
-            if v is None:
-                continue
-
-            # Check if edges are valid numbers
-            has_valid_number = all(
-                [
-                    isinstance(v[0], (int, float)),
-                    isinstance(v[1], (int, float)),
-                ]
-            )
-            if not has_valid_number:
-                raise TypeError(
-                    "Periodicity: Argument must be a tuple of "
-                    "2 real numbers as edge descriptors. "
-                )
-
-            # Check that first number is lower than second
-            if not v[0] < v[1]:
-                raise ValueError(
-                    "Periodicity: First argument in tuple must be "
-                    "lower than second argument."
-                )
 
     # =========================================================================
     # PROPERTIES
     # =========================================================================
 
     @property
-    def periodic_flag(self):
-        """Proxy to ``periodic_conf_.periodic_flag``."""
-        return self.periodic_conf.periodic_flag
+    def isperiodic(self):
+        """Proxy to ``periodic.isperiodic``."""
+        return self.periodic.isperiodic
 
     # =========================================================================
     # INTERNAL IMPLEMENTATION
     # =========================================================================
 
-    def _build_periodicity(self, periodic, dim):
-        """Cleanup the periodicity configuration.
-
-        Remove the unnecessary axis from the periodic dict and also creates
-        a configuration for use in the search.
-
-        """
-        # assume no periodicity
-        cleaned_periodic = {}
-
-        periodic_flag = False
-        pd_hi, pd_low = None, None
-        periodic_edges, periodic_direc = None, None
-
-        periodic_flag = any([x is not None for x in list(periodic.values())])
-
-        # now check if periodic
-        if periodic_flag:
-
-            pd_hi = np.ones((1, dim)) * np.inf
-            pd_low = np.ones((1, dim)) * -np.inf
-            periodic_edges = []
-            for k in range(dim):
-                aux = periodic.get(k)
-                cleaned_periodic[k] = aux
-                if aux:
-                    pd_low[0, k] = aux[0]
-                    pd_hi[0, k] = aux[1]
-                    aux = np.insert(aux, 1, 0.0)
-                else:
-                    aux = np.zeros((1, 3))
-                periodic_edges = np.hstack(
-                    [
-                        periodic_edges,
-                        np.tile(aux, (3 ** (dim - 1 - k), 3 ** k)).T.ravel(),
-                    ]
-                )
-
-            periodic_edges = periodic_edges.reshape(dim, 3 ** dim).T
-            periodic_edges -= periodic_edges[::-1]
-            periodic_edges = np.unique(periodic_edges, axis=0)
-
-            mask = periodic_edges.sum(axis=1, dtype=bool)
-            periodic_edges = periodic_edges[mask]
-
-            periodic_direc = np.sign(periodic_edges)
-
-        return cleaned_periodic, PeriodicityConf(
-            periodic_flag=periodic_flag,
-            pd_hi=pd_hi,
-            pd_low=pd_low,
-            periodic_edges=periodic_edges,
-            periodic_direc=periodic_direc,
-        )
-
     def _distance(self, centre_0, centres):
-        """Compute distance between points.
-
-        metric options: 'euclid', 'sphere'
-
-        Notes: In the case of 'sphere' metric, the input units must be degrees.
-
-        """
+        """Compute distance between points."""
         if len(centres) == 0:
             return EMPTY_ARRAY.copy()
-        metric_func = (
-            self.metric if callable(self.metric) else METRICS[self.metric]
-        )
-        return metric_func(centre_0, centres, self.dim)
+        return self._metric_func(centre_0, centres, self.dim)
 
     def _get_neighbor_distance(self, centres, neighbor_cells):
-        """Retrieve neighbor distances whithin the given cells."""
+        """Retrieve neighbor distances whithin the given cells.
+
+        Gathers candidate points from the CSR grid view: neighbor cell digits
+        are converted to flattened cell ids, and each cell's data indices are
+        a contiguous slice ``_csr_order[_csr_offsets[c]:_csr_offsets[c + 1]]``.
+        This avoids per-cell dict hashing and boxed-int iteration.
+        """
+        # Local variable for speedup
+        data = self.data
+        _distance = self._distance
+        order = self._csr_order
+        offsets = self._csr_offsets
+        shape = self.shape
+
         # combine the centres with the neighbors
         centres_ngb = zip(centres, neighbor_cells)
 
@@ -726,18 +672,25 @@ class GriSPy(Grid):
                 n_dis.append(EMPTY_ARRAY.copy())
                 continue
 
-            # Genera una lista con los vecinos de cada celda
-            ind_tmp = [self.grid.get(nt, []) for nt in map(tuple, neighbors)]
+            # Cell digits -> flattened cell ids (vectorized, no Python hashing)
+            cids = np.ravel_multi_index(
+                neighbors.T, shape, order="F", mode="clip"
+            )
 
-            # Une en una sola lista todos sus vecinos
-            inds = np.fromiter(itertools.chain(*ind_tmp), dtype=np.int32)
-            n_idxs.append(inds)
+            # Une en una sola lista todos sus vecinos: each cell's indices are
+            # a contiguous slice of the CSR `order` array.
+            inds = np.concatenate(
+                [order[offsets[c] : offsets[c + 1]] for c in cids]
+            )
 
             if self.dim == 1:
-                dis = self._distance(centre, self.data[inds])
+                dis = _distance(centre, data[inds])
             else:
-                dis = self._distance(centre, self.data.take(inds, axis=0))
+                idata = data.take(inds, axis=0)
+                dis = _distance(centre, idata)
+
             n_dis.append(dis)
+            n_idxs.append(inds.astype(np.int32))
 
         return n_dis, n_idxs
 
@@ -784,7 +737,7 @@ class GriSPy(Grid):
             k_cell_max[k_cell_max[:, k] >= self.N_cells, k] = self.N_cells - 1
 
         cell_size = self.k_bins[1, :] - self.k_bins[0, :]
-        cell_radii = 0.5 * np.sum(cell_size ** 2) ** 0.5
+        cell_radii = 0.5 * np.sum(cell_size**2) ** 0.5
 
         neighbor_cells = []
         for i, centre in enumerate(centres):
@@ -825,53 +778,33 @@ class GriSPy(Grid):
         return neighbor_cells
 
     def _near_boundary(self, centres, distance_upper_bound):
-        mask = np.zeros((len(centres), self.dim), dtype=bool)
+        """Check if given centres are within distance of the grid boundary."""
+        window = np.zeros((len(centres), self.dim), dtype=bool)
         for k in range(self.dim):
             if self.periodic[k] is None:
                 continue
-            mask[:, k] = (
+            window[:, k] = (
                 abs(centres[:, k] - self.periodic[k][0]) < distance_upper_bound
             )
-            mask[:, k] += (
+            window[:, k] += (
                 abs(centres[:, k] - self.periodic[k][1]) < distance_upper_bound
             )
-        return mask.sum(axis=1, dtype=bool)
-
-    def _mirror(self, centre, distance_upper_bound):
-        pd_hi, pd_low, periodic_edges, periodic_direc = (
-            self.periodic_conf.pd_hi,
-            self.periodic_conf.pd_low,
-            self.periodic_conf.periodic_edges,
-            self.periodic_conf.periodic_direc,
-        )
-
-        mirror_centre = centre - periodic_edges
-
-        mask = periodic_direc * distance_upper_bound
-        mask = mask + mirror_centre
-        mask = (mask >= pd_low) * (mask <= pd_hi)
-        mask = np.prod(mask, 1, dtype=bool)
-        return mirror_centre[mask]
+        return window.sum(axis=1, dtype=bool)
 
     def _mirror_universe(self, centres, distance_upper_bound):
         """Generate Terran centres in the Mirror Universe."""
-        terran_centres = np.array([[]] * self.dim).T
-        terran_indices = np.array([], dtype=int)
         near_boundary = self._near_boundary(centres, distance_upper_bound)
         if not np.any(near_boundary):
+            terran_centres = np.array([[]] * self.dim).T
+            terran_indices = np.array([], dtype=int)
             return terran_centres, terran_indices
 
-        for i, centre in enumerate(centres):
-            if not near_boundary[i]:
-                continue
-            mirror_centre = self._mirror(centre, distance_upper_bound[i])
-            if len(mirror_centre) > 0:
-                terran_centres = np.concatenate(
-                    (terran_centres, mirror_centre), axis=0
-                )
-                terran_indices = np.concatenate(
-                    (terran_indices, np.repeat(i, len(mirror_centre)))
-                )
+        terran_centres = self.periodic.mirror(centres[near_boundary], levels=1)
+        # track original indices
+        multiplicity = self.periodic.multiplicity(levels=1)
+        indices = np.arange(len(centres))[near_boundary]
+        terran_indices = np.repeat(indices, multiplicity)
+
         return terran_centres, terran_indices
 
     # =========================================================================
@@ -906,9 +839,7 @@ class GriSPy(Grid):
         if inplace:
             periodic_attr = attr.fields(GriSPy).periodic
             periodic_attr.validator(self, periodic_attr, periodic)
-            self.periodic, self.periodic_conf = self._build_periodicity(
-                periodic=periodic, dim=self.dim
-            )
+            self.periodic = Periodicity(periodic, dim=self.dim)
         else:
             return GriSPy(
                 data=self.data,
@@ -928,6 +859,7 @@ class GriSPy(Grid):
         distance_upper_bound=-1.0,
         sorted=False,
         kind="quicksort",
+        n_jobs=1,
     ):
         """Find all points within given distances of each centre.
 
@@ -946,7 +878,7 @@ class GriSPy(Grid):
             When sorted = True, the sorting algorithm can be specified in this
             keyword. Available algorithms are: ['quicksort', 'mergesort',
             'heapsort', 'stable']. Default: 'quicksort'
-        njobs: int, optional
+        n_jobs: int, optional
             Number of jobs for parallel computation. Not implemented yet.
 
         Returns
@@ -965,6 +897,10 @@ class GriSPy(Grid):
         vlds.validate_distance_bound(distance_upper_bound, self.periodic)
         vlds.validate_bool(sorted)
         vlds.validate_sortkind(kind)
+        if n_jobs != 1:
+            raise NotImplementedError(
+                "Parallel computation is not implemented yet."
+            )
         # Match distance_upper_bound shape with centres shape
         if np.isscalar(distance_upper_bound):
             distance_upper_bound *= np.ones(len(centres))
@@ -981,7 +917,7 @@ class GriSPy(Grid):
         )
 
         # We need to generate mirror centres for periodic boundaries...
-        if self.periodic_flag:
+        if self.isperiodic:
             terran_centres, terran_indices = self._mirror_universe(
                 centres, distance_upper_bound
             )
@@ -1028,8 +964,9 @@ class GriSPy(Grid):
         distance_upper_bound=-1.0,
         sorted=False,
         kind="quicksort",
+        n_jobs=1,
     ):
-        """Find all points within given lower and upper distances of each centre.
+        """Find points within a lower and upper distance of each centre.
 
         The distance condition is:
             `distance_lower_bound <= distance < distance_upper_bound`
@@ -1053,7 +990,7 @@ class GriSPy(Grid):
             When sorted = True, the sorting algorithm can be specified in this
             keyword. Available algorithms are: ['quicksort', 'mergesort',
             'heapsort', 'stable']. Default: 'quicksort'
-        njobs: int, optional
+        n_jobs: int, optional
             Number of jobs for parallel computation. Not implemented yet.
 
         Returns
@@ -1074,6 +1011,10 @@ class GriSPy(Grid):
         vlds.validate_shell_distances(
             distance_lower_bound, distance_upper_bound, self.periodic
         )
+        if n_jobs != 1:
+            raise NotImplementedError(
+                "Parallel computation is not implemented yet."
+            )
 
         # Match distance bounds shapes with centres shape
         if np.isscalar(distance_lower_bound):
@@ -1098,7 +1039,7 @@ class GriSPy(Grid):
         )
 
         # We need to generate mirror centres for periodic boundaries...
-        if self.periodic_flag:
+        if self.isperiodic:
             terran_centres, terran_indices = self._mirror_universe(
                 centres, distance_upper_bound
             )
@@ -1154,7 +1095,7 @@ class GriSPy(Grid):
 
         return neighbors_distances, neighbors_indices
 
-    def nearest_neighbors(self, centres, n=1, kind="quicksort"):
+    def nearest_neighbors(self, centres, n=1, kind="quicksort", n_jobs=1):
         """Find the n nearest-neighbors for each centre.
 
         Parameters
@@ -1168,7 +1109,7 @@ class GriSPy(Grid):
             to the centre. The sorting algorithm can be specified in this
             keyword. Available algorithms are: ['quicksort', 'mergesort',
             'heapsort', 'stable']. Default: 'quicksort'
-        njobs: int, optional
+        n_jobs: int, optional
             Number of jobs for parallel computation. Not implemented yet.
 
         Returns
@@ -1186,6 +1127,10 @@ class GriSPy(Grid):
         vlds.validate_centres(centres, self.data)
         vlds.validate_n_nearest(n, self.data, self.periodic)
         vlds.validate_sortkind(kind)
+        if n_jobs != 1:
+            raise NotImplementedError(
+                "Parallel computation is not implemented yet."
+            )
 
         # Initial definitions
         N_centres = len(centres)
@@ -1196,7 +1141,7 @@ class GriSPy(Grid):
 
         # First estimation is the cell radii
         cell_size = self.k_bins[1, :] - self.k_bins[0, :]
-        cell_radii = 0.5 * np.sum(cell_size ** 2) ** 0.5
+        cell_radii = 0.5 * np.sum(cell_size**2) ** 0.5
 
         upper_distance_tmp = cell_radii * np.ones(N_centres)
 

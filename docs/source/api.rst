@@ -23,6 +23,15 @@ Module ``grispy.core``
    :member-order: bysource
 
 
+Module ``grispy.periodicity``
+-----------------------------
+
+.. automodule:: grispy.periodicity
+   :members:
+   :show-inheritance:
+   :member-order: bysource
+
+
 Module ``grispy.distances``
 ---------------------------
 

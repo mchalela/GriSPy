@@ -8,7 +8,7 @@
 [![Documentation Status](https://readthedocs.org/projects/grispy/badge/?version=latest)](https://grispy.readthedocs.io/en/latest/?badge=latest)
 [![Coverage Status](https://coveralls.io/repos/github/mchalela/GriSPy/badge.svg?branch=master)](https://coveralls.io/github/mchalela/GriSPy?branch=master) 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.6+](https://img.shields.io/badge/python-3.6+-blue.svg)](https://www.python.org/downloads/release/python-370/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![PyPI downloads](https://img.shields.io/pypi/dm/grispy)](https://pypistats.org/packages/grispy)
 
 [![ascl:1912.013](https://img.shields.io/badge/ascl-1912.013-blue.svg?colorB=262255)](http://ascl.net/1912.013)
@@ -50,7 +50,7 @@ And that's it! The `dist` and `ind` lists contain the distances and indices to `
 
 ## Requirements
 
-You will need Python 3.6 or later to run GriSPy.
+You will need Python 3.11 or later to run GriSPy.
 
 
 ## Standard Installation

@@ -21,8 +21,6 @@ GRISPY_PATH = CURRENT_PATH.parent.parent
 
 sys.path.insert(0, str(GRISPY_PATH))
 
-from setup import VERSION
-
 import grispy
 
 
@@ -33,9 +31,9 @@ copyright = '2019, Martin Chalela, Emanuel Sillero, Luis Pereyra and Alejandro G
 author = 'Martin Chalela, Emanuel Sillero, Luis Pereyra and Alejandro Garcia'
 
 # The short X.Y version.
-version = VERSION
+version = grispy.__version__
 # The full version, including alpha/beta/rc tags
-release = VERSION
+release = grispy.__version__
 
 
 # -- General configuration ---------------------------------------------------
@@ -55,6 +53,13 @@ extensions = [
 
     'nbsphinx'
 ]
+
+# Render the numpy-style "Attributes" section as :ivar: fields inside the
+# class description instead of as standalone, cross-referenceable objects.
+# The Grid/GriSPy attributes are also exposed as @property methods, so without
+# this napoleon and autodoc would document each one twice, producing
+# "duplicate object description" warnings (fatal under sphinx-build -W).
+napoleon_use_ivar = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
